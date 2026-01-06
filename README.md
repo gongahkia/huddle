@@ -1,44 +1,63 @@
-# Huddle
+[![](https://img.shields.io/badge/sagasu_5.0.0-passing-green)](https://github.com/gongahkia/sagasu-5/releases/tag/1.0.0)
 
-A framework-independent browser library for reviewing working websites using the host application's access policy, backend and database. Hosts can allow open review without interactive login or require their existing authentication; Huddle creates no accounts. Pin an element, leave a page observation, reply and resolve discussion in the embedded panel. Directory lookup, mentions and assignment are optional host capabilities. Complete JSON/Markdown export and deliberate preview/import/resume live in the panel; no separately deployed Huddle product service or management app is required.
+# `Sagasu 5`
 
-The [current acceptance audit](docs/acceptance-current.md) records verified browser/database/framework and hosted Pronto results, recovery evidence and performance limits.
+Run [it](#other-notes) back *(but as a [MacOS](https://www.apple.com/os/macos/) menu bar app)*.
 
-Use `createLocalOptions({namespace:'my-review'})` from `@huddle/browser/local` for backend-free browser review, or supply a host adapter for shared team feedback. Both use the same UI and support complete JSON/Markdown transfers plus formatted copy for agents. See [local/team modes](docs/local-review.md).
+## Stack
 
-The private `@huddle/browser` package has optional React/Next.js, Preact, Vue/Nuxt, Svelte/SvelteKit, Solid, Angular and Astro helpers. Its core has no framework dependency. The separate server-only `@huddle/host` reference package supplies thin Next.js/Express/Fastify HTTP bindings and PostgreSQL/MySQL/SQLite/MongoDB storage implementations. The host authorizes every operation and derives authorship; importing historical identities grants no access.
+* *Frontend*: [SwiftUI](https://developer.apple.com/swiftui/)
+* *Backend*: [Swift](https://developer.apple.com/swift/)
+* *API*: [`Sagasu 4`'s data](#data)
 
-Start with the [browser package guide](packages/browser/README.md), [host integration guide](docs/host-http.md), [storage package](packages/host/README.md), [browser workflows/theme tokens](docs/browser-workflows.md) and [complete transfers](docs/host-transfers.md). The [neutral collaboration contract](docs/collaboration-contract.md), [HTTP specification](docs/schema/huddle.http.v2.openapi.json) and [huddle.feedback.v2 schema](docs/schema/huddle.feedback.v2.schema.json) support custom backends. Existing v0.1 integrations need the [migration guide](docs/migration-v0.2.md).
+## Rationale
 
-Use Node **24.21.0** and pnpm **10.33.0**:
+See [this](https://github.com/gongahkia/sagasu#rationale), [this](https://github.com/gongahkia/sagasu-2#rationale), [this](https://github.com/gongahkia/sagasu-3#rationale) and [this](https://github.com/gongahkia/sagasu-4#rationale).
 
-```sh
-pnpm install --frozen-lockfile
-pnpm typecheck
-pnpm lint
-pnpm test
-pnpm build
-pnpm test:package
-pnpm check:bundle
-pnpm test:browser
+## Architecture
+
+![](./asset/reference/architecture.png)
+
+## Screenshots
+
+![](./asset/reference/1.png)  
+![](./asset/reference/2.png)  
+
+## Usage
+
+Note that `Sagasu 5` *(like `Sagasu 4`)* was primarily made for my own use.
+
+The below instructions are for locally hosting and running `Sagasu 5`.
+
+1. First execute the below to install the repository on your local machine.
+
+```console
+$ git clone https://github.com/gongahkia/sagasu-5 && cd sagasu-5
 ```
 
-Browser checks build every maintained framework fixture from an installed private archive, with SSR/hydration/navigation tests and a separate real host/SQLite collaboration fixture. That fixture owns fresh disposable data and named test sessions; it is not production session middleware. Native browser setup and the optional Linux WebKit compatibility runtime are documented in [browser runtime](docs/browser-runtime.md). Real database conformance, all twelve framework/database combinations, sixteen ordered portability pairs and uninstall retention have separate commands in the [server matrix guide](docs/server-matrix.md). They provision only task-owned disposable fixtures, never existing application databases.
+2. Next install Xcode from the [Mac App Store](https://apps.apple.com/us/app/xcode/id497799835?mt=12).
 
-Both packages remain private archives. Install them in the host without a sibling-checkout dependency; keep server drivers out of the browser graph. Detaching the library/routes leaves host data intact. Storage removal is a separate explicit host decision after a verified complete export. There is no uninstall hook that deletes feedback.
+3. Finally run the below command to build the project with [Xcode](https://developer.apple.com/xcode/) via the [Xcode CLI toolkit](https://mac.install.guide/commandlinetools/).
 
-The [approved implementation plan](docs/implementation-plan.adoc) supersedes the older service architecture. [Current evidence and outstanding gates](docs/frontend-progress.md) distinguish fixture checks from the completed actual Pronto migration and hosted acceptance. Original feedback, backups, credentials and evaluation data are not disposable fixtures. The unused standalone product service and its one-off commands are retired; original stores and private backups remain intact.
+```console
+$ swift build
+```
 
-## Access and storage
+4. Alternatively open the project directly within Xcode and build it via the [GUI view](https://developer.apple.com/documentation/xcode/building-and-running-an-app).
 
-The host selects open UAT review with an anonymous visitor identity or review through its existing login. Huddle creates no accounts and ships no product server. Every operation still uses the host’s allowed scope, stable reviewer identity, mutation protection and backend. A development URL alone does not establish who can reach its data. See [open or authenticated review](packages/host/README.md#open-or-authenticated-review).
+## Data
 
-The original Pronto feedback has a dedicated guarded migration path in that application. Keep production backups and complete neutral exports outside Git. Retiring the old service code does not delete any SQLite/PostgreSQL database or alter the host’s account records. Rollback after cutover must keep the new store available, using its host-owned read-only gate.
+For those interested, `Sagasu 5` is currenly configured to pull daily data from `Sagasu 4`'s below [publicly available endpoints](https://github.com/gongahkia/sagasu-4).
 
-The former service, management app, popup transport, account bootstrap and Pronto-specific service importer have been retired. Their code remains in Git history; old service load/container benchmarks describe that historical architecture. Current browser, storage, framework and performance evidence is documented in [the acceptance audit](docs/acceptance-current.md).
+* `backend/log/scraped_log.json`
+* `backend/log/scraped_bookings.json`
+* `backend/log/scraped_tasks.json`
 
-## Examples and testing
+## Other notes
 
-A backend-free [local example](examples/local/index.html) uses the installed browser library and IndexedDB. Run `pnpm build && pnpm examples`, then open http://localhost:4320/local/. Feedback stays in that browser; copy/export it to share.
+`Sagasu 5` is where it is today because of the below projects. 
 
-For UI review, run `pnpm examples:playground` and open **http://localhost:4327/playground/**. The expanded [local example playground](docs/ui-playground.md) uses the actual SDK and disposable SQLite data, with seeded discussions, two reviewers, narrow-screen previews, themes, dialogs, anchor changes, paging and failure controls. [ADR 0001](docs/decisions/0001-huddle-ui-dogfooding.md) records the release boundary: dogfood widget UI in Huddle first; use Pronto to validate engineering integration after UI review. The workbench source and its fictional host live under `examples/testing/playground/`; its loopback-only URL is retained so existing fixture feedback keeps its original page identity. This fixture is not part of the library installation or a separate product.
+* [Sagasu](https://github.com/gongahkia/sagasu)
+* [Sagasu 2](https://github.com/gongahkia/sagasu-2)
+* [Sagasu 3](https://github.com/gongahkia/sagasu-3)
+* [Sagasu 4](https://github.com/gongahkia/sagasu-4)
