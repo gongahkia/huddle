@@ -48,6 +48,11 @@ export async function createApp(options: ServerOptions = {}) {
   });
   app.get('/api/session',async request => ({actor: actor(request)}));
   app.post('/api/auth/logout',async (request,reply) => {const a = actor(request); db.run('DELETE FROM sessions WHERE id=?',a.sessionId); closeSessions(s => s.sessionId === a.sessionId); reply.header('Set-Cookie','huddle_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'); return {ok: true};});
+  app.post('/api/auth/invitation',{config: {rateLimit: {max: 30,timeWindow: '1 minute'}}},async request => {
+    sameOrigin(request); const {token} = z.object({token: z.string().min(20).max(200)}).strict().parse(request.body);
+    const invite = db.get<{kind: string; projectName: string; expiresAt: number}>(`SELECT i.kind,p.name projectName,i.expires_at expiresAt FROM invitations i JOIN projects p ON p.id=i.project_id WHERE i.hash=? AND i.revoked=0 AND i.expires_at>? AND (i.kind='guest' OR i.used=0)`,hash(token),Date.now());
+    if (!invite) throw new HttpError(410,'This invitation expired, was used or was revoked.'); return invite;
+  });
   app.post('/api/auth/accept',{config: {rateLimit: {max: 20,timeWindow: '1 minute'}}},async (request,reply) => {
     sameOrigin(request); const input = schema.acceptSchema.parse(request.body);
     const token = db.transaction(() => {
@@ -98,15 +103,19 @@ export async function createApp(options: ServerOptions = {}) {
   app.patch('/api/projects/:projectId/threads/:id',async request => {const {a,projectId} = scope(request); return store.patch(a,projectId,(request.params as {id: string}).id,schema.patchSchema.parse(request.body));});
   app.get('/api/projects/:projectId/changes',async request => {const {a,projectId} = scope(request); const {after} = z.object({after: z.coerce.number().int().min(0).default(0)}).strict().parse(request.query); return {items: store.changes(a,projectId,after)};});
   app.get('/api/projects/:projectId/events',async (request,reply) => {
-    const {a,projectId} = scope(request); const {after} = z.object({after: z.coerce.number().int().min(0).default(0)}).strict().parse(request.query); let cursor = after;
+    const {a,projectId} = scope(request); const {after} = z.object({after: z.coerce.number().int().min(0).default(0)}).strict().parse(request.query); let cursor = z.coerce.number().int().min(0).parse(request.headers['last-event-id'] || after);
     reply.hijack(); const raw = reply.raw;
     raw.writeHead(200,{'Content-Type': 'text/event-stream','Cache-Control': 'no-store','Connection': 'keep-alive','X-Accel-Buffering': 'no',...(request.headers.origin ? {'Access-Control-Allow-Origin': request.headers.origin,'Vary': 'Origin'} : {})});
     const id = db.id(); let closed = false;
     const close = () => {if (closed) return; closed = true; clearInterval(heartbeat); store.listeners.delete(listener); streams.delete(id); raw.end();};
     const send = () => {if (closed) return;
       try {const current = actor(request); projectAccess(db,current,projectId);
-        for (const item of store.changes(a,projectId,cursor,500)) {cursor = item.seq; raw.write(`id: ${item.seq}\ndata: ${JSON.stringify(item)}\n\n`);}
-        if (raw.writableLength > 1024 * 1024) close();
+        let batch;
+        do {
+          batch = store.changes(a,projectId,cursor,500);
+          for (const item of batch) {cursor = item.seq; raw.write(`id: ${item.seq}\ndata: ${JSON.stringify(item)}\n\n`);}
+          if (raw.writableLength > 1024 * 1024) {close(); break;}
+        } while (batch.length === 500);
       } catch {raw.write('event: revoked\ndata: {}\n\n'); close();}
     };
     const listener = (change: {projectId: string}) => {if (change.projectId === projectId) send();};

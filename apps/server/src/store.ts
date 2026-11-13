@@ -6,8 +6,8 @@ import {createSchema, listSchema, patchSchema, replySchema} from './validation';
 import type {z} from 'zod';
 
 type Row = {id: string; project_id: string; environment: string; page: string; page_url: string; release: string | null; anchor: string; status: 'open' | 'resolved'; assignee_id: string | null; version: number; created_at: string; updated_at: string; updated_seq: number; source_id: string | null};
-type CommentRow = {seq: number; id: string; author_id: string | null; author_name: string; body: string; mentions: string; created_at: string; source_id: string | null};
-export const commentValue = (r: CommentRow): Comment => ({id: r.id,authorId: r.author_id,authorName: r.author_name,body: r.body,mentions: JSON.parse(r.mentions),createdAt: r.created_at,...(r.source_id ? {sourceId: r.source_id} : {})});
+type CommentRow = {seq: number; id: string; author_id: string | null; author_name: string; body: string; mentions: string; created_at: string; source_id: string | null; source_author_id: string | null};
+export const commentValue = (r: CommentRow): Comment => ({id: r.id,authorId: r.author_id,authorName: r.author_name,body: r.body,mentions: JSON.parse(r.mentions),createdAt: r.created_at,...(r.source_id ? {sourceId: r.source_id, sourceAuthorId: r.source_author_id} : {})});
 export class Store {
   listeners = new Set<(change: Change & {projectId: string}) => void>();
   constructor(readonly db: Database) {}

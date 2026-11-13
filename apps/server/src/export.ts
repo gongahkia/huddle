@@ -19,7 +19,7 @@ export async function* exportProject(path: string, projectId: string, format: 'j
       else yield `## ${escapeMd(t.page)} (${escapeMd(t.environment)})\n\nThread: ${escapeMd(t.id)} · ${escapeMd(t.status)} · Assignee: ${escapeMd(t.assignee_id || 'Unassigned')}\n\nURL: ${escapeMd(t.page_url)}\n\nAnchor: ${escapeMd(t.anchor)}\n\n`;
       let comments = 0;
       for (const c of reader.prepare('SELECT * FROM comments WHERE thread_id=? ORDER BY seq').iterate(t.id)) {
-        const comment = {id: c.id,authorId: c.author_id,authorName: c.author_name,body: c.body,mentions: JSON.parse(String(c.mentions)),createdAt: c.created_at,sourceId: c.source_id};
+        const comment = {id: c.id,authorId: c.author_id,authorName: c.author_name,body: c.body,mentions: JSON.parse(String(c.mentions)),createdAt: c.created_at,sourceId: c.source_id,sourceAuthorId: c.source_author_id};
         if (format === 'json') yield `${comments ? ',' : ''}${JSON.stringify(comment)}`;
         else yield `### ${escapeMd(c.author_name)} · ${escapeMd(c.created_at)}\n\nComment: ${escapeMd(c.id)} · Mentions: ${escapeMd(c.mentions)}\n\n${escapeMd(c.body)}\n\n`;
         comments++;

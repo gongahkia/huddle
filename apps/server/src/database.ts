@@ -18,7 +18,7 @@ CREATE INDEX IF NOT EXISTS sessions_grant ON sessions(grant_id);
 CREATE TABLE IF NOT EXISTS auth_codes(hash TEXT PRIMARY KEY,user_id TEXT NOT NULL,grant_id TEXT,project_id TEXT NOT NULL,environment TEXT NOT NULL,origin TEXT NOT NULL,challenge TEXT NOT NULL,expires_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS threads(id TEXT PRIMARY KEY,project_id TEXT NOT NULL REFERENCES projects(id),environment TEXT NOT NULL,page TEXT NOT NULL,page_url TEXT NOT NULL,release TEXT,anchor TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'open',assignee_id TEXT REFERENCES users(id),version INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,updated_seq INTEGER NOT NULL DEFAULT 0,source_id TEXT,UNIQUE(project_id,source_id));
 CREATE INDEX IF NOT EXISTS threads_scope ON threads(project_id,environment,updated_seq DESC);
-CREATE TABLE IF NOT EXISTS comments(seq INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT UNIQUE NOT NULL,thread_id TEXT NOT NULL REFERENCES threads(id),author_id TEXT REFERENCES users(id),author_name TEXT NOT NULL,body TEXT NOT NULL,mentions TEXT NOT NULL DEFAULT '[]',created_at TEXT NOT NULL,source_id TEXT,UNIQUE(thread_id,source_id));
+CREATE TABLE IF NOT EXISTS comments(seq INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT UNIQUE NOT NULL,thread_id TEXT NOT NULL REFERENCES threads(id),author_id TEXT REFERENCES users(id),author_name TEXT NOT NULL,body TEXT NOT NULL,mentions TEXT NOT NULL DEFAULT '[]',created_at TEXT NOT NULL,source_id TEXT,source_author_id TEXT,UNIQUE(thread_id,source_id));
 CREATE INDEX IF NOT EXISTS comments_thread ON comments(thread_id,seq);
 CREATE TABLE IF NOT EXISTS history(id INTEGER PRIMARY KEY AUTOINCREMENT,thread_id TEXT NOT NULL REFERENCES threads(id),actor_name TEXT NOT NULL,action TEXT NOT NULL,data TEXT NOT NULL,created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS history_thread ON history(thread_id,id);
@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS requests(actor_id TEXT NOT NULL,project_id TEXT NOT N
 CREATE TABLE IF NOT EXISTS schema_version(version INTEGER NOT NULL);
 INSERT INTO schema_version SELECT 1 WHERE NOT EXISTS(SELECT 1 FROM schema_version);
 `);
+    if (!this.all<{name: string}>('PRAGMA table_info(comments)').some(c => c.name === 'source_author_id')) this.raw.exec('ALTER TABLE comments ADD COLUMN source_author_id TEXT');
+    this.raw.exec('UPDATE schema_version SET version=2');
   }
   get<T>(sql: string, ...args: SQLInputValue[]): T | undefined {return this.raw.prepare(sql).get(...args) as T | undefined;}
   all<T>(sql: string, ...args: SQLInputValue[]): T[] {return this.raw.prepare(sql).all(...args) as T[];}
