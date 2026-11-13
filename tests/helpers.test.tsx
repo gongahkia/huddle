@@ -7,6 +7,17 @@ import {useHuddle} from '../packages/browser/src/adapters/react';
 import {mount,type HuddleOptions} from '../packages/browser/src/index';
 const options: HuddleOptions = {serverUrl: 'https://huddle.test',projectId: '11111111-1111-4111-8111-111111111111',environment: 'staging'};
 const dispose: (() => void)[] = [];
+it('supports a host trigger without a floating launcher and exposes open/pinning state',() => {
+ const widget = mount({...options,launcher: 'hidden'}); dispose.push(widget.destroy);
+ const host = document.querySelector('[data-huddle-root]')!;
+ expect(host.shadowRoot!.querySelector('.launcher')).toBeNull();
+ expect(host.hasAttribute('data-huddle-open')).toBe(false);
+ widget.open(); expect(host.hasAttribute('data-huddle-open')).toBe(true);
+ expect(host.shadowRoot!.querySelector('aside')).not.toBeNull();
+ widget.close(); expect(host.hasAttribute('data-huddle-open')).toBe(false);
+ expect(host.shadowRoot!.querySelector('.launcher')).toBeNull();
+ widget.destroy(); expect(document.querySelector('[data-huddle-open]')).toBeNull();
+});
 beforeEach(() => {
  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true);
  vi.stubGlobal('requestAnimationFrame',(callback: FrameRequestCallback) => setTimeout(() => callback(performance.now()),0));

@@ -38,6 +38,7 @@ Calling `mount` twice with identical settings returns the existing document inst
 Use lifecycle cleanup in your frontend framework. No framework runtime or app stylesheet is required.
 Imports are SSR-safe; mount only in a browser lifecycle hook after hydration.
 The optional `requestTimeoutMs` changes the 15-second API deadline; `onError` reports failures to host diagnostics.
+Use `launcher: 'hidden'` with `open()` for your own header button. The host's `data-huddle-open` attribute marks an open panel or active pin picker, allowing hosts to pause automatic route refreshes during review.
 Failed saves preserve retry IDs across reloads when local storage is available. No automatic write replay occurs.
 
 The default page identity retains only pathname. `allowedQueryParameters: ['view']`, `includeHash: true`, and

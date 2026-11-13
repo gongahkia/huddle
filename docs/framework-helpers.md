@@ -51,6 +51,8 @@ export function Review({options}: {options: HuddleOptions | null}) {
 
 Render this once in a root layout or persistent application component. Pass public configuration as props; imports and rendering are safe during SSR, and mounting happens in an effect after hydration. React StrictMode effect replay is tested. Preact uses the same shape with `@huddle/browser/preact`.
 
+To use your application's own header button, pass `launcher: 'hidden'` and call the returned controls' `open()` from that button. The default remains a floating launcher. The widget host has `data-huddle-root` while mounted and `data-huddle-open` while the panel or pin picker is open. Hosts can use the latter to suspend automatic route refreshes during review; it disappears on close/destroy. These markers do not expose comments or credentials.
+
 ## Vue and Nuxt
 
 ```vue

@@ -8,6 +8,7 @@ export type HuddleOptions = {
   serverUrl: string; projectId: string; environment: string; release?: string;
   allowedQueryParameters?: string[]; includeHash?: boolean; pageIdentity?: (sanitizedUrl: URL) => string;
   accessToken?: string; styleNonce?: string;
+  launcher?: 'floating' | 'hidden';
   requestTimeoutMs?: number; onError?: (error: Error) => void;
 };
 export type Huddle = {open(): void; close(): void; updateContext(context: Partial<Pick<HuddleOptions,'environment' | 'release'>>): void; destroy(): void};
@@ -22,6 +23,7 @@ export function mountForOwner(options: HuddleOptions, owner?: symbol): Huddle {
   const settings = {...options}; const serverUrl = new URL(settings.serverUrl);
   if (!['http:','https:'].includes(serverUrl.protocol) || serverUrl.username || serverUrl.password || serverUrl.pathname !== '/' || serverUrl.search || serverUrl.hash) throw new Error('Use an HTTP(S) Huddle server origin without a path, query or credentials.');
   if (!settings.projectId?.trim() || !/^[a-zA-Z0-9_-]{1,80}$/.test(settings.environment)) throw new Error('Provide a project ID and a valid environment.');
+  if (settings.launcher !== undefined && !['floating','hidden'].includes(settings.launcher)) throw new Error('launcher must be floating or hidden.');
   if (settings.requestTimeoutMs !== undefined && (!Number.isFinite(settings.requestTimeoutMs) || settings.requestTimeoutMs < 100 || settings.requestTimeoutMs > 120000)) throw new Error('requestTimeoutMs must be between 100 and 120000.');
   settings.serverUrl = serverUrl.origin;
   const prior = instances.get(document);
@@ -75,12 +77,13 @@ export function mountForOwner(options: HuddleOptions, owner?: symbol): Huddle {
   function setError(e: unknown) {if (destroyed || life.signal.aborted) return; notify(e); error = e instanceof Error ? e.message : 'Could not complete this action.'; if (e instanceof ApiError && [401,403].includes(e.status)) {persistDraft(); stream?.stop(); stream = undefined; actor = undefined; api.token = ''; threads = []; selected = undefined; members = []; resolutions.clear();} render();}
   function render() {
     if (destroyed) return;
+    host.toggleAttribute('data-huddle-open',opened || pinning);
     const previousFocus = shadow.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
     const focusId = previousFocus?.id, selectionStart = previousFocus && 'selectionStart' in previousFocus ? previousFocus.selectionStart : null;
     const oldScroll = shadow.querySelector('.content')?.scrollTop || 0;
     ui.replaceChildren();
     if (pinning) {pins.replaceChildren(); const note = el('div',undefined,'pick-note'); note.append(el('span',reattach ? 'Click the new target. Escape to cancel.' : 'Click an element to comment. Escape to cancel.'),button('Cancel',cancelPin)); ui.append(note); return;}
-    if (!opened) {const count = threads.filter(t => t.status === 'open' && unread(t)).length; const launch = button(`Huddle${count ? ` · ${count} new` : ''}`,() => controller.open(),'launcher'); launch.setAttribute('aria-label','Open Huddle'); ui.append(launch); pins.replaceChildren(); return;}
+    if (!opened) {if (settings.launcher !== 'hidden') {const count = threads.filter(t => t.status === 'open' && unread(t)).length; const launch = button(`Huddle${count ? ` · ${count} new` : ''}`,() => controller.open(),'launcher'); launch.setAttribute('aria-label','Open Huddle'); ui.append(launch);} pins.replaceChildren(); return;}
     const panel = el('aside',undefined,'panel'); panel.setAttribute('aria-label','Huddle feedback');
     const header = el('header'); const heading = el('div',undefined,'row between'); heading.append(el('h2','Huddle'),button('Close',() => controller.close())); header.append(heading,el('p',currentContext.environment,'muted'));
     const content = el('div',undefined,'content');
