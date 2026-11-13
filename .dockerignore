@@ -3,6 +3,10 @@ node_modules
 **/node_modules
 **/dist
 **/.next
+**/.nuxt
+**/.output
+**/.svelte-kit
+**/.astro
 .data
 .env*
 output

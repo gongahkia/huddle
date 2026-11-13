@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {onMount} from 'svelte';
-  import {startReview} from '../integration';
-  onMount(() => {const review = startReview('svelte'); return () => review?.destroy();});
+  import {huddle} from '@huddle/browser/svelte';
+  import {reviewOptions} from '../integration';
 </script>
+<div use:huddle={reviewOptions('svelte')}></div>

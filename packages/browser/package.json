@@ -8,8 +8,17 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/huddle.js"
-    }
+    },
+    "./react": {"types":"./dist/react.d.ts","import":"./dist/react.js"},
+    "./preact": {"types":"./dist/preact.d.ts","import":"./dist/preact.js"},
+    "./vue": {"types":"./dist/vue.d.ts","import":"./dist/vue.js"},
+    "./svelte": {"types":"./dist/svelte.d.ts","import":"./dist/svelte.js"},
+    "./solid": {"types":"./dist/solid.d.ts","import":"./dist/solid.js"},
+    "./angular": {"types":"./dist/angular.d.ts","import":"./dist/angular.js"},
+    "./astro": {"types":"./dist/astro.d.ts","import":"./dist/astro.js"}
   },
+  "peerDependencies": {"react":">=18 <20","preact":">=10 <12","vue":">=3.3 <4","svelte":">=4 <6","solid-js":">=1.8 <2","@angular/core":">=20 <23"},
+  "peerDependenciesMeta": {"react":{"optional":true},"preact":{"optional":true},"vue":{"optional":true},"svelte":{"optional":true},"solid-js":{"optional":true},"@angular/core":{"optional":true}},
   "files": [
     "dist",
     "NOTICE",

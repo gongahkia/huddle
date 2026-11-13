@@ -10,3 +10,7 @@ playwright-report/
 *.tsbuildinfo
 .next/
 next-env.d.ts
+.nuxt/
+.output/
+.svelte-kit/
+.astro/
