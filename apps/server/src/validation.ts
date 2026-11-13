@@ -1,0 +1,16 @@
+import {z} from 'zod';
+export const identifier = z.string().uuid();
+export const originSchema = z.string().max(300).refine(value => {try {const u = new URL(value); return ['http:','https:'].includes(u.protocol) && u.origin === value && !u.username && !u.password;} catch {return false;}},'Use an exact HTTP(S) origin without a path.');
+export const anchorSchema = z.object({kind: z.enum(['page','element']),selector: z.string().max(1800),label: z.string().min(1).max(120),quote: z.string().max(300),tag: z.string().regex(/^[a-z][a-z0-9-]*$/).max(40).optional(),stableKey: z.string().max(700).optional(),context: z.string().max(120).optional(),x: z.number().min(0).max(1),y: z.number().min(0).max(1),viewport: z.object({width: z.number().min(0).max(20000),height: z.number().min(0).max(20000)}).strict().optional()}).strict();
+export const contextSchema = z.object({environment: z.string().regex(/^[a-z0-9_-]{1,40}$/),page: z.string().min(1).max(1500),pageUrl: z.string().url().max(2000),release: z.string().max(120).optional()}).strict();
+export const commentSchema = z.object({body: z.string().trim().min(1).max(3000),mentions: z.array(identifier).max(30).default([])}).strict();
+export const createSchema = contextSchema.extend({requestId: identifier,anchor: anchorSchema,body: commentSchema.shape.body,mentions: commentSchema.shape.mentions}).strict();
+export const replySchema = commentSchema.extend({requestId: identifier}).strict();
+export const patchSchema = z.object({requestId: identifier,expectedVersion: z.number().int().positive(),status: z.enum(['open','resolved']).optional(),assigneeId: identifier.nullable().optional(),anchor: anchorSchema.optional()}).strict().refine(v => v.status !== undefined || v.assigneeId !== undefined || v.anchor !== undefined,'Choose a change.');
+export const loginSchema = z.object({email: z.string().email().max(200),password: z.string().min(1).max(200)}).strict();
+export const invitationSchema = z.object({kind: z.enum(['member','guest']),expiresInHours: z.number().int().min(1).max(720).default(168)}).strict();
+export const acceptSchema = z.object({token: z.string().min(20).max(200),name: z.string().trim().min(1).max(80),email: z.string().email().max(200).optional(),password: z.string().min(12).max(200).optional()}).strict();
+export const authorizeSchema = z.object({projectId: identifier,environment: contextSchema.shape.environment,origin: originSchema,challenge: z.string().regex(/^[\w-]{43}$/)}).strict();
+export const exchangeSchema = z.object({code: z.string().min(20).max(200),verifier: z.string().regex(/^[\w-]{43,128}$/)}).strict();
+export const projectSchema = z.object({name: z.string().trim().min(1).max(100),origins: z.array(originSchema).min(1).max(30),environments: z.array(contextSchema.shape.environment).min(1).max(20)}).strict();
+export const listSchema = z.object({environment: contextSchema.shape.environment.optional(),page: z.string().max(1500).optional(),status: z.enum(['open','resolved']).optional(),assigneeId: identifier.optional(),mentionedId: identifier.optional(),before: z.coerce.number().int().positive().optional(),limit: z.coerce.number().int().min(1).max(50).default(30)}).strict();
