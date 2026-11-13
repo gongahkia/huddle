@@ -39,3 +39,10 @@ Build the embedded-first Huddle release specified in the supplied goal, with all
 - Export/import, durable SSE reconnect (including >500 event catch-up) and integration suites total 20 passing tests.
 - Local Docker tooling installed; isolated verification daemon uses /tmp/huddle-docker.sock and /tmp/huddle-docker-data. First image build passed.
 - Required 600-second / 100-client benchmark started; results not yet accepted.
+
+## Coordination and cross-framework acceptance
+- All 13 Chromium tests pass, including administrative project setup, private guest links/revocation, slow/offline retry recovery, stale page responses, native popovers, 100 mount/destroy cycles and ten authenticated SSE teardown cycles.
+- Packed browser library installs and typechecks in a separate fresh consumer without workspace dependencies.
+- Unit/integration suite: 22 tests pass, including consistent streaming snapshots and concurrent coordination updates.
+- Required 600-second benchmark passed: 2,000/2,000 writes, 198,000/198,000 peer observations, no errors, p95 write 47.89 ms, p95 visibility 44.42 ms. Separate server RSS peaked at 242,065,408 bytes on the recorded WSL reference host.
+- Compose persistence/online backup smoke passed. Clean-checkout and final-revision container checks remain pending.

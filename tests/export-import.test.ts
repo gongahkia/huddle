@@ -38,3 +38,13 @@ it('streams complete JSON and Markdown beyond the original 2000-thread cap and 1
   expect(markdown).toContain('2005 threads'); expect(markdown).toContain('record\\-2004\\-0'); expect(markdown).toContain('record\\-0\\-104');
  } finally {f.close();}
 });
+it('keeps an export snapshot consistent while later comments are written',async () => {
+ const f = setup(); try {
+  const id = randomUUID(), now = new Date().toISOString(); f.db.run('INSERT INTO threads(id,project_id,environment,page,page_url,anchor,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)',id,f.projectId,'staging','/','http://localhost:4320','{}',now,now);
+  f.db.run('INSERT INTO comments(id,thread_id,author_name,body,created_at) VALUES(?,?,?,?,?)',randomUUID(),id,'First','Included',now);
+  const iterator = exportProject(f.path,f.projectId,'json'); const first = await iterator.next(); let text = first.value || '';
+  f.db.run('INSERT INTO comments(id,thread_id,author_name,body,created_at) VALUES(?,?,?,?,?)',randomUUID(),id,'Second','Written after snapshot',now);
+  for await (const part of iterator) text += part;
+  const exported = JSON.parse(text); expect(exported.threads[0].comments).toHaveLength(1); expect(exported.threads[0].comments[0].body).toBe('Included');
+ } finally {f.close();}
+});

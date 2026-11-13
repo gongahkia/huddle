@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir: 'tests/browser',fullyParallel: false,workers: 1,timeout: 30000,expect: {timeout: 7000},use: {baseURL: 'http://127.0.0.1:4311',trace: 'retain-on-failure',screenshot: 'only-on-failure'},webServer: [{command: 'pnpm exec tsx scripts/test-server.ts',url: 'http://127.0.0.1:4311/api/health',reuseExistingServer: false},{command: 'pnpm exec tsx scripts/examples.ts',env: {EXAMPLES_PORT: '4321'},url: 'http://localhost:4321/html/',reuseExistingServer: false}]});

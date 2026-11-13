@@ -104,3 +104,13 @@ it('paginates thread summaries and replies and exposes durable reconnect cursors
   const detail = (await f.request('GET',`${f.base}/threads/${firstId}`)).json(); expect(detail.comments).toHaveLength(50); expect(detail.commentCount).toBe(56);
   const more = (await f.request('GET',`${f.base}/threads/${firstId}?after=${detail.nextCursor}`)).json(); expect(more.comments).toHaveLength(6);
 });
+it('allows one winner for concurrent updates and denies a member access to another project and its export',async () => {
+ const f = await fixture(); const thread = (await f.request('POST',f.base + '/threads',f.input())).json<ThreadDetail>();
+ const updates = await Promise.all(['resolved','open'].map(status => f.request('PATCH',`${f.base}/threads/${thread.id}`,{requestId: randomUUID(),expectedVersion: thread.version,status})));
+ expect(updates.map(r => r.statusCode).sort()).toEqual([200,409]);
+ const invitation = (await f.request('POST',f.base + '/invitations',{kind: 'member'})).json();
+ const accepted = await f.request('POST','/api/auth/accept',{token: invitation.url.split('#')[1],name: 'Member',email: 'member@example.test',password: 'test-member-password'}); const member = String(accepted.headers['set-cookie']).split(';')[0];
+ const other = (await f.request('POST','/api/projects',{name: 'Separate',origins: [site],environments: ['staging']})).json();
+ for (const suffix of ['/threads','/export','/members','/changes']) expect((await f.request('GET',`/api/projects/${other.id}${suffix}`,undefined,member)).statusCode).toBe(404);
+ expect((await f.request('GET',`${f.base}/threads/${thread.id}`,undefined,member)).statusCode).toBe(200);
+});

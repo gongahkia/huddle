@@ -7,7 +7,7 @@ export type {Anchor, ReviewContext} from '@huddle/shared';
 export type HuddleOptions = {
   serverUrl: string; projectId: string; environment: string; release?: string;
   allowedQueryParameters?: string[]; includeHash?: boolean; pageIdentity?: (sanitizedUrl: URL) => string;
-  accessToken?: string;
+  accessToken?: string; styleNonce?: string;
 };
 export type Huddle = {open(): void; close(): void; updateContext(context: Partial<Pick<HuddleOptions,'environment' | 'release'>>): void; destroy(): void};
 const instances = new WeakMap<Document, Huddle>();
@@ -25,7 +25,7 @@ export function mount(options: HuddleOptions): Huddle {
   let currentContext = getContext(), geometryFrame = 0, resolveFrame = 0, resolutions = new Map<string,ResolvedAnchor>();
   const requests = requestTracker();
   const host = document.createElement('div'); host.dataset.huddleRoot = ''; host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;pointer-events:none';
-  const shadow = host.attachShadow({mode: 'open'}), style = document.createElement('style'); style.textContent = styles;
+  const shadow = host.attachShadow({mode: 'open'}), style = document.createElement('style'); style.textContent = styles; if (settings.styleNonce) style.nonce = settings.styleNonce;
   const surface = document.createElement('div'); surface.className = 'surface'; surface.setAttribute('popover','manual');
   const ui = document.createElement('div'), pins = document.createElement('div'), highlight = document.createElement('div'); highlight.className = 'highlight'; highlight.hidden = true;
   surface.append(pins,highlight,ui); shadow.append(style,surface); document.documentElement.append(host);
@@ -132,7 +132,7 @@ export function mount(options: HuddleOptions): Huddle {
     try {const result = await api.request<Page<Thread>>(api.project(`/threads?${params}`)); if (destroyed || seq !== loadSequence || page !== currentContext.page) return;
       const first = store?.read('baseline') === null; threads = before ? [...threads,...result.items].slice(0,150) : result.items;
       if (first) {for (const t of threads) markRead(t); store?.write('baseline',true);}
-      nextCursor = result.nextCursor;
+      nextCursor = result.nextCursor; loading = false;
       if (!stream) {stream = new ChangeStream(api,result.cursor,event => {if (event.environment === currentContext.environment) scheduleRefresh();},(message,terminal) => {notice = message; if (terminal) {actor = undefined; api.token = ''; threads = []; selected = undefined; members = []; resolutions.clear(); stream?.stop(); stream = undefined;} render();}); stream.start();}
       render();
     } catch (e) {setError(e);} finally {if (seq === loadSequence) loading = false;}
@@ -218,6 +218,11 @@ export function mount(options: HuddleOptions): Huddle {
   window.addEventListener('keydown',keydown,{signal: life.signal}); window.addEventListener('scroll',scheduleGeometry,{signal: life.signal,capture: true,passive: true});
   window.addEventListener('resize',scheduleResolution,{signal: life.signal}); window.addEventListener('popstate',routeChange,{signal: life.signal}); window.addEventListener('hashchange',routeChange,{signal: life.signal});
   document.addEventListener('visibilitychange',onVisibility,{signal: life.signal});
+  document.addEventListener('toggle',event => {
+    if (event.composedPath().includes(host) || !(event.target instanceof HTMLElement) || !event.target.matches('[popover]')) return;
+    try {surface.hidePopover(); topLayer();} catch { /* non-popover fallback */ }
+    scheduleResolution();
+  },{capture: true,signal: life.signal});
   const controller: Huddle = {
     open() {if (destroyed) return; opened = true; topLayer(); render(); shadow.querySelector<HTMLElement>('.panel button')?.focus(); if (api.token && !actor) void api.request<{actor: Actor}>('/api/session').then(async result => {actor = result.actor; setupStorage(); await initialize();}).catch(setError); else if (actor) void refresh();},
     close() {persistDraft(); opened = false; pinning = false; highlight.hidden = true; render(); shadow.querySelector<HTMLElement>('.launcher')?.focus();},

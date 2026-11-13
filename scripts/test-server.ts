@@ -1,0 +1,13 @@
+import {mkdtempSync, rmSync} from 'node:fs';
+import {join, resolve} from 'node:path';
+import {tmpdir} from 'node:os';
+import {createApp} from '../apps/server/src/app';
+import {bootstrap, passwordHash} from '../apps/server/src/auth';
+const directory = mkdtempSync(join(tmpdir(),'huddle-browser-'));
+const {app,db} = await createApp({dbPath: join(directory,'test.sqlite'),baseUrl: 'http://127.0.0.1:4311',staticRoot: resolve('dist/public'),rateLimits: false});
+bootstrap(db,'admin@huddle.test','Alex Admin','huddle-browser-password');
+db.run("INSERT INTO users VALUES(?,?,?,?,'member')",'22222222-2222-4222-8222-222222222222','Morgan Designer','member@huddle.test',passwordHash('huddle-member-password'));
+db.run('INSERT INTO projects VALUES(?,?,?,?,?)','11111111-1111-4111-8111-111111111111','Studio review','["http://localhost:4321"]','["staging","production"]',new Date().toISOString());
+db.run('INSERT INTO memberships VALUES(?,?)','11111111-1111-4111-8111-111111111111','22222222-2222-4222-8222-222222222222');
+console.log(await app.listen({host: '127.0.0.1',port: 4311}));
+for (const signal of ['SIGINT','SIGTERM'] as const) process.once(signal,() => {void app.close().then(() => {rmSync(directory,{recursive: true,force: true}); process.exit(0);});});

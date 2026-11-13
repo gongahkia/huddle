@@ -9,5 +9,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/huddle.js"
     }
-  }
+  },
+  "files": [
+    "dist",
+    "NOTICE",
+    "README.md"
+  ]
 }
