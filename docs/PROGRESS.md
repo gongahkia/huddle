@@ -24,3 +24,9 @@ Build the embedded-first Huddle release specified in the supplied goal, with all
 - Widget authentication uses a user-initiated popup with single-use authorization-code exchange, scoped to project, environment and exact reviewed origin. Third-party cookies are unnecessary.
 - Durable event sequence supports SSE reconnect; bearer credentials travel in headers, never stream query strings.
 - Self-hosted management UI uses same-origin HttpOnly cookie sessions; widget credentials stay in memory.
+
+## Service foundations
+- Independent anchor/storage package: 10 behavioral tests pass; committed separately.
+- SQLite/Fastify service implements scoped sessions, invitations, PKCE review exchange, threads, assignment/status/reattachment history, cursor reads and SSE.
+- 17 tests pass, including project isolation, guest revocation/expiry, member invitation reuse, origin/environment-bound credentials, idempotent concurrent saves, stale-version rejection and restart persistence.
+- Typecheck and lint pass under pinned Node 24.21.0 / TypeScript 6.0.3.
