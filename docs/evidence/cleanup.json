@@ -1,0 +1,6 @@
+{
+  "temporaryCheckoutRemoved": true,
+  "isolatedDockerDaemonStopped": true,
+  "ownedContainerDataRemoved": true,
+  "unrelatedDockerDesktopNotStarted": true
+}

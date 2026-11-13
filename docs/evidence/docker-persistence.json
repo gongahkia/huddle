@@ -1,9 +1,9 @@
 {
-  "at": "2026-11-13T15:49:59.247Z",
-  "composeProject": "huddle-check-1794584986162",
+  "at": "2026-11-13T16:12:26.856Z",
+  "composeProject": "huddle-check-1794586326817",
   "result": "passed",
   "persistedComment": true,
   "persistedSession": true,
   "sqliteBackupCreated": true,
-  "ps": "NAME                                  IMAGE                               COMMAND                  SERVICE   CREATED         STATUS                           PORTS\nhuddle-check-1794584986162-huddle-1   huddle-check-1794584986162-huddle   \"docker-entrypoint.s…\"   huddle    2 seconds ago   Up 1 second (health: starting)   127.0.0.1:4312->4310/tcp\n"
+  "ps": "NAME                                  IMAGE                               COMMAND                  SERVICE   CREATED         STATUS                           PORTS\nhuddle-check-1794586326817-huddle-1   huddle-check-1794586326817-huddle   \"docker-entrypoint.s…\"   huddle    3 seconds ago   Up 1 second (health: starting)   127.0.0.1:4312->4310/tcp\n"
 }

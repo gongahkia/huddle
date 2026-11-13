@@ -62,3 +62,12 @@ Build the embedded-first Huddle release specified in the supplied goal, with all
 
 ## Container clean-build correction
 The final image check caught a missing root NOTICE input after package provenance became part of the build. The builder now explicitly copies NOTICE. Rebuilding and exercising the real Compose service passed again on the compact-retry implementation, including restart persistence and online backup.
+
+## Final acceptance
+- Final compact-storage 600-second load run passed: 2,000 writes, 198,000 peer observations, no errors; p95 write 45.92 ms, p95 visibility 42.44 ms, peak service RSS 215,924,736 bytes.
+- Clean committed-file archive at 37afbf6 passed all installation/type/lint/unit/build/package/bundle/browser gates: 23 unit/integration and 14 Chromium tests.
+- Documented bootstrap/start/backup and starting from the backup preserved a fresh comment and session.
+- Production Compose service reverified after all implementation changes. Source preservation comparison passes for all 670 Pronto tracked files and original HEAD/clean status.
+- completion-audit.md maps all fifteen acceptance requirements and additional contract constraints to inspected evidence.
+- Temporary clean checkout removed after validation. Isolated verification daemon stopped and its task-owned image/container data removed. No application/test services remain intentionally running.
+- Final implementation diff against verified revision 37afbf6 is empty; only evidence/documentation changed afterward.

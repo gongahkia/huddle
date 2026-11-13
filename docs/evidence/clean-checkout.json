@@ -1,0 +1,24 @@
+{
+  "revision": "37afbf6aa59719ff53a633f5d0debb89b351f4cc",
+  "environment": "Clean tracked-file archive at /tmp/huddle-clean-lMWIIh",
+  "commands": {
+    "pnpm install --frozen-lockfile": "passed",
+    "pnpm typecheck": "passed",
+    "pnpm lint": "passed",
+    "pnpm test": "23 passed",
+    "pnpm build": "passed",
+    "pnpm check:bundle": "installer 10895 bytes gzip; module 10541 bytes gzip",
+    "pnpm test:package": "passed in external consumer",
+    "pnpm exec playwright test": "14 passed"
+  },
+  "startup": {
+    "archiveRevision": "37afbf6aa59719ff53a633f5d0debb89b351f4cc",
+    "bootstrapCommand": "pnpm bootstrap",
+    "startCommand": "pnpm start",
+    "backupCommand": "pnpm backup",
+    "freshDatabaseInitialization": true,
+    "authenticatedHttpWrite": true,
+    "sqliteBackupAndRestore": true,
+    "restoredSession": true
+  }
+}

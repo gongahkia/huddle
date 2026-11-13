@@ -8,12 +8,12 @@ Acceptance work completed locally on 13–14 November 2026 (Asia/Singapore). Thi
 - 23 unit/integration tests cover anchor uncertainty, draft limits/isolation, authenticated writes, author forgery rejection, project/role/origin/environment isolation, expired/revoked invitations, one-use authorization codes, duplicate retries, optimistic update races, restart persistence, bounded reads, durable SSE catch-up, complete exports, snapshot consistency, compact-retry migration and idempotent Pronto import with provenance.
 - 14 Chromium tests cover two reviewers, mentions/assignment/status/export, guest onboarding/revocation, administrator project creation, HTML/React/Angular examples, draft reload/offline/slow-response behavior, stale page responses, native modal/popover behavior, responsive/SPA behavior, 100 mount/destroy/navigation cycles and ten authenticated connection teardown cycles.
 - Package smoke packs the actual browser artifact, installs it in an isolated external consumer and typechecks the published interface without repository aliases.
-- A separate browser resource sample preloads the engine, then measures a static unauthenticated widget: approximately 23 KiB incremental mounted heap in that run, zero requests and zero layouts during a three-second idle window, and zero remaining listener delta after teardown. These measurements include browser/automation/JIT effects and are not universal per-tab memory promises. Full raw values are in the accompanying evidence JSON.
+- A separate browser resource sample preloads the engine, then measures a static unauthenticated widget: approximately 24 KiB incremental mounted heap in that run, zero requests and zero layouts during a three-second idle window, and zero remaining listener delta after teardown. These measurements include browser/automation/JIT effects and are not universal per-tab memory promises. Full raw values are in the accompanying evidence JSON.
 - Current complete installer asset is approximately 10.6 KiB gzip including styles (75 KiB limit); `pnpm check:bundle` checks both installer and ES module automatically.
 
 ## 100-client load acceptance
 
-The first accepted **600-second** run (before the subsequent compact-retry optimization; final run is recorded in the completion audit) preloaded **1,000 threads and 20,000 comments**, connected **100 authenticated SSE review clients**, and issued one mutation per client every 30 seconds. Writers were staggered over each interval. Each change was checked at all 99 peer clients. Final database counts independently verify committed writes and retry-ledger entries.
+The final accepted **600-second** run on the compact-retry implementation preloaded **1,000 threads and 20,000 comments**, connected **100 authenticated SSE review clients**, and issued one mutation per client every 30 seconds. Writers were staggered over each interval. Each change was checked at all 99 peer clients. Final database counts independently verify committed writes and retry-ledger entries.
 
 | Measurement | Result |
 | --- | --- |
@@ -23,11 +23,11 @@ The first accepted **600-second** run (before the subsequent compact-retry optim
 | Final idempotency records | 2,000 |
 | Final durable event count (including seed) | 3,000 |
 | Errors | 0 |
-| p95 mutation latency | 47.89 ms, below 500 ms |
-| p95 peer update visibility | 44.42 ms, below 2,000 ms |
-| Peak server RSS | 242,065,408 bytes (230.85 MiB) |
-| Peak generator RSS | 240,443,392 bytes, measured separately |
-| Peak database plus WAL | 34,246,784 bytes |
+| p95 mutation latency | 45.92 ms, below 500 ms |
+| p95 peer update visibility | 42.44 ms, below 2,000 ms |
+| Peak server RSS | 215,924,736 bytes (205.92 MiB) |
+| Peak generator RSS | 230,424,576 bytes, measured separately |
+| Peak database plus WAL | 15,171,544 bytes |
 
 Reference host: Intel Core i7-1355U, 12 exposed logical CPUs, approximately 4.80 GiB exposed RAM, Fedora/WSL kernel `6.18.33.2-microsoft-standard-WSL2`, Node 24.21.0. Server and generator ran as separate local processes with no cgroup CPU/memory cap. Other builds/browser/container checks were active during parts of this run. Traffic used loopback and this result is not an Internet latency guarantee or proof of a 2-CPU deployment's maximum capacity.
 
@@ -49,4 +49,8 @@ Browser acceptance is Chromium only. Framework compatibility does not imply Fire
 
 ## Final acceptance audit
 
-The separate completion audit maps all fifteen goal gates to authoritative files, commands and outcomes. Clean-checkout, final-revision container verification and the final Pronto preservation comparison are performed after implementation commits; they must be recorded there before claiming completion.
+The [completion audit](completion-audit.md) maps all fifteen goal gates to authoritative files, commands and outcomes. A clean committed-file archive at revision 37afbf6 passed install, typecheck, lint, 23 unit/integration tests, build, both bundle limits, an external package consumer, and all 14 browser tests. The documented bootstrap/start/backup commands also passed with a new database; starting from the resulting backup preserved its comment and session. Container persistence was rechecked on the final implementation. Pronto’s 670 tracked files, commit and clean Git state matched the initial snapshot. Only evidence/documentation commits follow that checked implementation revision.
+
+## Storage growth follow-up
+
+A focused 1,000-thread / 20,000-comment fixture measured 2,000 additional replies through the real store. Keeping whole response snapshots in the retry ledger grew the checkpointed database by 22,011,904 bytes. The final compact thread-reference ledger grew it by 2,146,304 bytes (about 90% less in this fixture), ending at 10,743,808 bytes. This is a separate storage experiment, not a substitution for the full network load run. Both measurements are preserved under evidence; `pnpm bench:storage` reproduces the current version. An additive migration converts legacy retry rows without deleting feedback.
