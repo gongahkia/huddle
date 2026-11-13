@@ -1,0 +1,11 @@
+{
+  "at": "2026-11-13T16:07:49.068Z",
+  "seedThreads": 1000,
+  "seedComments": 20000,
+  "addedReplies": 2000,
+  "finalComments": 22000,
+  "checkpointedSeedBytes": 8597504,
+  "checkpointedFinalBytes": 10743808,
+  "growthBytes": 2146304,
+  "notes": "Separate focused fixture measurement, not the 600-second network run. Real Store.reply writes include history, durable events and idempotency response records. One synthetic administrator and 100 active threads. WAL truncated before each size sample."
+}

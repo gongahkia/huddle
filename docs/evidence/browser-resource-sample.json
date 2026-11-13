@@ -1,0 +1,16 @@
+{
+  "at": "2026-11-13T15:59:28.277Z",
+  "browser": "Chromium",
+  "os": "6.18.33.2-microsoft-standard-WSL2",
+  "cpu": "13th Gen Intel(R) Core(TM) i7-1355U",
+  "baselineHeapBytes": 1563552,
+  "mountedHeapBytes": 1586276,
+  "incrementalMountedHeapBytes": 22724,
+  "afterDestroyHeapBytes": 1732872,
+  "listenerDeltaAfterDestroy": 0,
+  "idleWindowSeconds": 3,
+  "idleRequests": 0,
+  "idleTaskSeconds": 0.011288000000000006,
+  "idleLayoutCount": 0,
+  "notes": "Unauthenticated widget, static HTML page, forced GC; not a universal memory guarantee. Authenticated 100-client activity is measured separately."
+}
