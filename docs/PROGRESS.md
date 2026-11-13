@@ -59,3 +59,6 @@ Build the embedded-first Huddle release specified in the supplied goal, with all
 - Smoke harness creates its own uniquely named Compose project, bootstraps a unique temporary password, verifies comment/session persistence across restart and exercises online backup, then removes its own volume.
 - CI records deterministic unit/browser/package/container checks plus a separate full load job. Workflow has not been run remotely; all acceptance claims are local evidence.
 - CSP nonce propagation is supported by both the script installer and TypeScript options and has a focused Chromium acceptance test.
+
+## Container clean-build correction
+The final image check caught a missing root NOTICE input after package provenance became part of the build. The builder now explicitly copies NOTICE. Rebuilding and exercising the real Compose service passed again on the compact-retry implementation, including restart persistence and online backup.

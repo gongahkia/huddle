@@ -3,7 +3,7 @@ WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
-COPY tsconfig.json ./
+COPY tsconfig.json NOTICE ./
 COPY packages ./packages
 COPY apps ./apps
 COPY examples ./examples
