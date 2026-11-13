@@ -18,10 +18,21 @@ export async function createApp(options: ServerOptions = {}) {
   const db = new Database(path), store = new Store(db);
   const baseUrl = new URL(options.baseUrl || process.env.HUDDLE_BASE_URL || 'http://localhost:4310').origin;
   const app = Fastify({bodyLimit: 16384,logger: false,requestTimeout: 15000});
+  const canonical = new URL(baseUrl), loopback = new Set(['localhost','127.0.0.1','[::1]']);
+  app.addHook('onRequest',async (request,reply) => {
+    // Normalize local HTML navigation only. API requests still require the
+    // exact configured origin, and remote deployments never redirect by Host.
+    if (request.method !== 'GET' || !request.headers.accept?.includes('text/html') || request.url.startsWith('/api/') || canonical.protocol !== 'http:' || !loopback.has(canonical.hostname)) return;
+    let incoming: URL;
+    try {incoming = new URL(`http://${request.headers.host}`);} catch {return;}
+    if (loopback.has(incoming.hostname) && incoming.port === canonical.port && incoming.origin !== baseUrl) {
+      return reply.header('Cache-Control','no-store').redirect(`${baseUrl}${request.url}`);
+    }
+  });
   const streams = new Map<string, {actor: ReturnType<typeof authenticate>; close: () => void}>();
   const actor = (request: FastifyRequest) => authenticate(db,request,baseUrl);
   const scope = (request: FastifyRequest) => {const a = actor(request); const {projectId} = request.params as {projectId: string}; schema.identifier.parse(projectId); projectAccess(db,a,projectId); return {a,projectId};};
-  const sameOrigin = (r: FastifyRequest) => {if (r.headers.origin !== baseUrl) throw new HttpError(403,'A same-origin request is required.');};
+  const sameOrigin = (r: FastifyRequest) => {if (r.headers.origin !== baseUrl) throw new HttpError(403,`A same-origin request is required. Open Huddle at ${baseUrl}.`);};
   const closeSessions = (matches: (a: ReturnType<typeof authenticate>) => boolean) => {for (const stream of streams.values()) if (matches(stream.actor)) stream.close();};
   await app.register(cors,{origin(origin, callback) {
     const allowed = !origin || origin === baseUrl || !!db.get("SELECT 1 FROM projects p,json_each(p.origins) o WHERE o.value=? LIMIT 1",origin);

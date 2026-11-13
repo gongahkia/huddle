@@ -24,6 +24,27 @@ async function fixture() {
   const input = () => ({requestId: randomUUID(),environment: 'staging',page: '/example',pageUrl: `${site}/example`,anchor: {kind: 'page',selector: 'body',label: 'This page',quote: '',x: .5,y: .5},body: 'First note',mentions: []});
   return {...server,request,cookie,base,project,a,input,directory};
 }
+it('redirects only equivalent local HTML visits and keeps login origin checks exact',async () => {
+  const f = await fixture();
+  const visit = (host: string, url = '/invite?view=review', accept = 'text/html') => f.app.inject({url,headers: {host,accept}});
+  const redirect = await visit('127.0.0.1:4310');
+  expect(redirect.statusCode).toBe(302);
+  expect(redirect.headers.location).toBe(`${origin}/invite?view=review`);
+  expect(redirect.headers['cache-control']).toBe('no-store');
+  for (const host of ['localhost:4310','127.0.0.1:4312','evil.test:4310','localhost.evil.test:4310']) {
+    expect((await visit(host)).headers.location).toBeUndefined();
+  }
+  expect((await visit('127.0.0.1:4310','/api/health')).headers.location).toBeUndefined();
+  expect((await visit('127.0.0.1:4310','/embed.js','application/javascript')).headers.location).toBeUndefined();
+  const credentials = {email: 'admin@example.test',password: 'test-password-long'};
+  for (const wrong of ['http://127.0.0.1:4310','https://evil.test','']) {
+    const denied = await f.request('POST','/api/auth/login',credentials,'',wrong);
+    expect(denied.statusCode).toBe(403);
+    expect(denied.json().error).toContain(origin);
+    expect(denied.headers['set-cookie']).toBeUndefined();
+  }
+  expect((await f.request('POST','/api/auth/login',credentials,'')).statusCode).toBe(200);
+});
 it('requires authentication, same origin and server-derived author identity',async () => {
   const f = await fixture();
   expect((await f.request('GET',f.base + '/threads',undefined,'')).statusCode).toBe(401);

@@ -5,12 +5,13 @@ import {Database} from '../apps/server/src/database';
 import {bootstrap} from '../apps/server/src/auth';
 import {importPronto} from '../apps/server/src/import';
 import type {Actor} from '@huddle/shared';
+import {bootstrapPassword} from './password';
 const [command,...args] = process.argv.slice(2), path = process.env.HUDDLE_DATABASE || '.data/huddle.sqlite';
 const db = new Database(path);
 try {
  if (command === 'bootstrap') {
   const [email,name = 'Administrator'] = args;
-  bootstrap(db,z.string().email().parse(email),z.string().min(1).max(80).parse(name),process.env.HUDDLE_BOOTSTRAP_PASSWORD || ''); console.log('Administrator created.');
+  bootstrap(db,z.string().email().parse(email),z.string().min(1).max(80).parse(name),await bootstrapPassword()); console.log('Administrator created.');
  } else if (command === 'backup') {
   if (!args[0] || args[0] === path) throw new Error('Provide a distinct backup destination path.');
   await backup(db.raw,args[0]); console.log('Consistent SQLite backup written.');

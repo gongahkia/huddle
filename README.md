@@ -15,15 +15,18 @@ pnpm install --frozen-lockfile
 pnpm build
 ```
 
-Set `HUDDLE_BOOTSTRAP_PASSWORD` in your terminal to a unique password of at least 12 characters. Then create the first administrator:
+Create the first administrator. Bootstrap prompts for a unique password of at least 12 characters and asks you to confirm it; typing is hidden:
 
 ```sh
 pnpm bootstrap you@example.com "Your name"
-unset HUDDLE_BOOTSTRAP_PASSWORD
 pnpm start
 ```
 
 Open **http://localhost:4310** and sign in with those credentials. There is no default password. Bootstrap refuses a database that already contains users.
+
+For noninteractive setup (including Docker), provide `HUDDLE_BOOTSTRAP_PASSWORD` through your environment or secret manager, then unset it after bootstrap. Never put a real password in source files. A failed bootstrap creates no account; rerun it successfully before signing in.
+
+Use the URL printed at startup. `HUDDLE_BASE_URL` defaults to `http://localhost:4310`; if you change the service URL or port, set it to that exact browser origin before starting. Local HTML visits through an equivalent loopback hostname redirect there. API origin checks remain exact. If you see **A same-origin request is required**, open the configured URL rather than changing the browser's security settings.
 
 In **Project setup**, create a project with its exact allowed website origins and environments. An origin includes scheme and port, for example `http://localhost:4320`; paths and wildcards are not accepted. Create member invitations or guest review links and copy them to your teammates yourself. Huddle sends no email.
 

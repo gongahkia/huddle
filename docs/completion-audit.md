@@ -1,6 +1,6 @@
 # Huddle release completion audit
 
-Audited 14 November 2026 (Asia/Singapore) against the complete objective in GOAL.md. Implementation revision **37afbf6** contains the final production behavior; subsequent commits record evidence/documentation only. The source project is preserved.
+Audited 14 November 2026 (Asia/Singapore) against the complete objective in GOAL.md. Implementation revision **37afbf6** is the original goal-completion baseline. A subsequent local bootstrap/origin fix is recorded in [verification](verification.md#local-startup-follow-up). The source project is preserved.
 
 ## Required acceptance gates
 

@@ -71,3 +71,10 @@ The final image check caught a missing root NOTICE input after package provenanc
 - completion-audit.md maps all fifteen acceptance requirements and additional contract constraints to inspected evidence.
 - Temporary clean checkout removed after validation. Isolated verification daemon stopped and its task-owned image/container data removed. No application/test services remain intentionally running.
 - Final implementation diff against verified revision 37afbf6 is empty; only evidence/documentation changed afterward.
+
+### Local startup correction (14 November)
+
+- Bootstrap now offers a hidden, confirmed password prompt; environment-based automation remains supported. Terminal cancellation restores input mode.
+- Startup prints the configured browser origin. Equivalent local HTML visits redirect there while API origin checks stay exact. README explains setup and recovery from a failed bootstrap.
+- Typecheck, lint, 29 unit/integration tests, build, bundle checks and all 15 Chromium tests pass. A real terminal/bootstrap and built-service sign-in smoke passed on disposable data; the bundled automation CLI also passed.
+- The user's database was inspected read-only for its account count (zero); no credentials or accounts were created there. Pronto was not modified. The earlier load/container evidence remains scoped to its recorded revision.

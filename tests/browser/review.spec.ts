@@ -1,6 +1,15 @@
 import {expect, test, type Page} from '@playwright/test';
 const server = 'http://127.0.0.1:4311', project = '11111111-1111-4111-8111-111111111111';
 const example = (kind = 'html') => `http://localhost:4321/${kind}/?project=${project}&server=${encodeURIComponent(server)}`;
+test('local hostname redirects preserve connection parameters and invitation fragments',async ({page}) => {
+ await page.goto('http://localhost:4311/connect?project=example&environment=staging#review');
+ await expect(page).toHaveURL(`${server}/connect?project=example&environment=staging#review`);
+ await expect(page.getByRole('heading',{name: 'Good work starts with a conversation.'})).toBeVisible();
+ const invitation = page.waitForRequest(request => request.url() === `${server}/api/auth/invitation`);
+ await page.goto('http://localhost:4311/invite#synthetic-invitation-token');
+ expect((await invitation).postDataJSON()).toEqual({token: 'synthetic-invitation-token'});
+ await expect(page).toHaveURL(`${server}/invite`);
+});
 async function login(page: Page, member = false) {await page.goto(server); await page.getByLabel('Email',{exact: true}).fill(member ? 'member@huddle.test' : 'admin@huddle.test'); await page.getByLabel('Password',{exact: true}).fill(member ? 'huddle-member-password' : 'huddle-browser-password'); await page.getByRole('button',{name: 'Sign in',exact: true}).click(); await expect(page.getByRole('heading',{name: 'Feedback inbox',exact: true})).toBeVisible();}
 async function connect(page: Page) {
  await page.getByRole('button',{name: 'Open Huddle',exact: true}).click();

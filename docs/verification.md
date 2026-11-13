@@ -49,7 +49,13 @@ Browser acceptance is Chromium only. Framework compatibility does not imply Fire
 
 ## Final acceptance audit
 
-The [completion audit](completion-audit.md) maps all fifteen goal gates to authoritative files, commands and outcomes. A clean committed-file archive at revision 37afbf6 passed install, typecheck, lint, 23 unit/integration tests, build, both bundle limits, an external package consumer, and all 14 browser tests. The documented bootstrap/start/backup commands also passed with a new database; starting from the resulting backup preserved its comment and session. Container persistence was rechecked on the final implementation. Pronto’s 670 tracked files, commit and clean Git state matched the initial snapshot. Only evidence/documentation commits follow that checked implementation revision.
+The [completion audit](completion-audit.md) maps all fifteen goal gates to authoritative files, commands and outcomes. A clean committed-file archive at revision 37afbf6 passed install, typecheck, lint, 23 unit/integration tests, build, both bundle limits, an external package consumer, and all 14 browser tests. The documented bootstrap/start/backup commands also passed with a new database; starting from the resulting backup preserved its comment and session. Container persistence was rechecked at that implementation checkpoint. Pronto’s 670 tracked files, commit and clean Git state matched the initial snapshot. Later startup fixes are recorded below.
+
+## Local startup follow-up
+
+The first interactive setup exposed two gaps: bootstrap required an environment password that was easy to miss, and startup printed the bound `127.0.0.1` address although the default canonical origin was `localhost`. Bootstrap now prompts twice with input hidden, preserves environment-based automation, and cancels cleanly on interrupt/EOF. Startup prints the configured browser URL. Local HTML navigation through an equivalent loopback hostname and port redirects to that URL, preserving connection parameters and invitation fragments. API requests still require the exact configured origin; arbitrary hosts and different ports do not redirect.
+
+After this fix, typecheck, lint, all 29 unit/integration tests, production build, both bundle checks and all 15 Chromium tests passed. An actual terminal bootstrap with disposable data showed no password echo; that account signed in through the built service. The bundled CLI also successfully bootstrapped a separate disposable database using an environment password. No user account/password was created in the user's database, and no Pronto files were changed. These startup changes do not rerun or replace the original load and Docker evidence.
 
 ## Storage growth follow-up
 
