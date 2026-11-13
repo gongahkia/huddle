@@ -1,6 +1,7 @@
 services:
   huddle:
     build: .
+    restart: unless-stopped
     ports:
       - "127.0.0.1:${HUDDLE_PORT:-4310}:4310"
     environment:

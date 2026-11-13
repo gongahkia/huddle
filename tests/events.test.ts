@@ -24,6 +24,8 @@ it('streams live changes, catches up beyond one batch, honors reconnect IDs and 
   f.store.create(actor,projectId,input()); await until('id: 511\n'); controller.abort(); await reader.cancel().catch(() => {});
   const reconnect = new AbortController();
   const next = await fetch(`${address}/api/projects/${projectId}/events?after=0`,{headers: {cookie: `huddle_session=${token}`,'Last-Event-ID': '510'},signal: reconnect.signal});
-  const nextReader = next.body!.getReader(); const chunk = decoder.decode((await nextReader.read()).value); expect(chunk).toContain('id: 511'); expect(chunk).not.toContain('id: 510'); reconnect.abort(); await nextReader.cancel().catch(() => {});
+  const nextReader = next.body!.getReader(); const chunk = decoder.decode((await nextReader.read()).value); expect(chunk).toContain('id: 511'); expect(chunk).not.toContain('id: 510');
+  const shutdownDeadline = setTimeout(() => reconnect.abort(),2000);
+  try {await f.app.close(); expect(reconnect.signal.aborted).toBe(false); expect((await nextReader.read()).done).toBe(true);} finally {clearTimeout(shutdownDeadline); reconnect.abort(); await nextReader.cancel().catch(() => {});}
  } finally {controller.abort(); await f.app.close(); expect(f.store.listeners.size).toBe(0); rmSync(directory,{recursive: true,force: true});}
 });

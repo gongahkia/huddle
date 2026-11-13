@@ -32,7 +32,16 @@ export class LocalStore {
   }
 }
 export const remainderAfterSave = (current: string, sent: string) => current.startsWith(sent) ? current.slice(sent.length).trimStart() : current;
-export function requestTracker() {
-  let current: {payload: string; id: string} | undefined;
-  return {idFor(payload: unknown) {const value = JSON.stringify(payload); if (current?.payload !== value) current = {payload: value, id: crypto.randomUUID()}; return current.id;}, clear() {current = undefined;}};
+export function requestTracker(persistence?: () => {store: LocalStore; key: string} | undefined) {
+  type Record = {payload: string; id: string};
+  let current: {record: Record; location?: {store: LocalStore; key: string}} | undefined;
+  return {
+    idFor(payload: unknown) {
+      const value = JSON.stringify(payload), location = persistence?.(), saved = location?.store.read<Record>(location.key);
+      const previous = saved && typeof saved.id === 'string' && /^[0-9a-f-]{36}$/i.test(saved.id) ? saved : current?.record;
+      const record = previous?.payload === value ? previous : {payload: value,id: crypto.randomUUID()};
+      current = {record,location}; location?.store.write(location.key,record); return record.id;
+    },
+    clear() {if (current) current.location?.store.remove(current.location.key,current.record); current = undefined;},
+  };
 }

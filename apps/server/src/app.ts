@@ -146,6 +146,7 @@ export async function createApp(options: ServerOptions = {}) {
   });
   const staticRoot = options.staticRoot || resolve('dist/public');
   if (existsSync(staticRoot)) {await app.register(fastifyStatic,{root: staticRoot}); app.setNotFoundHandler((request,reply) => request.url.startsWith('/api/') ? reply.code(404).send({error: 'Not found.'}) : reply.sendFile('index.html'));}
-  app.addHook('onClose',async () => {for (const stream of streams.values()) stream.close(); db.close();});
+  app.addHook('preClose',async () => {for (const stream of streams.values()) stream.close();});
+  app.addHook('onClose',async () => {db.close();});
   return {app,db,store,baseUrl};
 }

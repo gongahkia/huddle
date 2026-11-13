@@ -8,34 +8,47 @@ export type HuddleOptions = {
   serverUrl: string; projectId: string; environment: string; release?: string;
   allowedQueryParameters?: string[]; includeHash?: boolean; pageIdentity?: (sanitizedUrl: URL) => string;
   accessToken?: string; styleNonce?: string;
+  requestTimeoutMs?: number; onError?: (error: Error) => void;
 };
 export type Huddle = {open(): void; close(): void; updateContext(context: Partial<Pick<HuddleOptions,'environment' | 'release'>>): void; destroy(): void};
-const instances = new WeakMap<Document, Huddle>();
+const instances = new WeakMap<Document, {controller: Huddle; settings: HuddleOptions}>();
 type Draft = {body: string; mentions: string[]; anchor?: Anchor; threadId?: string};
 export function mount(options: HuddleOptions): Huddle {
-  const prior = instances.get(document); if (prior) return prior;
+  if (typeof document === 'undefined' || typeof window === 'undefined') throw new Error('Mount Huddle in a browser lifecycle hook after hydration, not during server rendering.');
   const settings = {...options}; const serverUrl = new URL(settings.serverUrl);
-  if (!['http:','https:'].includes(serverUrl.protocol) || serverUrl.username || serverUrl.password) throw new Error('Use an HTTP(S) Huddle server URL.');
-  const api = new Api(serverUrl.origin,settings.projectId), life = new AbortController(); api.token = settings.accessToken || '';
+  if (!['http:','https:'].includes(serverUrl.protocol) || serverUrl.username || serverUrl.password || serverUrl.pathname !== '/' || serverUrl.search || serverUrl.hash) throw new Error('Use an HTTP(S) Huddle server origin without a path, query or credentials.');
+  if (!settings.projectId?.trim() || !/^[a-zA-Z0-9_-]{1,80}$/.test(settings.environment)) throw new Error('Provide a project ID and a valid environment.');
+  if (settings.requestTimeoutMs !== undefined && (!Number.isFinite(settings.requestTimeoutMs) || settings.requestTimeoutMs < 100 || settings.requestTimeoutMs > 120000)) throw new Error('requestTimeoutMs must be between 100 and 120000.');
+  settings.serverUrl = serverUrl.origin;
+  const prior = instances.get(document);
+  if (prior) {
+    if ((Object.keys({...prior.settings,...settings}) as (keyof HuddleOptions)[]).some(key => prior.settings[key] !== settings[key])) throw new Error('Huddle is already mounted with different settings. Destroy it before changing the installation.');
+    return prior.controller;
+  }
+  if (document.querySelector('[data-huddle-root]')) throw new Error('Another copy of Huddle is already mounted. Install the widget once per page.');
+  const api = new Api(serverUrl.origin,settings.projectId,settings.requestTimeoutMs), life = new AbortController(); api.token = settings.accessToken || '';
   let actor: Actor | undefined, members: Member[] = [], opened = false, destroyed = false, pinning = false, reattach = false;
   let threads: Thread[] = [], selected: ThreadDetail | undefined, anchor: Anchor | undefined, body = '', mentionIds: string[] = [];
   let busy = false, error = '', notice = '', loading = false, allPages = false, resolved = false, nextCursor: number | null = null;
-  let stream: ChangeStream | undefined, loadSequence = 0, detailSequence = 0, queuedRefresh: ReturnType<typeof setTimeout> | undefined;
+  let stream: ChangeStream | undefined, connection: AbortController | undefined, loadSequence = 0, detailSequence = 0, refreshAttempt = 0, queuedRefresh: ReturnType<typeof setTimeout> | undefined;
   let store: LocalStore | undefined, seen: Record<string,string> = {}, draftKey = '', restoredTarget = '';
   let currentContext = getContext(), geometryFrame = 0, resolveFrame = 0, resolutions = new Map<string,ResolvedAnchor>();
-  const requests = requestTracker();
+  const requests = requestTracker(() => store ? {store,key: `request:${draftKey}`} : undefined);
   const host = document.createElement('div'); host.dataset.huddleRoot = ''; host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;pointer-events:none';
   const shadow = host.attachShadow({mode: 'open'}), style = document.createElement('style'); style.textContent = styles; if (settings.styleNonce) style.nonce = settings.styleNonce;
   const surface = document.createElement('div'); surface.className = 'surface'; surface.setAttribute('popover','manual');
   const ui = document.createElement('div'), pins = document.createElement('div'), highlight = document.createElement('div'); highlight.className = 'highlight'; highlight.hidden = true;
   surface.append(pins,highlight,ui); shadow.append(style,surface); document.documentElement.append(host);
-  function topLayer() {if (!surface.matches(':popover-open') && typeof surface.showPopover === 'function') {try {surface.showPopover();} catch { /* fallback fixed host */ }}}
+  function topLayer() {try {if (typeof surface.showPopover === 'function' && !surface.matches(':popover-open')) surface.showPopover();} catch { /* fallback fixed host */ }}
   topLayer();
+  function notify(error: unknown) {try {settings.onError?.(error instanceof Error ? error : new Error('Huddle could not complete this action.'));} catch { /* Host diagnostics must not break navigation. */ }}
   function getContext(): ReviewContext {
     const url = new URL(location.href); url.username = ''; url.password = '';
     for (const name of [...url.searchParams.keys()]) if (!settings.allowedQueryParameters?.includes(name)) url.searchParams.delete(name);
     if (!settings.includeHash) url.hash = '';
-    return {environment: settings.environment,page: settings.pageIdentity?.(new URL(url)) || `${url.pathname}${url.search}${url.hash}`,pageUrl: url.href,release: settings.release};
+    let page = `${url.pathname}${url.search}${url.hash}`;
+    try {const custom = settings.pageIdentity?.(new URL(url)); if (typeof custom === 'string' && custom.length > 0 && custom.length <= 2000) page = custom;} catch (error) {notify(error);}
+    return {environment: settings.environment,page,pageUrl: url.href,release: settings.release};
   }
   function setupStorage() {
     if (!actor) return;
@@ -54,7 +67,7 @@ export function mount(options: HuddleOptions): Huddle {
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, cls?: string) => {const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (cls) node.className = cls; return node;};
   function button(text: string, action: () => void, cls = '') {const b = el('button',text,cls); b.type = 'button'; b.addEventListener('click',action); return b;}
   function link(text: string, href: string) {const a = el('a',text); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a;}
-  function setError(e: unknown) {if (destroyed || life.signal.aborted) return; error = e instanceof Error ? e.message : 'Could not complete this action.'; if (e instanceof ApiError && [401,403].includes(e.status)) {stream?.stop(); actor = undefined; api.token = ''; threads = []; selected = undefined; members = []; resolutions.clear();} render();}
+  function setError(e: unknown) {if (destroyed || life.signal.aborted) return; notify(e); error = e instanceof Error ? e.message : 'Could not complete this action.'; if (e instanceof ApiError && [401,403].includes(e.status)) {persistDraft(); stream?.stop(); stream = undefined; actor = undefined; api.token = ''; threads = []; selected = undefined; members = []; resolutions.clear();} render();}
   function render() {
     if (destroyed) return;
     const previousFocus = shadow.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
@@ -79,6 +92,7 @@ export function mount(options: HuddleOptions): Huddle {
     scheduleResolution();
   }
   function renderList(header: HTMLElement, content: HTMLElement) {
+    header.append(button('Refresh feedback',() => {error = ''; void initialize().catch(setError);}));
     const actions = el('div',undefined,'row'); actions.append(button('Pin a comment',() => startPin(false),'primary'),button('Page comment',() => {anchor = pageAnchor(); selected = undefined; body = ''; mentionIds = []; error = ''; render(); shadow.getElementById('huddle-body')?.focus();})); header.append(actions);
     const filters = el('div',undefined,'row');
     for (const [label,value,change] of [['All pages',allPages,() => {allPages = !allPages; void refresh();}],['Show resolved',resolved,() => {resolved = !resolved; void refresh();}]] as const) {const l = el('label'); const check = el('input'); check.type = 'checkbox'; check.checked = value; check.addEventListener('change',change); l.append(check,document.createTextNode(label)); filters.append(l);} content.append(filters);
@@ -120,10 +134,11 @@ export function mount(options: HuddleOptions): Huddle {
   }
   async function authorize() {
     if (busy) return; busy = true; error = ''; render();
-    try {actor = await connect(api,currentContext.environment,life.signal); setupStorage(); await initialize();} catch (e) {setError(e);} finally {busy = false; render();}
+    const attempt = new AbortController(); connection = attempt;
+    try {const next = await connect(api,currentContext.environment,AbortSignal.any([life.signal,attempt.signal])); if (destroyed || attempt.signal.aborted) return; actor = next; setupStorage(); await initialize();} catch (e) {if (!attempt.signal.aborted) setError(e);} finally {if (connection === attempt) connection = undefined; busy = false; render();}
   }
   async function initialize() {
-    members = await api.request<Member[]>(api.project('/members')); await refresh();
+    const token = api.token, nextMembers = await api.request<Member[]>(api.project('/members')); if (destroyed || token !== api.token) return; members = nextMembers; await refresh();
     if (restoredTarget) {const id = restoredTarget; restoredTarget = ''; try {selected = await api.request<ThreadDetail>(api.project(`/threads/${id}`));} catch {anchor = pageAnchor(); notice = 'The original thread is unavailable. Your draft is kept as a page comment.';} render();}
   }
   async function refresh(before?: number) {
@@ -132,14 +147,14 @@ export function mount(options: HuddleOptions): Huddle {
     try {const result = await api.request<Page<Thread>>(api.project(`/threads?${params}`)); if (destroyed || seq !== loadSequence || page !== currentContext.page) return;
       const first = store?.read('baseline') === null; threads = before ? [...threads,...result.items].slice(0,150) : result.items;
       if (first) {for (const t of threads) markRead(t); store?.write('baseline',true);}
-      nextCursor = result.nextCursor; loading = false;
-      if (!stream) {stream = new ChangeStream(api,result.cursor,event => {if (event.environment === currentContext.environment) scheduleRefresh();},(message,terminal) => {notice = message; if (terminal) {actor = undefined; api.token = ''; threads = []; selected = undefined; members = []; resolutions.clear(); stream?.stop(); stream = undefined;} render();}); stream.start();}
+      nextCursor = result.nextCursor; loading = false; refreshAttempt = 0; error = '';
+      if (!stream) {stream = new ChangeStream(api,result.cursor,event => {if (event.environment === currentContext.environment) scheduleRefresh();},(message,terminal) => {notice = message; if (terminal) {persistDraft(); actor = undefined; api.token = ''; threads = []; selected = undefined; members = []; resolutions.clear(); stream?.stop(); stream = undefined;} render();}); stream.start();}
       render();
-    } catch (e) {setError(e);} finally {if (seq === loadSequence) loading = false;}
+    } catch (e) {if (destroyed || seq !== loadSequence || page !== currentContext.page) return; setError(e); if (actor && e instanceof ApiError && (e.status === 0 || e.status === 408 || e.status === 429 || e.status >= 500)) scheduleRefresh(Math.min(30000,1000 * 2 ** Math.min(refreshAttempt++,5)));} finally {if (seq === loadSequence) loading = false;}
   }
-  function scheduleRefresh() {if (destroyed) return; clearTimeout(queuedRefresh); queuedRefresh = setTimeout(() => {void refresh(); if (selected) void loadDetail(selected.id);},60);}
+  function scheduleRefresh(delay = 60) {if (destroyed) return; clearTimeout(queuedRefresh); queuedRefresh = setTimeout(() => {void refresh(); if (selected) void loadDetail(selected.id);},delay);}
   async function loadDetail(id: string) {
-    const seq = ++detailSequence; try {const result = await api.request<ThreadDetail>(api.project(`/threads/${id}`)); if (destroyed || seq !== detailSequence || selected?.id !== id) return; selected = result; markRead(result); render();} catch (e) {setError(e);}
+    const seq = ++detailSequence; try {const result = await api.request<ThreadDetail>(api.project(`/threads/${id}`)); if (destroyed || seq !== detailSequence || selected?.id !== id) return; selected = result; markRead(result); render();} catch (e) {if (seq === detailSequence && selected?.id === id) setError(e);}
   }
   async function chooseThread(id: string) {
     persistDraft(); body = ''; mentionIds = []; anchor = undefined; selected = threads.find(t => t.id === id) ? {...threads.find(t => t.id === id)!,comments: [],history: [],nextCursor: null} : undefined;
@@ -157,7 +172,7 @@ export function mount(options: HuddleOptions): Huddle {
       const saved = savedStore?.read<Draft>(savedKey); if (saved?.body === sent && JSON.stringify(saved.mentions) === JSON.stringify(sentMentions)) savedStore?.remove(savedKey,saved);
       if (draftKey === savedKey && anchor === target && selected?.id === id) {body = remainderAfterSave(body,sent); if (body.trim()) {selected = result; anchor = undefined; persistDraft();} else {selected = result; anchor = undefined; mentionIds = [];} markRead(result);}
       notice = 'Comment saved.'; await refresh();
-    } catch (e) {error = e instanceof Error ? e.message : 'Save failed. Your draft is kept on this device.'; persistDraft();} finally {busy = false; render();}
+    } catch (e) {persistDraft(); setError(e);} finally {busy = false; render();}
   }
   async function patch(change: {status?: 'open' | 'resolved'; assigneeId?: string | null; anchor?: Anchor}) {
     if (!selected || busy) return; busy = true; const id = selected.id; error = '';
@@ -218,16 +233,17 @@ export function mount(options: HuddleOptions): Huddle {
   window.addEventListener('keydown',keydown,{signal: life.signal}); window.addEventListener('scroll',scheduleGeometry,{signal: life.signal,capture: true,passive: true});
   window.addEventListener('resize',scheduleResolution,{signal: life.signal}); window.addEventListener('popstate',routeChange,{signal: life.signal}); window.addEventListener('hashchange',routeChange,{signal: life.signal});
   document.addEventListener('visibilitychange',onVisibility,{signal: life.signal});
+  window.addEventListener('online',() => {stream?.pause(); stream?.start(); if (actor) void refresh();},{signal: life.signal});
   document.addEventListener('toggle',event => {
     if (event.composedPath().includes(host) || !(event.target instanceof HTMLElement) || !event.target.matches('[popover]')) return;
     try {surface.hidePopover(); topLayer();} catch { /* non-popover fallback */ }
     scheduleResolution();
   },{capture: true,signal: life.signal});
   const controller: Huddle = {
-    open() {if (destroyed) return; opened = true; topLayer(); render(); shadow.querySelector<HTMLElement>('.panel button')?.focus(); if (api.token && !actor) void api.request<{actor: Actor}>('/api/session').then(async result => {actor = result.actor; setupStorage(); await initialize();}).catch(setError); else if (actor) void refresh();},
+    open() {if (destroyed) return; opened = true; topLayer(); render(); shadow.querySelector<HTMLElement>('.panel button')?.focus(); const token = api.token; if (token && !actor) void api.request<{actor: Actor}>('/api/session').then(async result => {if (destroyed || token !== api.token) return; actor = result.actor; setupStorage(); await initialize();}).catch(e => {if (token === api.token) setError(e);}); else if (actor) void refresh();},
     close() {persistDraft(); opened = false; pinning = false; highlight.hidden = true; render(); shadow.querySelector<HTMLElement>('.launcher')?.focus();},
-    updateContext(context) {const changedEnvironment = context.environment && context.environment !== settings.environment; Object.assign(settings,context); if (changedEnvironment) {stream?.stop(); stream = undefined; actor = undefined; api.token = '';} routeChange();},
+    updateContext(context) {if (destroyed) return; if (context.environment !== undefined && !/^[a-zA-Z0-9_-]{1,80}$/.test(context.environment)) throw new Error('Provide a valid environment.'); const changedEnvironment = context.environment && context.environment !== settings.environment; if (changedEnvironment) persistDraft(); Object.assign(settings,context); if (changedEnvironment) {connection?.abort(); stream?.stop(); stream = undefined; actor = undefined; api.token = '';} routeChange();},
     destroy() {if (destroyed) return; persistDraft(); destroyed = true; life.abort(); api.destroy(); stream?.stop(); observer.disconnect(); cancelAnimationFrame(geometryFrame); cancelAnimationFrame(resolveFrame); clearTimeout(queuedRefresh); if (history.pushState === push) history.pushState = originalPush; if (history.replaceState === replace) history.replaceState = originalReplace; host.remove(); instances.delete(document); threads = []; selected = undefined; actor = undefined; members = []; resolutions.clear();},
   };
-  instances.set(document,controller); render(); return controller;
+  instances.set(document,{controller,settings}); render(); return controller;
 }
