@@ -1,0 +1,7 @@
+Huddle includes adaptations of author-supplied shared-commenting code from
+/home/gongahkia/coding/projects/pronto-prod (source revision recorded in docs/source-baseline.json).
+Source areas: feedback anchors, request deduplication, browser drafts and unread state,
+and discussion/export behavior. Existing source contains no LICENSE/COPYING/NOTICE file.
+Adaptation is performed at the repository owner's instruction. No public redistribution
+or open-source relicensing permission is asserted by this repository.
+Third-party dependencies retain their respective licenses.
