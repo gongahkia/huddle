@@ -1,0 +1,19 @@
+---
+import {ClientRouter} from 'astro:transitions';
+---
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><ClientRouter/></head><body><slot/></body></html>
+<script>
+  import {installHuddle} from '@huddle/browser/astro';
+  installHuddle(() => {
+    if (!document.querySelector('[data-review-page]')) return null;
+    const params = new URLSearchParams(location.search), projectId = params.get('project');
+    return projectId ? {serverUrl: params.get('server') || 'http://localhost:4310',projectId,environment: 'staging',release: 'astro-example-v1'} : null;
+  });
+  function interactive() {
+    const button = document.querySelector<HTMLButtonElement>('#add-update');
+    if (!button || button.dataset.ready) return;
+    button.dataset.ready = 'true'; let count = 0;
+    button.addEventListener('click',() => {document.querySelector('#updates')!.textContent = `Updates: ${++count}`;});
+  }
+  document.addEventListener('astro:page-load',interactive); interactive();
+</script>

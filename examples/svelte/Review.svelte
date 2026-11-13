@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {huddle} from '@huddle/browser/svelte';
-  import {reviewOptions} from '../integration';
+  import {huddle,type HuddleOptions} from '@huddle/browser/svelte';
+  let {options}: {options: HuddleOptions | null} = $props();
 </script>
-<div use:huddle={reviewOptions('svelte')}></div>
+<div use:huddle={options}></div>

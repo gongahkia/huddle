@@ -1,0 +1,5 @@
+---
+import Layout from '../layouts/Layout.astro';
+const serverProject = Astro.url.searchParams.get('project');
+---
+<Layout><main data-review-page data-server-project={serverProject}><h1>Astro server-rendered integration</h1><section data-huddle-id="astro-counter"><p id="updates">Updates: 0</p><button id="add-update">Add update</button></section><a href="/other">Next page</a></main></Layout>

@@ -2,6 +2,23 @@
 
 Framework-independent embedded Huddle client. Requires a self-hosted Huddle service.
 
+Optional helpers are exported from `/react`, `/preact`, `/vue`, `/svelte`, `/solid`, `/angular` and `/astro`. Import only the helper your application uses; framework peers are optional and external to the core engine.
+
+```tsx
+import {useHuddle} from '@huddle/browser/react';
+function Review() {
+  useHuddle({serverUrl: 'https://reviews.example.com',
+    projectId: 'your-project-uuid',environment: 'staging'});
+  return null;
+}
+```
+
+React/Preact use `useHuddle(optionsOrNull)`. Vue uses `useHuddle(optionsRefGetterOrObject)`. Svelte/SvelteKit use the `huddle` action: `<div use:huddle={options}>`. Solid uses `createHuddle(optionsGetter)`. Angular uses `injectHuddle(optionsGetter)` in a component field/constructor. Astro uses `installHuddle(optionsOrGetterOrNull)` from a processed layout browser script; it follows ClientRouter lifecycle events and returns an explicit `destroy()`.
+
+Helpers mount only in browser lifecycle callbacks, clean up their own widgets, and reject another installation even when options match. Use a persistent root owner across page transitions. Set options to null to disable. Environment/release updates preserve the widget; an environment change requires reconnection. Other installation changes remount. Keep callback references stable across renders.
+
+For Next.js, call the React hook inside a client component. Nuxt uses the Vue helper in `app.vue`. Imports are SSR-safe. Serve/copy the entire `dist/` directory, including shared chunks, when directly serving the ES module; the installer script remains standalone.
+
 ```ts
 import { mount } from '@huddle/browser';
 const huddle = mount({

@@ -39,8 +39,10 @@ it('updates context in place, remounts installation changes and validates before
 });
 it('handles actual React StrictMode effect replay, prop updates and unmount cleanup',async () => {
  const host = document.createElement('div'); document.body.append(host); const root = createRoot(host), push = history.pushState;
+ let mounts = 0; const observer = new MutationObserver(records => {for (const record of records) for (const node of record.addedNodes) if (node instanceof HTMLElement && node.hasAttribute('data-huddle-root')) mounts++;});
+ observer.observe(document.documentElement,{childList: true,subtree: true}); dispose.push(() => observer.disconnect());
  function Review({config}: {config: HuddleOptions | null}) {useHuddle(config); return <p>Host remains interactive</p>;}
- await act(async () => root.render(<StrictMode><Review config={options}/></StrictMode>)); expect(document.querySelectorAll('[data-huddle-root]')).toHaveLength(1);
+ await act(async () => root.render(<StrictMode><Review config={options}/></StrictMode>)); expect(document.querySelectorAll('[data-huddle-root]')).toHaveLength(1); expect(mounts).toBe(2);
  const first = document.querySelector('[data-huddle-root]');
  await act(async () => root.render(<StrictMode><Review config={{...options,release: 'new'}}/></StrictMode>)); expect(document.querySelector('[data-huddle-root]')).toBe(first);
  await act(async () => root.render(<StrictMode><Review config={null}/></StrictMode>)); expect(document.querySelector('[data-huddle-root]')).toBeNull();

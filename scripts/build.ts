@@ -25,6 +25,7 @@ await build({entryPoints: ['scripts/cli.ts'],bundle: true,platform: 'node',targe
 await viteBuild({root: 'apps/manage',build: {outDir: resolve('dist/public'),emptyOutDir: false},logLevel: 'warn'});
 await mkdir('dist/examples/html',{recursive: true}); await cp('examples/html/index.html','dist/examples/html/index.html'); await cp('examples/style.css','dist/examples/style.css'); await cp('dist/public/huddle.js','dist/examples/huddle.js');
 await rm('dist/examples/chunks',{recursive: true,force: true}); await cp('dist/public/chunks','dist/examples/chunks',{recursive: true});
+await rm('dist/examples/sdk',{recursive: true,force: true}); await cp('packages/browser/dist','dist/examples/sdk',{recursive: true});
 for (const example of ['react','angular','vue','svelte','preact','solid']) {
  await viteBuild({root: `examples/${example}`,base: `/${example}/`,plugins: example === 'svelte' ? [svelte()] : example === 'solid' ? [solid()] : [],resolve: {alias: [...helpers.map(name => ({find: `@huddle/browser/${name}`,replacement: resolve(`packages/browser/src/adapters/${name}.ts`)})),{find: '@huddle/browser',replacement: resolve('packages/browser/src/index.ts')}]},build: {outDir: resolve(`dist/examples/${example}`),emptyOutDir: true},logLevel: 'warn'});
 }

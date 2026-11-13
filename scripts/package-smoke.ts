@@ -8,7 +8,7 @@ const exec = promisify(execFile), directory = mkdtempSync(join(tmpdir(),'huddle-
 const root = JSON.parse(readFileSync('package.json','utf8')), pkg = JSON.parse(readFileSync('packages/browser/package.json','utf8'));
 const peers = Object.keys(pkg.peerDependencies) as string[];
 const cases = [
- {entry: '',peers: [],symbol: 'mount',call: 'helper(options)'},
+ {entry: '',peers: [],symbol: 'mount',call: '(() => {const widget=helper(options);widget.open();widget.close();widget.updateContext({release:"v2"});widget.destroy();return widget;})()'},
  {entry: 'react',peers: ['react'],symbol: 'useHuddle',call: 'helper(options)'},
  {entry: 'preact',peers: ['preact'],symbol: 'useHuddle',call: 'helper(options)'},
  {entry: 'vue',peers: ['vue'],symbol: 'useHuddle',call: 'helper(() => options)'},
@@ -28,7 +28,7 @@ try {
   await exec('npm',['install','--ignore-scripts','--no-audit','--no-fund'],{cwd: dir,maxBuffer: 2 * 1024 * 1024});
   for (const peer of peers) if (!item.peers.includes(peer) && existsSync(join(dir,'node_modules',peer,'package.json'))) throw new Error(`${item.entry || 'core'} unnecessarily installed ${peer}`);
   const entry = '@huddle/browser' + (item.entry ? `/${item.entry}` : '');
-  writeFileSync(join(dir,'consumer.ts'),`import {${item.symbol} as helper,type HuddleOptions} from '${entry}';\nconst options:HuddleOptions={serverUrl:'https://huddle.test',projectId:'11111111-1111-4111-8111-111111111111',environment:'staging'};\nexport function integration(){return ${item.call};}\nconsole.log(helper);\n`);
+  writeFileSync(join(dir,'consumer.ts'),`import {${item.symbol} as helper,type HuddleOptions} from '${entry}';\nconst options:HuddleOptions={serverUrl:'https://huddle.test',projectId:'11111111-1111-4111-8111-111111111111',environment:'staging'};\n// @ts-expect-error Configuration fields must retain their declared types.\nconst invalid:HuddleOptions={...options,environment:123};void invalid;\nexport function integration(){return ${item.call};}\nconsole.log(helper);\n`);
   writeFileSync(join(dir,'tsconfig.json'),JSON.stringify({compilerOptions: {target: 'ES2023',module: 'NodeNext',moduleResolution: 'NodeNext',strict: true,noEmit: true,skipLibCheck: false,types: [],lib: ['ES2023','DOM','DOM.Iterable']},files: ['consumer.ts']}));
   await exec(process.execPath,[resolve('node_modules/typescript/bin/tsc'),'-p',join(dir,'tsconfig.json')],{maxBuffer: 1024 * 1024});
   await exec(process.execPath,['--input-type=module','-e',`const module=await import('${entry}');if(typeof module.${item.symbol}!=='function')throw Error('Missing export');if('mountForOwner' in module)throw Error('Private ownership seam leaked');`],{cwd: dir});
