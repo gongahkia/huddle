@@ -19,3 +19,12 @@ Objective: [framework-goal.md](framework-goal.md). Baseline is c177b27, with a c
 - Core build, typecheck, lint and 41 tests pass, including actual React StrictMode and ownership checks. All eight exports passed independent installation, declaration, SSR import and browser-bundle checks with only their own framework installed.
 - Complete core sizes at this checkpoint: installer 12,113 bytes gzip; ES-module graph 11,805 bytes gzip. Shared chunks are included in the measurement.
 - Production Nuxt build succeeds. Installed SvelteKit 3 requires adapter configuration in Vite rather than svelte.config.js; corrected the fixture against its current source/documentation. Packed SSR fixture builds and browser validation are ongoing.
+
+## Completed implementation and verification
+
+- The user's 8784dac commit captured the in-progress SSR implementation, tests and cookbook; preserved it unchanged. Added final architecture/verification records separately.
+- Nuxt, SvelteKit and Astro build and run from installed tarballs. Astro uses its standalone Node SSR adapter; request-specific project HTML proves server rendering before JavaScript runs in all three fixtures.
+- Final checks pass: frozen install, typecheck, lint, 41 unit/integration tests, production builds, eight isolated package consumers and 66 Chromium/Firefox browser tests. Two Firefox CDP metric cases are intentionally skipped; zero failures/flaky results.
+- Emitted core/helper ownership also passes in both browsers. All 18 SDK files in each of three SSR installs match the current distributable. Installer/complete core ESM sizes remain 12,113/11,805 bytes gzip.
+- WebKit was attempted but cannot launch with this Fedora host's missing Ubuntu ABI dependencies. No remote CI, new long benchmark or full container result is claimed.
+- Test services stopped; temporary consumers, isolated SSR installs and manual Nuxt scratch removed. Source fixtures and rebuild commands remain; the integration tarball is retained. See framework-audit.md and evidence/framework-helpers.json for the requirement audit and measured results.
