@@ -2,7 +2,7 @@
 
 ## Components
 
-The TypeScript workspace contains a DOM-based browser package, a Fastify/Node service, a separate React management UI and real HTML/React/Angular examples. The browser package has no framework runtime dependency. Builds produce a script-installable IIFE, an ES module and bundled TypeScript declarations. Vite bundles management/example assets; these are excluded from the widget budget.
+The TypeScript workspace contains a DOM-based browser package, a Fastify/Node service, a separate React management UI and real HTML/React/Angular/Vue/Svelte/Preact/Solid examples, plus a separately built production Next.js fixture. The browser package has no framework runtime dependency. Builds produce a script-installable IIFE, an ES module and bundled TypeScript declarations. Vite bundles management/example assets; these are excluded from the widget budget.
 
 The Node service uses built-in SQLite, WAL mode, parameterized queries and foreign keys. It is a single-process/single-instance deployment. Schema initialization and additive source-author and compact-retry-record migrations run on startup. Each discussion mutation, history change, durable event and idempotency result is committed in one immediate transaction. SSE notification happens only after commit.
 
@@ -64,7 +64,7 @@ Destroy aborts fetch/stream/popup work, removes listeners/observers/frames, rest
 
 Drafts and read state use bounded, namespaced local storage with 14-day expiry. Total Huddle-managed persistence across namespaces is at most 2 MiB in UTF-16 accounting; oldest entries are evicted first. The widget holds at most 150 summary records and 250 loaded replies; its members picker shows up to 100 members and each comment can mention up to 30. Workspace paging/exports provide access to larger histories.
 
-Standard light-DOM targets are supported. Frame contents, shadow-root-internal targeting, canvas objects and reconstructed app state are outside this release. Browser acceptance currently covers Chromium; do not infer Safari/Firefox acceptance from framework independence.
+Standard light-DOM targets are supported. Frame contents, shadow-root-internal targeting, canvas objects and reconstructed app state are outside this release. See the [integration matrix](integration.md) for measured browser/framework coverage and [failure handling](reliability.md) for recovery behavior.
 
 ## Operations
 

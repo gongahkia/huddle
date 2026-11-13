@@ -45,7 +45,7 @@ The smoke harness is `pnpm test:docker`; optional `DOCKER_HOST`, `HUDDLE_SMOKE_P
 
 A 2,005-thread fixture with 2,109 comments (105 in one thread) exports all records as JSON and Markdown; no original display/export cap silently truncates it. Snapshot testing writes a new comment after export starts and verifies the export remains consistent. Pronto conversion uses a local synthetic JSON fixture, preserves author/source attribution and rejects incomplete input. No Pronto runtime modules, private environment files or databases are used.
 
-Browser acceptance is Chromium only. Framework compatibility does not imply Firefox/Safari acceptance. Anchors can require manual reattachment after redesigns; non-rendered/iframe/shadow-internal/canvas targets remain unsupported. Screenshots and other recordings are outside this release; verification screenshots under output are test artifacts, not product recording functionality.
+The original acceptance run was Chromium only; current browser/framework results are recorded in the integration follow-up below. Anchors can require manual reattachment after redesigns; non-rendered/iframe/shadow-internal/canvas targets remain unsupported. Screenshots and other recordings are outside this release; verification screenshots under output are test artifacts, not product recording functionality.
 
 ## Final acceptance audit
 
@@ -56,6 +56,18 @@ The [completion audit](completion-audit.md) maps all fifteen goal gates to autho
 The first interactive setup exposed two gaps: bootstrap required an environment password that was easy to miss, and startup printed the bound `127.0.0.1` address although the default canonical origin was `localhost`. Bootstrap now prompts twice with input hidden, preserves environment-based automation, and cancels cleanly on interrupt/EOF. Startup prints the configured browser URL. Local HTML navigation through an equivalent loopback hostname and port redirects to that URL, preserving connection parameters and invitation fragments. API requests still require the exact configured origin; arbitrary hosts and different ports do not redirect.
 
 After this fix, typecheck, lint, all 29 unit/integration tests, production build, both bundle checks and all 15 Chromium tests passed. An actual terminal bootstrap with disposable data showed no password echo; that account signed in through the built service. The bundled CLI also successfully bootstrapped a separate disposable database using an environment password. No user account/password was created in the user's database, and no Pronto files were changed. These startup changes do not rerun or replace the original load and Docker evidence.
+
+## Integration hardening
+
+After the integration reliability changes, typecheck, lint, all 37 unit/integration tests, production service/widget/example builds, the production Next.js build, package smoke and both bundle checks passed. A fresh manifest-only frozen install also passed, matching the container build's dependency-install stage; an offline attempt lacked cached tarballs, so this successful check used the registry. `docker compose config --quiet` passed. No new full container smoke or ten-minute load run was performed in this follow-up.
+
+The final Chromium/Firefox run passed **46 browser tests**, with **two Firefox skips** for Chromium DevTools heap/listener metrics. HTML, React, Angular, Vue, Svelte, Preact, Solid and production Next.js all exercised the same client against the real service. New component fixtures unmount/remount the overlay; Next.js verifies prerendered HTML, hydration, real feedback, client route cleanup and browser back navigation. Browser fault tests cover a committed save with a lost response and unchanged retry after reload, transient proxy failures, cancellation during an environment change, and conflicting installation/throwing callback isolation.
+
+Widget installer: **12,039 bytes gzip**. ES module: **11,643 bytes gzip**. Both remain below the 75 KiB budget; framework fixture dependencies are development dependencies and are not bundled into the widget. The external package consumer also verifies SSR-safe import without browser globals.
+
+A **30-second regression smoke**, running alongside browser verification, connected 100 reviewers with 1,000 existing threads and 20,000 comments. All 100 expected writes and 9,900 expected peer observations completed without errors; measured p95 write/visibility times were about 80/78 ms. This is a short regression check, not a replacement for the original 600-second acceptance run or a standalone capacity benchmark. Its sanitized report is [integration-load-smoke.json](evidence/integration-load-smoke.json).
+
+Chromium and Firefox executed locally on Fedora/WSL. Playwright WebKit could not launch because this host lacks the required Ubuntu ABI dependencies. CI now installs all three engines on Ubuntu, but neither a completed WebKit run nor remote CI success is claimed. Nuxt, SvelteKit, Astro and other untested integrations remain explicit gaps in the [coverage matrix](integration.md). The service remains single-instance SQLite with persistent storage; these changes do not provide distributed failover. See the [failure handling contract](reliability.md).
 
 ## Storage growth follow-up
 

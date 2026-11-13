@@ -16,9 +16,12 @@ huddle.updateContext({ release: 'next-release' });
 huddle.destroy();
 ```
 
-Calling `mount` twice returns the existing document instance. Destroy before switching projects or servers.
+Calling `mount` twice with identical settings returns the existing document instance. Conflicting settings throw; destroy before changing the installation.
 `updateContext` changes environment/release; changing environment requires new review authorization.
 Use lifecycle cleanup in your frontend framework. No framework runtime or app stylesheet is required.
+Imports are SSR-safe; mount only in a browser lifecycle hook after hydration.
+The optional `requestTimeoutMs` changes the 15-second API deadline; `onError` reports failures to host diagnostics.
+Failed saves preserve retry IDs across reloads when local storage is available. No automatic write replay occurs.
 
 The default page identity retains only pathname. `allowedQueryParameters: ['view']`, `includeHash: true`, and
 `pageIdentity: sanitizedUrl => ...` are explicit opt-ins. Never allow parameters/fragments that hold secrets.

@@ -78,3 +78,11 @@ The final image check caught a missing root NOTICE input after package provenanc
 - Startup prints the configured browser origin. Equivalent local HTML visits redirect there while API origin checks stay exact. README explains setup and recovery from a failed bootstrap.
 - Typecheck, lint, 29 unit/integration tests, build, bundle checks and all 15 Chromium tests pass. A real terminal/bootstrap and built-service sign-in smoke passed on disposable data; the bundled automation CLI also passed.
 - The user's database was inspected read-only for its account count (zero); no credentials or accounts were created there. Pronto was not modified. The earlier load/container evidence remains scoped to its recorded revision.
+
+### Integration and failure recovery (14 November)
+
+- Added API/response-body deadlines, readable proxy failures, transient read recovery, stream watchdog/reconnect jitter, durable retry IDs across reload, environment cancellation and host callback isolation. Live streams now close before graceful server shutdown; Compose restarts exited services.
+- Added actual Vue, Svelte, Preact, Solid and production Next.js fixtures, lifecycle/SSR checks and an independent package import check. The browser package still has no framework runtime dependency.
+- Passed typecheck, lint, 37 unit/integration tests, production builds, package smoke, bundle limits and 46 Chromium/Firefox browser tests. Two CDP-only Firefox cases are intentionally skipped.
+- A 30-second 100-reviewer smoke completed all 100 writes and 9,900 peer updates with zero errors. The original 600-second evidence remains separately scoped. Container dependency-stage install and Compose config passed; full Docker smoke was not rerun.
+- Documented integration recipes, supported versions and failure behavior. WebKit cannot launch with this Fedora host's dependencies; CI coverage is configured but not claimed as executed. Nuxt, SvelteKit, Astro and other frameworks without dedicated fixtures remain unverified.

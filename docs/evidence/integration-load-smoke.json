@@ -1,0 +1,35 @@
+{
+  "at": "2026-11-13T16:54:22.236Z",
+  "durationSeconds": 30,
+  "clients": 100,
+  "seedThreads": 1000,
+  "seedComments": 20000,
+  "writes": 100,
+  "expectedWrites": 100,
+  "peerObservations": 9900,
+  "expectedPeerObservations": 9900,
+  "mutationP95Ms": 80.33697799999936,
+  "visibilityP95Ms": 78.18455899999935,
+  "peakServerRssBytes": 216563712,
+  "peakGeneratorRssBytes": 169918464,
+  "peakDatabaseAndWalBytes": 13106800,
+  "serverCpuMicroseconds": {
+    "user": 6603320,
+    "system": 1055891
+  },
+  "audit": {
+    "type": "audit",
+    "comments": 20100,
+    "requests": 100,
+    "events": 1100
+  },
+  "errors": [],
+  "reference": {
+    "node": "v24.21.0",
+    "os": "6.18.33.2-microsoft-standard-WSL2",
+    "cpu": "13th Gen Intel(R) Core(TM) i7-1355U",
+    "logicalCpus": 12,
+    "totalMemoryBytes": 5155467264,
+    "server": "Separate Node process; no CPU/memory cgroup cap; same-machine loopback load generator"
+  }
+}

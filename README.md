@@ -2,7 +2,7 @@
 
 A small, self-hosted layer for discussing working websites. Pin an element, leave a page observation, reply, mention a teammate, assign ownership and resolve the discussion. Export complete feedback as JSON or Markdown.
 
-Huddle's embedded browser client works with plain HTML, React and Angular. A separate management workspace brings project feedback together. No external identity service, email provider, model API, Redis or paid service is required.
+Huddle's embedded browser client has real HTML, React, Angular, Vue, Svelte, Preact, Solid and Next.js integration fixtures. A separate management workspace brings project feedback together. No external identity service, email provider, model API, Redis or paid service is required. See the [integration matrix and lifecycle guide](docs/integration.md) and [failure handling contract](docs/reliability.md) for tested scope and limitations.
 
 This is an embedded-first release. The browser extension, screenshots, recording, click analytics and external issue-tracker integrations are future work.
 
@@ -36,7 +36,7 @@ For the included integration examples:
 pnpm examples
 ```
 
-Open `http://localhost:4320/html/?project=YOUR_PROJECT_ID`. The React and Angular examples are at `/react/` and `/angular/`, with the same `project` parameter. Add `server=http://localhost:4310` when using a different service URL. Allow the example origin in the project first. Examples demonstrate real framework integrations using the same browser engine.
+Open `http://localhost:4320/html/?project=YOUR_PROJECT_ID`. The React, Angular, Vue, Svelte, Preact and Solid examples are at `/react/`, `/angular/`, `/vue/`, `/svelte/`, `/preact/` and `/solid/`, with the same `project` parameter. Add `server=http://localhost:4310` when using a different service URL. Allow the example origin in the project first. For the production Next.js example, run `pnpm build:next` then `pnpm examples:next` and allow its origin `http://localhost:4322`.
 
 `pnpm dev` watches the service. Re-run `pnpm build` to rebuild the UI/widget/examples. SQLite data defaults to `.data/huddle.sqlite`; starting the app does not reset it.
 
@@ -72,7 +72,7 @@ review.destroy();
 
 Build first, then `pnpm --dir packages/browser pack --pack-destination ../../output/packages` produces a local tarball for another repository. Nothing is published. The package contains bundled declarations and has no framework runtime dependency. `pnpm test:package` verifies a fresh consumer installation.
 
-Calling `mount` twice returns the existing document instance. Destroy before changing project/server. Changing environment with `updateContext` requires a new review connection. The optional `accessToken` is for an already-authorized scoped review credential, such as a future extension integration; never put one in an installation snippet or checked-in source.
+Calling `mount` twice with identical settings returns the existing document instance. Conflicting settings fail clearly; destroy before changing the installation. Changing environment with `updateContext` requires a new review connection. The optional `accessToken` is for an already-authorized scoped review credential, such as a future extension integration; never put one in an installation snippet or checked-in source.
 
 The default page identity and saved link retain pathname only. Explicitly opt in to query parameters with `allowedQueryParameters: ['view']`, fragments with `includeHash: true`, or derive identity through `pageIdentity(sanitizedUrl)`. Keep credentials, invitation tokens and personal information out of allowed URL fields. `release` records the version when feedback was created; it does not prevent later releases from seeing earlier feedback.
 
@@ -175,13 +175,13 @@ pnpm bench:load
 pnpm bench:browser
 ```
 
-Browser and service tests create isolated disposable Huddle data; they do not access Pronto's database or environment. Test server credentials in test fixtures are public local fixtures, never production defaults. Browser tests use ports 4311/4321; the Docker smoke test uses 4312 by default.
+Browser and service tests create isolated disposable Huddle data; they do not access Pronto's database or environment. Test server credentials in test fixtures are public local fixtures, never production defaults. Browser tests use ports 4311/4321/4322; the Docker smoke test uses 4312 by default.
 
 The load benchmark defaults to the required 600 seconds, with 100 live clients, 1,000 seeded threads, 20,000 seeded comments and one write per client every 30 seconds. A shorter `HUDDLE_LOAD_SECONDS` is for iteration and does not satisfy the acceptance gate. Raw evidence goes under ignored `output/`; checked summaries and reference hardware are in [docs/verification.md](docs/verification.md).
 
 ## Compatibility and troubleshooting
 
-- Verified in Chromium on Linux/WSL with HTML, React and Angular. Other modern browsers are not yet accepted by this release's browser suite.
+- Integration fixtures cover HTML, React, Angular, Vue, Svelte, Preact, Solid and production Next.js on Chromium and Firefox. WebKit acceptance remains pending because of local system dependencies. See the [coverage matrix](docs/integration.md) for versions, SSR scope and unverified frameworks.
 - Cross-origin frame contents, closed shadow roots, canvas/WebGL internals and browser-internal pages cannot be pinned by this release. Open shadow-root internals are not a supported anchor boundary either.
 - Native dialogs and basic popovers are tested; complex fullscreen/custom overlay applications can require integration work. Shadow DOM isolates styles, not access to sensitive page data.
 - A pin cannot reconstruct a removed page, an authenticated application state, a virtualized row that is not rendered, or another user's private data. Open the original view or reattach it.

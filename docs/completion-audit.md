@@ -1,6 +1,6 @@
 # Huddle release completion audit
 
-Audited 14 November 2026 (Asia/Singapore) against the complete objective in GOAL.md. Implementation revision **37afbf6** is the original goal-completion baseline. A subsequent local bootstrap/origin fix is recorded in [verification](verification.md#local-startup-follow-up). The source project is preserved.
+Audited 14 November 2026 (Asia/Singapore) against the complete objective in GOAL.md. Implementation revision **37afbf6** is the original goal-completion baseline. Subsequent bootstrap and integration hardening are recorded in [verification](verification.md). The original acceptance table below remains historical evidence for that baseline. The source project is preserved.
 
 ## Required acceptance gates
 
@@ -31,7 +31,7 @@ Audited 14 November 2026 (Asia/Singapore) against the complete objective in GOAL
 - Thread/page context, selected quote, normalized pin coordinates, viewport/release context, target uncertainty and manual reattachment are retained. Matching retry IDs apply a mutation once; compact references avoid transcript duplication in the ledger.
 - Draft/read persistence is namespaced, capped at 2 MiB per origin, expires after 14 days and evicts oldest entries. Browser caches and comment pages are bounded. Idle measurements, heap/lifecycle observations, service RSS and database growth are recorded separately.
 - Script and TypeScript installations expose mount/open/close/context update/destroy. Native dialogs/popovers and nonce-based styles are tested. CSP installer coverage uses the actual built IIFE.
-- Framework independence does not assert support for every target/browser. Frame/shadow-root internals, canvas/WebGL objects, application-state reconstruction and non-Chromium browser acceptance are documented limitations. Extension delivery, recording and hosted operation are explicitly deferred by the objective.
+- Framework independence does not assert support for every target/browser. Frame/shadow-root internals, canvas/WebGL objects and application-state reconstruction remain limitations. Current browser/framework acceptance is in the [integration matrix](integration.md). Extension delivery, recording and hosted operation are explicitly deferred by the objective.
 
 ## Evidence scope and remaining limitations
 
