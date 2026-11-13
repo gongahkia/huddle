@@ -1,0 +1,54 @@
+{
+  "name": "huddle",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "tsx watch apps/server/src/main.ts",
+    "start": "node dist/server.js",
+    "bootstrap": "tsx scripts/bootstrap.ts",
+    "build": "tsx scripts/build.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:browser": "playwright test",
+    "check:bundle": "tsx scripts/bundle-budget.ts",
+    "bench:load": "tsx scripts/load.ts",
+    "bench:browser": "tsx scripts/browser-benchmark.ts",
+    "import:pronto": "tsx scripts/import.ts"
+  },
+  "dependencies": {
+    "fastify": "5.12.8",
+    "@fastify/static": "10.1.11",
+    "@fastify/cors": "11.4.3",
+    "@fastify/rate-limit": "11.2.2",
+    "zod": "4.6.7",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "tsx": "4.23.15",
+    "esbuild": "0.28.2",
+    "vite": "8.3.8",
+    "vitest": "5.1.0",
+    "jsdom": "31.0.1",
+    "@playwright/test": "1.65.0",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "10.14.0",
+    "@eslint/js": "10.0.1",
+    "typescript-eslint": "8.72.2",
+    "@angular/core": "22.2.6",
+    "@angular/common": "22.2.6",
+    "@angular/compiler": "22.2.6",
+    "@angular/platform-browser": "22.2.6",
+    "rxjs": "7.8.2"
+  }
+}

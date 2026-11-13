@@ -1,0 +1,13 @@
+// @vitest-environment jsdom
+import {beforeEach, describe, expect, it} from 'vitest';
+import {buildAnchor, resolveAnchor, pageAnchor, pickTarget, selectorFor} from '../packages/browser/src/anchor';
+beforeEach(() => {document.body.innerHTML = ''; Element.prototype.getBoundingClientRect = function () {return {width: this.hasAttribute('hidden') ? 0 : 100, height: 20, top: 0, left: 0} as DOMRect;};});
+const make = (selector: string) => buildAnchor(document.querySelector(selector)!, {x: .3, y: .4, quote: 'sample'});
+describe('portable anchors', () => {
+ it('tracks stable targets when siblings are inserted', () => {document.body.innerHTML = '<section><button id="save">Save</button></section>'; const a = make('button'); document.querySelector('section')!.prepend(document.createElement('p')); expect(resolveAnchor(a).state).toBe('ok'); expect(a.quote).toBe('sample');});
+ it('relocates only a unique label with its original context', () => {document.body.innerHTML = '<section><h2>Profile</h2><button>Save</button></section><section><h2>Billing</h2><button>Save</button></section>'; const a = make('section:nth-child(2) button'); document.body.prepend(document.createElement('section')); expect(resolveAnchor(a).state).toBe('relocated'); expect(resolveAnchor(a).element?.parentElement?.textContent).toContain('Billing');});
+ it('refuses ambiguous repeated labels even when a structural path still exists', () => {document.body.innerHTML = '<button>Save</button><button>Save</button>'; expect(resolveAnchor(make('button')).state).toBe('ambiguous');});
+ it('reports changed, hidden, removed and malformed targets', () => {document.body.innerHTML = '<button id="save">Save</button>'; const a = make('button'); document.querySelector('button')!.textContent = 'Submit'; expect(resolveAnchor(a).state).toBe('changed'); document.querySelector('button')!.setAttribute('hidden', ''); expect(resolveAnchor(a).state).toBe('hidden'); document.body.innerHTML = ''; expect(resolveAnchor(a).state).toBe('missing'); expect(resolveAnchor({...a, selector: '[[['}).state).toBe('missing');});
+ it('ignores generated identifiers and excludes its own interface', () => {document.body.innerHTML = '<div id=":r1:"><button>Go</button></div>'; expect(selectorFor(document.querySelector('button')!)).not.toContain(':r1:'); const a = make('button'); document.body.innerHTML = '<div data-huddle-root><button>Go</button></div>'; expect(resolveAnchor(a).state).toBe('missing'); expect(resolveAnchor(pageAnchor()).state).toBe('ok');});
+ it('picks the control around an icon', () => {document.body.innerHTML = '<button><span>Go</span></button>'; expect(pickTarget(document.querySelector('span')!).tagName).toBe('BUTTON');});
+});
