@@ -27,7 +27,11 @@ export async function createApp(options: ServerOptions = {}) {
     const allowed = !origin || origin === baseUrl || !!db.get("SELECT 1 FROM projects p,json_each(p.origins) o WHERE o.value=? LIMIT 1",origin);
     callback(null,allowed);
   },credentials: true,allowedHeaders: ['Content-Type','Authorization','Last-Event-ID'],methods: ['GET','POST','PATCH','OPTIONS'],exposedHeaders: ['Content-Disposition']});
-  if (options.rateLimits !== false) await app.register(rateLimit,{max: 300,timeWindow: '1 minute',cache: 10000});
+  if (options.rateLimits !== false) await app.register(rateLimit,{max: 300,timeWindow: '1 minute',cache: 10000,keyGenerator(request) {
+    const bearer = request.headers.authorization?.startsWith('Bearer ') ? request.headers.authorization.slice(7) : '';
+    const cookieToken = request.headers.cookie?.split(';').map(v => v.trim()).find(v => v.startsWith('huddle_session='))?.slice(15) || '';
+    try {return `actor:${resolveSession(db,bearer || cookieToken).id}`;} catch {return `ip:${request.ip}`;}
+  }});
   app.addHook('onSend',async (_req,reply,payload) => {
     reply.header('X-Content-Type-Options','nosniff').header('Referrer-Policy','no-referrer');
     if (_req.url.startsWith('/api/')) reply.header('Cache-Control','no-store');

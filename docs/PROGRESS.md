@@ -46,3 +46,10 @@ Build the embedded-first Huddle release specified in the supplied goal, with all
 - Unit/integration suite: 22 tests pass, including consistent streaming snapshots and concurrent coordination updates.
 - Required 600-second benchmark passed: 2,000/2,000 writes, 198,000/198,000 peer observations, no errors, p95 write 47.89 ms, p95 visibility 44.42 ms. Separate server RSS peaked at 242,065,408 bytes on the recorded WSL reference host.
 - Compose persistence/online backup smoke passed. Clean-checkout and final-revision container checks remain pending.
+
+## Storage and operational hardening
+- Focused storage measurement found full retry responses duplicating transcripts: 22,011,904 bytes growth for 2,000 short replies.
+- Retry ledger now stores only a request hash and thread reference; matching retries return current authorized detail without applying the write twice. Additive schema migration compacts legacy response records.
+- The same focused workload now grows by 2,146,304 bytes, approximately 90% less. Author/feedback records are preserved; migration is covered by a regression test.
+- Authenticated rate limits use resolved reviewer identity to support many reviewers sharing one network address.
+- 23 unit/integration tests pass. A new full 600-second load acceptance run is in progress for the changed persistence implementation.

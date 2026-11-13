@@ -24,7 +24,8 @@
     "examples": "tsx scripts/examples.ts",
     "test:docker": "tsx scripts/docker-smoke.ts",
     "test:package": "tsx scripts/package-smoke.ts",
-    "backup": "tsx scripts/cli.ts backup"
+    "backup": "tsx scripts/cli.ts backup",
+    "bench:storage": "tsx scripts/storage-benchmark.ts"
   },
   "dependencies": {
     "@fastify/cors": "11.4.3",

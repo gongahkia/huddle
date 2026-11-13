@@ -38,6 +38,7 @@ it('deduplicates concurrent creates/replies, detects changed retries and preserv
   const saves = await Promise.all([f.request('POST',f.base + '/threads',payload),f.request('POST',f.base + '/threads',payload)]);
   expect(saves.map(s => s.statusCode)).toEqual([200,200]); const t = saves[0].json<ThreadDetail>(); expect(saves[1].json().id).toBe(t.id);
   expect(f.db.get<{n: number}>('SELECT COUNT(*) n FROM comments')!.n).toBe(1);
+  expect(f.db.get<{response: string}>('SELECT response FROM requests')!.response).toBe(JSON.stringify({threadId: t.id}));
   expect((await f.request('POST',f.base + '/threads',{...payload,body: 'changed'})).statusCode).toBe(409);
   const reply = {requestId: randomUUID(),body: 'Follow up',mentions: [f.a.id]};
   await f.request('POST',`${f.base}/threads/${t.id}/replies`,reply); await f.request('POST',`${f.base}/threads/${t.id}/replies`,reply);

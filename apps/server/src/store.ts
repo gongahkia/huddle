@@ -52,13 +52,13 @@ export class Store {
     const seq = Number(this.db.run('INSERT INTO events(project_id,environment,thread_id,type,created_at) VALUES(?,?,?,?,?)',projectId,environment,threadId,type,new Date().toISOString()).lastInsertRowid);
     this.db.run('UPDATE threads SET updated_seq=? WHERE id=?',seq,threadId); return {seq,projectId,environment,threadId,type};
   }
-  private mutation<T>(actor: Actor, projectId: string, requestId: string, payload: unknown, execute: () => {value: T; change: Change & {projectId: string}}): T {
+  private mutation(actor: Actor, projectId: string, requestId: string, payload: unknown, execute: () => {value: ThreadDetail; change: Change & {projectId: string}}): ThreadDetail {
     const payloadHash = hash(JSON.stringify(payload)); let event: (Change & {projectId: string}) | undefined;
     const result = this.db.transaction(() => {
       const prior = this.db.get<{payload_hash: string; response: string}>('SELECT * FROM requests WHERE actor_id=? AND project_id=? AND request_id=?',actor.id,projectId,requestId);
-      if (prior) {if (prior.payload_hash !== payloadHash) throw new HttpError(409,'This request ID was already used for another change.'); return JSON.parse(prior.response) as T;}
+      if (prior) {if (prior.payload_hash !== payloadHash) throw new HttpError(409,'This request ID was already used for another change.'); const saved = JSON.parse(prior.response) as {threadId?: string; id?: string}; return this.detail(actor,projectId,saved.threadId || saved.id!);}
       const output = execute(); event = output.change;
-      this.db.run('INSERT INTO requests VALUES(?,?,?,?,?,?)',actor.id,projectId,requestId,payloadHash,JSON.stringify(output.value),new Date().toISOString()); return output.value;
+      this.db.run('INSERT INTO requests VALUES(?,?,?,?,?,?)',actor.id,projectId,requestId,payloadHash,JSON.stringify({threadId: output.value.id}),new Date().toISOString()); return output.value;
     });
     if (event) for (const listener of this.listeners) listener(event); return result;
   }

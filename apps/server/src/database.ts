@@ -29,7 +29,9 @@ CREATE TABLE IF NOT EXISTS schema_version(version INTEGER NOT NULL);
 INSERT INTO schema_version SELECT 1 WHERE NOT EXISTS(SELECT 1 FROM schema_version);
 `);
     if (!this.all<{name: string}>('PRAGMA table_info(comments)').some(c => c.name === 'source_author_id')) this.raw.exec('ALTER TABLE comments ADD COLUMN source_author_id TEXT');
-    this.raw.exec('UPDATE schema_version SET version=2');
+    if (this.get<{version: number}>('SELECT version FROM schema_version')!.version < 3) {
+      this.raw.exec(`UPDATE requests SET response=json_object('threadId',json_extract(response,'$.id')) WHERE json_valid(response) AND json_extract(response,'$.threadId') IS NULL AND json_extract(response,'$.id') IS NOT NULL; UPDATE schema_version SET version=3;`);
+    }
   }
   get<T>(sql: string, ...args: SQLInputValue[]): T | undefined {return this.raw.prepare(sql).get(...args) as T | undefined;}
   all<T>(sql: string, ...args: SQLInputValue[]): T[] {return this.raw.prepare(sql).all(...args) as T[];}
