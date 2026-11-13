@@ -2,7 +2,7 @@
 
 ## Components
 
-The TypeScript workspace contains a DOM-based browser package, a Fastify/Node service, a separate React management UI and real HTML/React/Angular/Vue/Svelte/Preact/Solid examples, plus a separately built production Next.js fixture. The browser package has no framework runtime dependency. Builds produce a script-installable IIFE, an ES module and bundled TypeScript declarations. Vite bundles management/example assets; these are excluded from the widget budget.
+The TypeScript workspace contains a DOM-based browser package, a Fastify/Node service, a separate React management UI and real HTML/React/Angular/Vue/Svelte/Preact/Solid examples, plus production Next.js/Nuxt/SvelteKit/Astro fixtures. Optional framework entry points share one emitted engine through ESM chunks; framework runtimes are external optional peers. The core has no framework runtime dependency. Builds produce a standalone installer IIFE, ESM entry points/shared chunks and bundled TypeScript declarations. Vite bundles management/example assets; these are excluded from the widget budget. Budget checks include the complete core import graph.
 
 The Node service uses built-in SQLite, WAL mode, parameterized queries and foreign keys. It is a single-process/single-instance deployment. Schema initialization and additive source-author and compact-retry-record migrations run on startup. Each discussion mutation, history change, durable event and idempotency result is committed in one immediate transaction. SSE notification happens only after commit.
 
@@ -57,6 +57,8 @@ Exports use a separate WAL reader transaction for one consistent snapshot while 
 ## Browser lifecycle and limits
 
 `mount(options)` returns `open`, `close`, `updateContext` and `destroy`. One document has one active widget. The installer supports project/environment/release attributes and derives the service origin from the script URL unless explicitly configured.
+
+Optional helpers acquire an exclusive owner in the same engine registry. They cannot adopt or destroy another helper/manual installation. Manual identical-settings mount behavior is preserved. A reusable binding supports development effect replay: null/disposal releases only its own current controller; subsequent mounting acquires a fresh one. Context options update in place; installation options trigger remounting. The Svelte helper is an action, Angular uses after-next-render/DestroyRef, and Astro follows document-swap/page-load events. See [framework-helpers.md](framework-helpers.md).
 
 Targeting uses stable attributes, selectors, tag/text and nearby context. Ambiguous matches are flagged rather than guessed. Manual reattachment records previous/new anchors. Resolution occurs on relevant DOM changes and is batched with animation frames; scroll only remeasures cached targets. Pointer selection is enabled only on request and consumes that deliberate click. Native dialog and popover handling uses the browser top layer and moves the overlay into an active modal to avoid native inertness.
 

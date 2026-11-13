@@ -1,0 +1,169 @@
+{
+  "at": "2026-11-13T17:54:24.321Z",
+  "implementationRevision": "8784dacb8ede467a9f724834eb979e7bf2a58d54",
+  "runtime": "Node 24.21.0 / pnpm 10.33.0 / Fedora 44 WSL2",
+  "checks": {
+    "frozenInstall": "passed",
+    "typecheck": "passed",
+    "lint": "passed",
+    "unitIntegration": {
+      "files": 10,
+      "tests": 41,
+      "status": "passed"
+    },
+    "productionBuild": "passed",
+    "nextProductionBuild": "passed",
+    "frameworkProductionBuilds": {
+      "at": "2026-11-13T17:42:50.562Z",
+      "packageSha256": "691820e39b42651014bb1cb4fe75e2fcbaf05ef1b3564f0188fedc5c48eed248",
+      "fixtures": [
+        {
+          "framework": "nuxt",
+          "version": "4.6.4",
+          "port": 4323,
+          "packageVersion": "0.1.0",
+          "packageSource": "installed tarball",
+          "productionBuild": "passed"
+        },
+        {
+          "framework": "sveltekit",
+          "version": "3.2.0",
+          "port": 4324,
+          "packageVersion": "0.1.0",
+          "packageSource": "installed tarball",
+          "productionBuild": "passed"
+        },
+        {
+          "framework": "astro",
+          "version": "7.4.11",
+          "port": 4325,
+          "packageVersion": "0.1.0",
+          "packageSource": "installed tarball",
+          "productionBuild": "passed"
+        }
+      ]
+    },
+    "packageConsumers": [
+      {
+        "entry": "@huddle/browser",
+        "installedFrameworks": [],
+        "ssrImport": "passed",
+        "typecheck": "passed",
+        "browserBundle": "passed",
+        "bundleInputs": 3
+      },
+      {
+        "entry": "@huddle/browser/react",
+        "installedFrameworks": [
+          "react"
+        ],
+        "ssrImport": "passed",
+        "typecheck": "passed",
+        "browserBundle": "passed",
+        "bundleInputs": 6
+      },
+      {
+        "entry": "@huddle/browser/preact",
+        "installedFrameworks": [
+          "preact"
+        ],
+        "ssrImport": "passed",
+        "typecheck": "passed",
+        "browserBundle": "passed",
+        "bundleInputs": 6
+      },
+      {
+        "entry": "@huddle/browser/vue",
+        "installedFrameworks": [
+          "vue"
+        ],
+        "ssrImport": "passed",
+        "typecheck": "passed",
+        "browserBundle": "passed",
+        "bundleInputs": 9
+      },
+      {
+        "entry": "@huddle/browser/svelte",
+        "installedFrameworks": [
+          "svelte"
+        ],
+        "ssrImport": "passed",
+        "typecheck": "passed",
+        "browserBundle": "passed",
+        "bundleInputs": 4
+      },
+      {
+        "entry": "@huddle/browser/solid",
+        "installedFrameworks": [
+          "solid-js"
+        ],
+        "ssrImport": "passed",
+        "typecheck": "passed",
+        "browserBundle": "passed",
+        "bundleInputs": 5
+      },
+      {
+        "entry": "@huddle/browser/angular",
+        "installedFrameworks": [
+          "@angular/core",
+          "rxjs"
+        ],
+        "ssrImport": "passed",
+        "typecheck": "passed",
+        "browserBundle": "passed",
+        "bundleInputs": 243
+      },
+      {
+        "entry": "@huddle/browser/astro",
+        "installedFrameworks": [],
+        "ssrImport": "passed",
+        "typecheck": "passed",
+        "browserBundle": "passed",
+        "bundleInputs": 4
+      }
+    ],
+    "browser": {
+      "stats": {
+        "startTime": "2026-11-13T17:44:20.923Z",
+        "duration": 186539.047,
+        "expected": 66,
+        "skipped": 2,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "byProject": {
+        "chromium": {
+          "passed": 34
+        },
+        "firefox": {
+          "passed": 32,
+          "skipped": 2
+        }
+      },
+      "errors": []
+    },
+    "bundle": {
+      "installerGzipBytes": 12113,
+      "coreEsmGraphGzipBytes": 11805,
+      "budgetBytes": 76800,
+      "installerIncreaseFromC177b27": 74,
+      "esmIncreaseFromC177b27": 162,
+      "frameworkRuntimesInCore": false
+    },
+    "installedArtifactIntegrity": {
+      "fixtures": [
+        "nuxt",
+        "sveltekit",
+        "astro"
+      ],
+      "filesComparedPerFixture": 18,
+      "result": "all SDK hashes match current dist"
+    }
+  },
+  "limitations": {
+    "webkit": "Launch attempted; missing Ubuntu ABI dependencies on Fedora. CI configuration exists but no WebKit or remote CI pass is claimed.",
+    "angularSsr": "SSR import checked; no Angular SSR application fixture.",
+    "distribution": "Private local tarball; no registry publication.",
+    "historicalPerformance": "No new long load benchmark or full container run; previous evidence retains its recorded scope."
+  }
+}
