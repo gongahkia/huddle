@@ -111,3 +111,11 @@ test('an administrator configures a new project through the management interface
  await login(page); await page.getByRole('button',{name: 'Project setup'}).click(); await page.getByLabel('Project name',{exact: true}).fill('Zebra additional review'); await page.getByLabel('Allowed website origins',{exact: true}).fill('http://localhost:4321'); await page.getByRole('button',{name: 'Create project',exact: true}).click();
  await page.getByRole('combobox',{name: 'Project',exact: true}).selectOption({label: 'Zebra additional review'}); await expect(page.getByText('Allowed origins: http://localhost:4321',{exact: false})).toBeVisible(); await expect(page.locator('pre').first()).toContainText('data-project=');
 });
+test('script installation carries its CSP nonce into isolated widget styles',async ({page}) => {
+ await page.route(server + '/csp-fixture',async route => {await route.fulfill({status: 200,contentType: 'text/html',headers: {'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'nonce-huddle-fixture'; connect-src 'self'; object-src 'none'"},body: '<!doctype html><html lang="en"><head><title>CSP fixture</title></head><body><main><h1>Review with an isolated stylesheet</h1></main></body></html>'});});
+ await page.goto(server + '/csp-fixture');
+ await page.evaluate(async () => {await new Promise<void>((resolve,reject) => {const script = document.createElement('script'); script.src = 'http://127.0.0.1:4311/embed.js'; script.nonce = 'huddle-fixture'; script.dataset.project = '11111111-1111-4111-8111-111111111111'; script.dataset.environment = 'staging'; script.onload = () => resolve(); script.onerror = () => reject(new Error('Installer failed')); document.head.append(script);});});
+ await expect(page.getByRole('button',{name: 'Open Huddle',exact: true})).toBeVisible();
+ expect(await page.locator('[data-huddle-root]').evaluate(el => ({nonce: el.shadowRoot!.querySelector('style')!.nonce,color: getComputedStyle(el.shadowRoot!.querySelector('.launcher')!).backgroundColor}))).toEqual({nonce: 'huddle-fixture',color: 'rgb(23, 95, 76)'});
+ await page.getByRole('button',{name: 'Open Huddle',exact: true}).click(); await expect(page.getByRole('button',{name: 'Connect Huddle',exact: true})).toBeVisible();
+});

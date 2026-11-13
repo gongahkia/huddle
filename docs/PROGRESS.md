@@ -53,3 +53,9 @@ Build the embedded-first Huddle release specified in the supplied goal, with all
 - The same focused workload now grows by 2,146,304 bytes, approximately 90% less. Author/feedback records are preserved; migration is covered by a regression test.
 - Authenticated rate limits use resolved reviewer identity to support many reviewers sharing one network address.
 - 23 unit/integration tests pass. A new full 600-second load acceptance run is in progress for the changed persistence implementation.
+
+## Self-hosted distribution
+- Production Docker image and Compose service run as an unprivileged user with a read-only root, persistent SQLite volume, health probe and local-only published port.
+- Smoke harness creates its own uniquely named Compose project, bootstraps a unique temporary password, verifies comment/session persistence across restart and exercises online backup, then removes its own volume.
+- CI records deterministic unit/browser/package/container checks plus a separate full load job. Workflow has not been run remotely; all acceptance claims are local evidence.
+- CSP nonce propagation is supported by both the script installer and TypeScript options and has a focused Chromium acceptance test.

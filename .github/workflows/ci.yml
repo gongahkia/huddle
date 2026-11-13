@@ -1,0 +1,53 @@
+name: Huddle verification
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm check:bundle
+      - run: pnpm test:package
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test
+      - run: pnpm test:docker
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: huddle-verification
+          path: |
+            output/browser
+            output/docker
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+  load:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm bench:load
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: huddle-load
+          path: output/load
