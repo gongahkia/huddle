@@ -165,5 +165,13 @@
     "angularSsr": "SSR import checked; no Angular SSR application fixture.",
     "distribution": "Private local tarball; no registry publication.",
     "historicalPerformance": "No new long load benchmark or full container run; previous evidence retains its recorded scope."
+  },
+  "cleanup": {
+    "testPorts": "No listeners on 4311 or 4321-4325 after verification",
+    "isolatedFrameworkInstallsRemoved": true,
+    "manualNuxtScratchRemoved": true,
+    "remainingConsumerTempDirectories": 0,
+    "sourceFixtures": "Retained under examples; regenerate packed production fixtures with pnpm build:frameworks",
+    "archive": "output/packages/huddle-browser-0.1.0.tgz retained for integration"
   }
 }
