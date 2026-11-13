@@ -23,14 +23,14 @@ test('two reviewers pin, reply, mention, assign, resolve/reopen and export hosti
   const p = await a.newPage(), q = await b.newPage(); await login(p); await login(q,true); await p.goto(example()); await q.goto(example()); await connect(p); await connect(q);
   await p.getByRole('button',{name: 'Pin a comment',exact: true}).click(); await p.locator('#save-profile').click();
   await expect(p.locator('#save-status')).toHaveText('');
-  const unique = `Review ${Date.now()} <img src=x onerror="window.huddlePwned=true">`;
+  const unique = `Review ${Date.now()} <img src=x onerror="window.huddlePwned=true">`, reply = `I can take this change. ${Date.now()}`;
   await p.getByLabel('Your comment',{exact: true}).fill(unique); await p.getByRole('checkbox',{name: 'Morgan Designer',exact: true}).check(); await p.getByRole('button',{name: 'Post comment',exact: true}).click();
   await expect(p.getByText('Comment saved.',{exact: true})).toBeVisible(); await expect(q.getByText(unique,{exact: true})).toBeVisible(); await expect(q.getByText('Mentioned you · New',{exact: true})).toBeVisible();
-  await q.getByRole('button').filter({hasText: unique}).click(); await q.getByLabel('Reply',{exact: true}).fill('I can take this change.'); await q.getByRole('button',{name: 'Post reply',exact: true}).click();
-  await expect(p.getByText('I can take this change.',{exact: true})).toBeVisible(); await p.getByRole('combobox',{name: 'Assignee',exact: true}).selectOption('22222222-2222-4222-8222-222222222222');
+  await q.getByRole('button').filter({hasText: unique}).click(); await q.getByLabel('Reply',{exact: true}).fill(reply); await q.getByRole('button',{name: 'Post reply',exact: true}).click();
+  await expect(p.getByText(reply,{exact: true})).toBeVisible(); await p.getByRole('combobox',{name: 'Assignee',exact: true}).selectOption('22222222-2222-4222-8222-222222222222');
   await p.getByRole('button',{name: 'Resolve thread',exact: true}).click(); await expect(p.getByRole('button',{name: 'Reopen thread',exact: true})).toBeVisible(); await p.getByRole('button',{name: 'Reopen thread',exact: true}).click();
   expect(await p.evaluate(() => 'huddlePwned' in window)).toBe(false);
-  await p.goto(server); await p.locator('.thread-card').filter({hasText: 'I can take this change.'}).click(); await expect(p.getByRole('region',{name: 'Thread discussion'}).getByText('I can take this change.',{exact: true})).toBeVisible();
+  await p.goto(server); await p.locator('.thread-card').filter({hasText: reply}).click(); await expect(p.getByRole('region',{name: 'Thread discussion'}).getByText(reply,{exact: true})).toBeVisible();
   const downloadPromise = p.waitForEvent('download'); await p.getByRole('button',{name: 'Export JSON',exact: true}).click(); const download = await downloadPromise; const stream = await download.createReadStream(); let text = ''; for await (const part of stream!) text += part.toString(); const data = JSON.parse(text); expect(data.complete).toBe(true); const thread = data.threads.find((t: {comments: {body: string}[]}) => t.comments.some(c => c.body === unique)); expect(thread.assigneeId).toBe('22222222-2222-4222-8222-222222222222'); expect(thread.comments).toHaveLength(2);
  } finally {await a.close(); await b.close();}
 });
@@ -43,8 +43,13 @@ test('recovers drafts after reload, handles moved/missing targets, reattaches an
  await page.getByRole('button',{name: 'Reattach pin',exact: true}).click(); await page.locator('#billing h2').click(); await expect(page.getByRole('heading',{name: 'Billing',exact: true}).last()).toBeVisible();
  await page.getByRole('button',{name: 'Close',exact: true}).click(); await page.locator('#save-profile').click(); await expect(page.locator('#save-status')).toHaveText('Profile saved');
 });
-for (const kind of ['react','angular']) test(`${kind} uses the same widget while host interactions keep working`,async ({page}) => {
+for (const kind of ['react','angular','vue','svelte','preact','solid']) test(`${kind} uses the same widget while host interactions keep working`,async ({page}) => {
  await login(page); await page.goto(example(kind)); await page.getByRole('button',{name: 'Add update',exact: true}).click(); await expect(page.getByText('Updates: 1',{exact: true})).toBeVisible(); await connect(page); await page.getByRole('button',{name: 'Page comment',exact: true}).click(); await page.getByLabel('Your comment',{exact: true}).fill(`${kind} shared engine`); await page.getByRole('button',{name: 'Post comment',exact: true}).click(); await expect(page.getByText('Comment saved.',{exact: true})).toBeVisible();
+ if (['vue','svelte','preact','solid'].includes(kind)) {
+  await page.getByRole('button',{name: 'Remove Huddle integration',exact: true}).click(); await expect(page.locator('[data-huddle-root]')).toHaveCount(0);
+  await page.getByRole('button',{name: 'Add update',exact: true}).click(); await expect(page.getByText('Updates: 2',{exact: true})).toBeVisible();
+  await page.getByRole('button',{name: 'Mount Huddle integration',exact: true}).click(); await expect(page.locator('[data-huddle-root]')).toHaveCount(1); await connect(page);
+ }
 });
 test('native dialogs, scroll, SPA navigation and small viewports remain usable',async ({page}) => {
  await login(page); await page.goto(example()); await connect(page); await page.getByRole('button',{name: 'Close',exact: true}).click(); await page.locator('#open-dialog').click();
@@ -74,7 +79,8 @@ test('a save retry keeps the same request and preserves text typed while the fir
  await expect(page.getByLabel('Your comment',{exact: true})).toHaveValue('Original note plus another thought');
  await page.getByLabel('Your comment',{exact: true}).fill('Original note'); await page.getByRole('button',{name: 'Post comment',exact: true}).click(); await expect(page.getByText('Comment saved.',{exact: true})).toBeVisible(); expect(requests).toHaveLength(2); expect(requests[0]).toBe(requests[1]);
 });
-test('mount/destroy and SPA cycles release nodes, listeners and history wrappers',async ({page}) => {
+test('mount/destroy and SPA cycles release nodes, listeners and history wrappers',async ({page,browserName}) => {
+ test.skip(browserName !== 'chromium','Heap/listener metrics require the Chromium DevTools protocol.');
  await page.goto(example()); const cdp = await page.context().newCDPSession(page); await cdp.send('Performance.enable');
  await page.evaluate(async () => {const w = window as Window & {review?: import('../../packages/browser/src/index').Huddle}; w.review?.destroy(); delete w.review; await import(new URL('/huddle.js',location.href).href);});
  const metrics = async () => {await cdp.send('HeapProfiler.collectGarbage'); const result = await cdp.send('Performance.getMetrics'); return Object.fromEntries(result.metrics.map(m => [m.name,m.value]));};

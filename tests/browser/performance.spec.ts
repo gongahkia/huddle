@@ -1,7 +1,8 @@
 import {expect, test} from '@playwright/test';
 import {mkdirSync, writeFileSync} from 'node:fs';
 import {cpus, release} from 'node:os';
-test('records idle CPU/network and heap behavior separately from server load',async ({page}) => {
+test('records idle CPU/network and heap behavior separately from server load',async ({page,browserName}) => {
+ test.skip(browserName !== 'chromium','Heap/listener metrics require the Chromium DevTools protocol.');
  await page.goto('http://localhost:4321/html/');
  const cdp = await page.context().newCDPSession(page); await cdp.send('Performance.enable');
  await page.evaluate(async () => {await import(new URL('/huddle.js',location.href).href);});

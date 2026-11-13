@@ -29,10 +29,12 @@
       ]
     }
   },
+  "exclude": ["**/.next/**", "node_modules"],
   "include": [
     "packages",
     "apps",
     "scripts",
+    "examples",
     "tests",
     "*.ts"
   ]

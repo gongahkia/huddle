@@ -8,3 +8,5 @@ output/
 test-results/
 playwright-report/
 *.tsbuildinfo
+.next/
+next-env.d.ts
