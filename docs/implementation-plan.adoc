@@ -1,0 +1,495 @@
+= Huddle: frontend-only collaboration implementation plan
+:toc: left
+:toclevels: 3
+:sectnums:
+
+Status: approved design, implementation not started. Prepared 14 November 2026.
+
+This document is a self-contained handoff for implementing Huddle on another machine. It records the agreed product direction, the existing implementation, the changes required in both repositories, and the checks required before claiming completion.
+
+*Preparing this document does not authorize its author to begin implementation.* A subsequent task should explicitly ask the implementing engineer or agent to execute it. During that implementation, work through the stages below, make coherent atomic commits, and continue until the acceptance criteria are met or a concrete external prerequisite prevents further progress.
+
+== Workspace and first actions on a new machine
+
+Assume two independent Git repositories checked out under the same parent directory:
+
+[source,text]
+----
+<projects>/
+  huddle/
+  pronto-prod/
+----
+
+The parent is a directory, not necessarily a Git repository. Resolve paths relative to these checkouts; do not depend on the original machine's absolute paths or username. From Huddle, Pronto is `../pronto-prod`; from Pronto, Huddle is `../huddle`.
+
+Starting points inspected for this plan:
+
+[cols="1,2,3",options="header"]
+|===
+|Repository |Observed HEAD |Meaning
+|Huddle |`f656a77` |Allow disposable service fixtures for consuming project tests
+|Pronto |`ac588e6` |Document Pronto dogfooding and add two-browser Huddle workflows
+|===
+
+These are reference points, not instructions to reset or overwrite newer changes. Both working trees were clean when inspected. On the new machine:
+
+. Read this entire document and both repositories' `AGENTS.md` files, including any nested instructions applicable to edited files.
+. Inspect `git status`, the current branches and recent history independently in each repository. Preserve unrelated work. Do not reset to the recorded commits.
+. Use Node 24 and pnpm 10.33.0. Huddle currently pins Node 24.21.0 through `.npmrc`. Install dependencies with the existing frozen lockfiles before changing them intentionally.
+. Read relevant installed Next.js guides under `node_modules/next/dist/docs/` before changing Next.js code. Pronto and Huddle's example use different installed Next versions; consult the guide in the repository being edited.
+. Inventory available browsers, database runtimes, container support and CI access. The original machine lacked a Docker daemon and could not run WebKit locally; do not assume the new machine has the same limitations.
+. Establish fresh disposable database fixtures and documented teardown. Never infer that an existing database is disposable from its name or port alone.
+. Capture a concise baseline of actual checks. Historical results below do not substitute for rerunning relevant checks against changed code.
+. Inventory private data and deployment access without printing secrets. The repository clones do not contain all environment files, databases, credentials or ignored evidence from the old machine.
+
+Do not start the old Huddle service, bootstrap an account, reset a database, start a Pronto worker, or execute production migrations as an automatic setup step.
+
+=== Data and credentials that do not travel with Git
+
+Before retiring the old machine, obtain any existing Huddle SQLite database using its supported consistent backup mechanism, and a complete export of any feedback that must be migrated. An active WAL-mode SQLite database must not be copied as a lone `.db` file while ignoring its journal files. Preserve original backups securely, outside Git.
+
+Obtain authorized Pronto environment configuration and named internal-team access through a secure channel. Do not paste passwords or database URLs into this document, issues, commit messages or terminal logs. Public demo guest access cannot stand in for internal-team access.
+
+If old datasets are unavailable, implement and test migration against fixtures, but leave the actual data migration explicitly pending. Do not claim production parity without inspecting the real source and destination.
+
+== Agreed product decisions
+
+Huddle is a lightweight frontend library for collaborative review of rendered websites. It supplies the overlay, pins, comments, replies, coordination and portable feedback data. The application adopting Huddle supplies authentication, authorization, storage and backend execution.
+
+[source,text]
+----
+Host application + Huddle browser library
+                 |
+       host's authenticated API
+                 |
+        host's existing database
+----
+
+There is no separately deployed Huddle server, separate Huddle login, Huddle account database or required external Huddle service. Database access credentials never enter the browser library.
+
+Team collaboration is required from the first release. Browser storage is only for bounded drafts, read state and retry metadata; it is not the authoritative comment store.
+
+Access is binary: authorized internal team member or denied. All internal members have the same review capabilities within the integration. Do not rebuild administrator/member/guest roles, invitations or permission tiers inside Huddle. The host may retain its own broader authorization model.
+
+Required capabilities:
+
+* Page comments and element pins.
+* Shared threads and replies with server-derived authorship.
+* Resolve, reopen and reattach pins.
+* Paginated current-page and all-pages browsing, including complete reply/history access.
+* Automatic updates between team members.
+* Complete versioned JSON export, readable Markdown export, and neutral JSON import.
+* Reliable integration and removal without coupling the host to Huddle infrastructure.
+
+Mentions, member lookup and assignment are optional host capabilities. They are not Huddle role distinctions. Hide unsupported controls instead of silently discarding their values.
+
+Maintained initial backend targets are PostgreSQL, MySQL, SQLite and MongoDB. Runnable server integrations are Next.js, Express and Fastify. Other backends and languages connect through the public adapter or language-neutral HTTP contract, without being advertised as verified implementations.
+
+Defer the browser extension, recording/click analytics, screenshots, attachments, Firebase/Supabase-specific adapters and third-party issue-tool connectors. An extension may reuse the core later; it would still require an authenticated shared data store.
+
+Keep package distribution private and packable. Public registry publishing, licensing changes and paid infrastructure are outside this task.
+
+== Existing implementation and important traps
+
+=== Huddle today
+
+`packages/browser/src/engine.ts` currently requires `serverUrl` and server project configuration. It directly uses a fixed HTTP API, popup PKCE authorization, server roles, an SSE implementation and links to a separate management application. Replacing just the initial mount signature will not remove the server dependency.
+
+`packages/shared/src/index.ts` contains server-shaped DTOs, including session/grant information, roles and numeric cursors. These must become neutral browser/host contracts.
+
+`apps/server` is the existing Fastify/SQLite product service; `apps/manage` is its management UI. Existing export, import, reliability and test code contain reusable behavior, but neither application remains a required product component after this refactor.
+
+The browser engine already has useful anchor matching, Shadow DOM isolation, top-layer behavior, bounded local storage, navigation tracking and framework lifecycle helpers. Preserve these strengths while replacing the collaboration layer.
+
+The widget currently caps displayed threads/replies and sends users to the management UI for complete history and exports. Removing that application requires embedded paging/history/export workflows, not simply deleting its links.
+
+The package already exposes core, React, Preact, Vue, Svelte, Solid, Angular and Astro entry points. Next.js uses React, Nuxt uses Vue and SvelteKit uses Svelte. Framework peers are optional. Preserve this separation.
+
+Huddle's current `AGENTS.md` describes a self-hosted product and Pronto as read-only. The user's approved direction supersedes those two stale statements for this task. Update that guidance during implementation while retaining its safety, verification and atomic-commit instructions.
+
+=== Pronto today
+
+Pronto consumes `@huddle/browser` through the committed archive `vendor/huddle-browser-0.1.0.tgz`. It must continue to install and build from a clean checkout without the sibling Huddle repository.
+
+Relevant integration entry points:
+
+* `src/components/prototype-feedback.tsx` selects Huddle or legacy feedback.
+* `src/components/huddle-feedback.tsx` mounts the React helper, retains the document nonce and provides the old-provider switch.
+* `src/lib/huddle-config.ts` validates separate-service settings.
+* `src/proxy.ts` adds service-origin and popup-related security policy exceptions.
+* `src/components/auto-refresh.tsx` pauses refresh while the overlay is active.
+* `src/app/api/demo/feedback` and `src/lib/feedback` implement legacy PostgreSQL feedback.
+* `docs/integrations/huddle.md` and `tests/huddle` describe and verify the old service-backed integration.
+
+The existing `assertDemoActor` intentionally allows public synthetic guest reviewers. It is insufficient for the new internal-only feedback policy. Introduce a dedicated internal-feedback check without changing ordinary demo access or breaking the customer simulator.
+
+Legacy feedback currently has response caps and an older anchor model. Do not expose those caps as a purportedly complete Huddle adapter. Existing migrations include `051_demo_feedback.sql` and `055_demo_feedback_request_ids.sql`; inspect the current migration inventory and choose the next unused identifier rather than assuming one.
+
+Historical checks recorded in the repository include successful Chromium/Firefox integration and package checks. They exercised the old architecture, not the proposed adapters. WebKit remains unverified until the new checks actually run in a supported environment.
+
+== Target architecture and contracts
+
+=== Browser API
+
+Release the breaking private browser API as `0.2.0`, or a later appropriate version if the repository has already advanced. Preserve entry-point names and the controls `open`, `close`, `updateContext` and `destroy`.
+
+The new mount configuration supplies:
+
+* A collaboration adapter and a stable integration/storage namespace.
+* Workspace, environment and optional release context.
+* Existing URL allowlisting and page identity configuration.
+* Optional privacy/exclusion and bounded view-context hooks.
+* Optional capabilities, theme settings, CSP style nonce and error callback.
+* Floating or host-owned launcher configuration.
+
+Workspace and environment isolate data. Release is metadata by default, not a separate authorization boundary. Only the backend grants access to a scope; choosing a workspace in the browser never grants membership.
+
+Remove mandatory service origins, Huddle bearer tokens, popup authentication, Huddle role checks and management-app navigation. Reject obsolete configuration clearly and provide a migration guide; do not silently connect to the old server protocol.
+
+Export the neutral adapter types from the public package. Keep optional HTTP code in a separate browser entry point so a custom adapter need not include it. Do not bundle framework runtimes or database drivers into the core.
+
+=== Collaboration contract
+
+Define the exact TypeScript types and HTTP schema before rewriting the engine. Use opaque string record IDs and cursors, JSON-compatible payloads, and ISO timestamps. Do not impose UUID host identities, expose server sessions or require numeric global change sequences.
+
+[cols="1,3",options="header"]
+|===
+|Operation |Contract
+|Session |Resolve the current host identity and authorized workspace, or deny access. Identity includes stable ID and display name; email is not required.
+|List |Page through thread summaries using stable ordering, page/status filters and opaque continuation cursors.
+|Detail |Read a thread with paginated comments and history; provide access to all pages without a separate application.
+|Create/reply |Accept an idempotency key. Derive author and timestamps on the backend.
+|Update |Resolve/reopen/reattach with idempotency and expected record version; assignment is optional.
+|Changes |Provide bounded change polling. Optional subscription accelerates updates; polling remains a fallback.
+|Export |Produce a complete consistent snapshot in neutral JSON or escaped Markdown.
+|Import |Validate and preview, then explicitly execute and report progress/results with retry-safe provenance.
+|Optional directory |Supply member lookup, mentions and assignment only when implemented by the host.
+|===
+
+Every async operation accepts an abort signal. Define typed failures for authentication, authorization, validation, not found, version conflict, rate limiting, timeout, network failure and backend unavailability. HTTP adapters map those failures consistently without leaking SQL, credentials or raw internal errors.
+
+Bind idempotency records to authenticated scope, actor and operation. Reusing a key with a different payload must fail rather than return an unrelated result. Commit the mutation, idempotency result and audit/change record atomically. Explicit retry reuses the original key after an uncertain timeout. Do not automatically replay writes in the background.
+
+Concurrent changes to an existing thread use optimistic versions. On conflict, refetch and explain the changed state; never silently overwrite. Concurrent independent replies remain append operations and must both survive.
+
+Backend authorization applies to every lookup, mutation, export, import and subscription. Validate workspace/environment from the host's allowed scope on each request. Recheck access when polling import/export jobs and when serving their results. Revocation must end live access as well as future ordinary reads.
+
+=== HTTP helper and server templates
+
+Provide a same-origin HTTP adapter with configurable base path, fetch implementation and host authentication integration. The default uses the host session and CSRF protections. Do not implement a new Huddle authentication system.
+
+Publish a versioned language-neutral API specification. Group endpoints for session, threads/details, comments, updates, change polling, optional directory, exports and import jobs. Specify cursor ordering, idempotency, conflict handling, limits and error codes so a non-TypeScript backend can implement them without reading engine internals.
+
+Keep Next.js, Express and Fastify handlers thin. They must call a common documented storage interface through the host's authorization seam. Examples may use clearly marked local test sessions; production instructions must not trust arbitrary user headers or client-supplied membership.
+
+Store reusable reference code and runnable examples outside the browser package. Prefer one tested database implementation per database shared by the three framework examples, rather than twelve independently maintained applications. Database drivers are server-side template/example dependencies only.
+
+== Database implementations
+
+Provide versioned installation migrations/setup and upgrade instructions. Installation must be explicit; mounting the overlay must never alter the database schema.
+
+Logical records cover threads, comments, history/change events, idempotency results and import provenance/jobs. Every record and query must retain the appropriate scope. Use indexes for scoped list ordering, comment/history paging, changes and idempotency uniqueness. Database-specific physical schemas may differ without changing the public contract.
+
+[cols="1,3",options="header"]
+|===
+|Database |Requirements
+|PostgreSQL |Use the existing host pool, transactional writes, scoped indexes and snapshot-consistent reads. Pronto uses this implementation with its existing tenant safeguards.
+|MySQL |Require transactional InnoDB tables, explicit supported charset/collation, deterministic paging and the same atomic mutation guarantees. Test actual MySQL, not a SQLite substitute.
+|SQLite |Use a durable local database, supported WAL configuration, bounded busy handling and short writes. Document its single-writer constraint and unsuitable ephemeral/multi-instance filesystem deployments.
+|MongoDB |Use separate bounded collections for growing comments/history and indexes for scope/order/provenance. Require a transaction-capable replica set for multi-document mutations; do not claim standalone MongoDB support. Avoid unbounded embedded comment arrays.
+|===
+
+Select and pin supported stable database versions in the fixture/CI configuration at implementation time. Document versions actually exercised; provider marketing labels are not a compatibility guarantee.
+
+Support the host mapping an existing schema through a custom adapter. Adopting the reference schema is convenient, not mandatory. Host backups, retention and operational ownership remain explicit in the guide.
+
+No database port, connection URL, credential or migration executes from the browser. No new managed backend account or paid service is required.
+
+== Port-in, port-out and import/export
+
+=== Permanent neutral format
+
+Introduce `huddle.feedback.v2` with a documented schema and representative fixtures. Include schema version, source dataset identity, snapshot metadata, explicit export scope, thread/comment/history counts, `contentIsUntrustedUserInput: true` and an unambiguous completeness marker.
+
+Preserve threads, replies, anchors, page/view context, environments, releases, historical authors, timestamps, resolution history, optional coordination fields and source provenance. Exclude tokens, sessions, passwords and access grants. Validate URLs before exposing navigation links; imported content remains untrusted text.
+
+Export all records in the selected authorized scope, independently of display/cache limits. A full workspace export includes all its authorized environments and both open/resolved threads; narrower exports must state their scope explicitly.
+
+Produce a consistent database snapshot, not a sequence of unrelated live page reads. Stream with bounded memory and backpressure, or support host-managed snapshot jobs for request-limited deployments. Do not introduce a mandatory worker service. Cancel or fail visibly if backend limits prevent completion; never label a truncated download complete. An incomplete JSON stream must not be accepted as a successful import.
+
+Markdown is an escaped, readable review artifact; JSON is the lossless round-trip format. Avoid spreadsheet-specific exports or external dependencies unless later required.
+
+=== Import protocol
+
+. Parse with configurable limits and validate structure, version, completeness, counts, references, URLs and field limits before writing.
+. Preview destination workspace/environment, counts, collisions, historical identities, optional member mappings and explicit URL/page-origin remapping.
+. Require a deliberate execute action after preview. Import does not grant permissions, provision accounts or fetch source URLs.
+. Bind execution to the validated file digest, mapping and authenticated destination scope. Recheck authorization at execution and progress/result reads.
+. Write bounded batches using recorded source provenance, an import job and idempotent record keys. Report exact progress, rejected records and failures.
+. Retry an interrupted import safely. Do not overwrite subsequent destination discussion activity or duplicate records on repeat import.
+. Mark completion only after all validated records and expected counts are accounted for.
+
+Unmatched authors remain historical attribution. Match live identities only through explicit host-approved mapping; do not automatically link by display name or email. Unmapped mentions/assignees retain historical source metadata without becoming live notification or authorization targets.
+
+An ID collision is a conflict unless provenance identifies the same source record. Use destination IDs plus source IDs where necessary. Preserve existing destination data. Cleanup of partial imports, if offered, must be explicit and limited to records created by that import; it must not delete later activity.
+
+Large imports use resumable host-backed jobs and bounded staging. Provide upload/staging limits and cleanup instructions without requiring Huddle hosting. Tests must cover failed batches and expired/revoked access, not only a successful small file.
+
+=== Migration-specific tooling
+
+Pronto conversion belongs in the Pronto repository, not in Huddle's permanent runtime. Convert the old PostgreSQL feedback directly into the neutral destination model with provenance, parity reports and retry-safe batches.
+
+Inventory any separate-service Huddle data as well as Pronto legacy feedback; they are different stores. If a real legacy Huddle dataset exists, preserve a consistent backup/export and convert it using temporary standalone tooling before retiring that service.
+
+After real migration and verification, remove Pronto-specific import code from Huddle and remove temporary production migration commands that are no longer needed. Keep generic import/export, schema documentation and neutral regression fixtures. Preserve original data/backups outside the runtime; cleanup does not authorize deleting them.
+
+Do not remove migration tooling merely because fixture tests passed if the real migration is still pending. Record pending datasets clearly.
+
+=== Removal experience
+
+Document two independent operations:
+
+* Detach Huddle: remove its browser import/mount and backend routes, keeping owned data intact.
+* Optionally remove its dedicated storage after a verified complete export and explicit host decision.
+
+Package removal must never trigger database deletion. Provide a cleanup guide and deliberately invoked migration examples, not automatic teardown hooks. Explain how a team can keep using the neutral data after abandoning Huddle.
+
+== Browser reliability, privacy and usability
+
+=== Shared updates and failure handling
+
+Default to bounded polling while an authorized review panel is open and the tab is visible. Use a documented default interval of ten seconds, one request at a time, with bounded backoff/jitter. Catch up immediately on open, visibility return and reconnect. Optional subscriptions invalidate scoped data and fall back to polling on failure.
+
+Abort stale operations on navigation, identity/scope change and destruction. Ignore late responses from a previous context. Display saving, disconnected, stale and failed states honestly; a locally retained draft is not a saved shared comment.
+
+On authentication expiry or denial, clear private rendered state, stop updates and defer sign-in to the host. Do not introduce a popup fallback. Keep drafts isolated by integration namespace, workspace, actor, environment and page, and expose a memory-only/disabled-persistence option for sensitive hosts.
+
+Retain bounded draft storage, expiry and memory fallback for unavailable/quota-exceeded storage. Do not store tokens. Preserve request keys for uncertain writes without exposing another actor's content or retrying it under a different identity.
+
+Keep memory bounded while allowing the user to reach every page of history. Use page windows or replaceable chunks instead of a hard limit that strands older content after the management application is removed.
+
+=== Anchors and privacy
+
+Preserve existing stable-key detection, normalized geometry, contextual matching, ambiguity warnings and explicit reattachment. Report changed/missing/hidden/ambiguous targets; do not silently attach to a guessed element.
+
+Add host hooks to exclude elements, redact captured text, define stable page/view identity and supply bounded JSON-compatible view context. Apply redaction to all persisted anchor/context strings, not only the visible label. URL query/hash retention remains opt-in.
+
+Never capture input values, passwords, cookies, arbitrary DOM dumps or application stores by default. Do not enable interaction recording or screenshots. Show captured context sufficiently for a reviewer to understand what will be saved.
+
+Document inaccessible iframe contents, canvas and closed/inaccessible shadow DOM. Stored tab/modal/record context does not imply automatic state reconstruction.
+
+=== Lifecycle and accessibility
+
+Maintain Shadow DOM isolation, CSP nonce support, native top-layer behavior and exclusive ownership of one overlay per document. Preserve SSR-safe imports and deterministic framework cleanup, including React Strict Mode.
+
+Restore focus to the opening host control as well as the built-in launcher. Verify Escape handling, keyboard navigation, visible focus, labels, screen-reader announcements, touch layouts and coexistence with host dialogs. Intercept a page click only during deliberate pin selection.
+
+Support documented CSS variables/theme tokens without leaking styles into the host. Do not add broad CSS resets or require changes to the application's component tree.
+
+On destroy, remove owned DOM, listeners, observers, timers, subscriptions and route hooks. Restore only hooks owned by this instance; do not overwrite another library's later wrappers.
+
+=== Performance
+
+Retain the existing 75 KiB gzip browser bundle ceiling and measure the actual consumer import graph. Optional adapters, frameworks and database drivers must not inflate the core. Report core, HTTP-helper and framework-helper costs separately.
+
+Measure idle requests, mount/destroy cycles, long-lived review use, large thread lists and bounded storage. Capture reproducible memory evidence rather than claiming old server RSS/load benchmarks validate the new frontend design. Test that request volume does not grow with repeated opens or remounts.
+
+== Pronto integration and rollout
+
+=== Authorization and UI
+
+Introduce one centralized internal-feedback authorization seam using Pronto's existing session, verified workspace/demo boundary and protected named-user policy. Explicitly reject `guest.invalid` demo identities regardless of whether the guest flow is enabled. A general logged-in customer is not automatically an internal reviewer.
+
+Use this seam for old and new feedback reads, writes, exports, imports and updates. Hide the launcher for denied users. Do not leave the legacy API readable because only the new overlay was guarded.
+
+Replace the service-backed connection screen and Earlier feedback switch with one internal-only experience. Remove the public reviewer's feedback access without removing the public chooser, customer simulator or ordinary guest navigation.
+
+Retain customer-header launcher placement, inbox refresh coordination and document nonce stability. Errors in review tooling must not break business pages, but fallback must never reopen legacy guest access.
+
+Remove obsolete separate-server URL/project configuration, Huddle-origin CSP allowances and popup COOP exceptions. Preserve unrelated request nonce/security fixes. Retain an explicit host enable/disable switch; disabling review must not expose guest feedback through a fallback path.
+
+=== Migration and packaging
+
+. Create additive storage migrations using the next available migration identifiers. Keep legacy tables intact for rollback.
+. Migrate existing feedback with preserved source IDs, authors, content, times, anchors, replies and statuses. Handle old selector/anchor limits explicitly and never truncate source data silently.
+. Run idempotent fixture migrations and compare normalized complete datasets, not just thread counts.
+. Pack the real Huddle release archive, record its checksum/version and vendor it in Pronto with the lockfile update and provenance note.
+. Verify Pronto installs/builds independently of the sibling checkout. Do not commit a symlink or a `file:../huddle` production dependency.
+. Update integration docs and tests to the host-backed architecture. Pronto browser tests must no longer start a Huddle product service.
+
+=== Hosted sequence
+
+The existing demo URL is `https://pronto-ai-poc.onrender.com`. The user previously confirmed auto-deployment from `main`. Reconfirm deployment settings and target revision before release. No new hosting is required.
+
+. Complete local/CI acceptance and prepare rollback instructions before changing hosted state.
+. Verify authorized migration access, an internal named-user session, backup availability and the exact target database.
+. Restrict all legacy feedback endpoints to internal users before exposing a legacy-backed rollback. Never use the currently guest-accessible historical application as the security rollback target.
+. Apply additive migrations and perform final data migration during a bounded feedback-write pause. Block both old and new writers for the affected scope, leaving unrelated app workflows available.
+. Verify source/destination parity and provenance, then enable the new adapter. Do not dual-write without a separately verified atomic design.
+. Push coherent commits only as part of the later authorized implementation task. Verify CI and Render complete for the intended commit, using the deployed status revision rather than assuming a successful push means a deployed release.
+. Test named internal users' shared pin/reply/status/export workflow and public/guest denial. Confirm writes persist across a fresh browser session.
+. Observe feedback-specific failures, then remove temporary migration code after parity is accepted.
+
+Rollback must preserve comments created after cutover. Use an internal-only maintenance/read-only state if reverting code cannot read the new data safely. Never point back to an older store and silently lose visibility of new threads. Keep original backups and a tested neutral export path.
+
+If hosted credentials or an internal session are unavailable, finish all independent work, document the exact blocked hosted steps and do not claim deployment acceptance. Do not request secrets in chat or substitute synthetic guest access for the positive test.
+
+=== Pronto operational boundaries
+
+* Do not seed, reset or migrate an unverified hosted database. Never infer disposability from a port.
+* Preserve local evaluation data and `output/live-eval/budget.json`. Historical recorded cumulative accounting was US$1.760242675; this is context, not authorization to spend.
+* Do not start inference workers, paid loops, live evaluation batches or external-channel tests for Huddle verification.
+* Hosted browser checks must block request-driven processing such as `/api/demo/process` and avoid analytics pages or prefetches that trigger synthesis. Read-only status checks do not prove fresh model availability.
+* Do not retry unrelated failed conversation/outbox jobs or claim a healthy overall queue based on feedback success.
+* Do not provision paid resources or assume ephemeral Render storage is durable.
+* Keep secrets, exports, database files and private evidence out of Git.
+
+== Implementation stages and atomic commits
+
+Each stage has a reviewable result. Keep the two repositories independently buildable at integration milestones. Suggested boundaries are commit subjects, not a requirement to commit a broken intermediate state.
+
+[cols="1,3,3",options="header"]
+|===
+|Stage |Work |Exit criteria / suggested commit
+|1. Baseline |Read instructions, inventory datasets, record checks; update stale architecture guidance and add neutral contract/schema definitions. |Contract reviewed; no server identifiers in new public types. `Define host collaboration contracts and portable feedback schema`.
+|2. Browser seam |Replace direct API/auth coupling; adapt lifecycle helpers and mock adapter; preserve anchors and controls. |Unit/lifecycle/SSR tests pass. `Make the review overlay use a host collaboration adapter`.
+|3. Storage |Implement and test PostgreSQL, MySQL, SQLite and MongoDB against the shared storage contract. |Actual database conformance runs pass. Separate coherent commits per implementation.
+|4. Host HTTP |Add HTTP helper/spec and Next.js, Express, Fastify examples with existing-auth seams. |All twelve framework/database combinations smoke-test successfully. `Add authenticated host integration templates`.
+|5. Portability |Implement snapshot exports, Markdown, import preview/jobs/provenance and remapping. |Round-trip, interrupted/repeated import and cross-database tests pass. `Add complete portable feedback transfers`.
+|6. UX/reliability |Finish embedded paging/history, optional capabilities, privacy hooks, failure states, accessibility and performance checks. |Two-user/fault/lifecycle checks pass; no dependency on a management app.
+|7. Pronto local |Tighten feedback access, add migrations/conversion, consume packed SDK and update UI/security policies/tests. |Guest denial and named-team positive tests pass locally; clean standalone consumer build passes. Separate migration, integration and documentation commits.
+|8. Production |Complete gated backup/migration/deploy/access checks and verify actual deployed revision. |Persisted collaboration and authorization verified; rollback remains safe. Never manufacture a result if access is blocked.
+|9. Retirement |Remove obsolete service/manage product code, old bootstrap/server commands, completed one-off tooling and dependencies; update support matrix and handoff. |No mandatory Huddle service remains; no required data was discarded. `Retire standalone service and finalize host integration documentation`.
+|===
+
+Retain legacy code temporarily only where needed for actual migration. Replace service-based test infrastructure with disposable host-integration fixtures. Running an example/test host backend does not make a Huddle product server part of the architecture.
+
+Update old goal/progress/architecture docs so an engineer cannot mistake obsolete self-hosting instructions for current setup. Preserve historical evidence as explicitly historical instead of relabeling it as new acceptance.
+
+== Verification plan
+
+=== Shared conformance tests
+
+Run the same suite against all four real databases:
+
+* Authorized/denied sessions, workspace/environment isolation, guessed IDs and server-derived authorship.
+* Stable paging under ties and concurrent activity; full comments/history beyond UI limits.
+* Atomic create/reply/update, duplicate request keys, changed-payload key reuse and version conflicts.
+* Concurrent independent replies, overlapping status changes and failure after commit but before response.
+* Change polling/subscription fallback, reconnect catch-up and revocation.
+* Complete consistent export during concurrent writes; interrupted downloads never import as complete.
+* Validated preview, identity/page remapping, interrupted batches, repeated imports and conflicting provenance.
+* Cancellation, timeouts, rate limits and sanitized backend failures.
+
+Exercise all twelve HTTP-framework/database combinations with authenticated smoke tests. Database conformance runs once per storage implementation; framework smoke tests verify actual wiring, auth and response semantics for each combination.
+
+=== Browser/framework tests
+
+Test Chromium and Firefox; verify WebKit in a supported local or CI environment before claiming it. Cover:
+
+* Two distinct internal users creating pins, replying, resolving/reopening and receiving automatic updates.
+* All-pages browsing and access to histories beyond old display caps.
+* Framework mount/remount/unmount, SSR/hydration, Strict Mode and exclusive overlay ownership.
+* Host navigation, RSC refresh, nonce retention, back/forward and page identity changes.
+* Offline/online, visibility, failed requests, expiry/revocation, delayed stale responses and denied/full browser storage.
+* Focus restoration, keyboard/screen-reader semantics, mobile composer clearance, host dialogs and deliberate pin-click interception.
+* Exclusion/redaction hooks, sensitive targets and URL allowlisting.
+* Repeated open/close/destroy with bounded memory, request counts and resource cleanup.
+
+Rebuild and verify every maintained framework fixture against the actual tarball: plain JS/TS, React/Next.js, Preact, Vue/Nuxt, Svelte/SvelteKit, Solid, Angular and Astro. Verify ordinary HTML plus jQuery/htmx interactions through the core without inventing unnecessary framework wrappers.
+
+=== Portability and uninstall tests
+
+For every ordered pair of the four databases, including same-database round trips, export and import a representative dataset, then repeat the import. Compare normalized data and historical provenance while allowing destination-generated IDs where required.
+
+Include more than 100 threads, more replies than the old display cap, multiple environments, resolved threads, historical users, optional features, Unicode and malicious-looking plain-text content. Verify origin remapping and that imported identities never gain access.
+
+Create a clean consumer from the archive, follow the integration guide, then remove Huddle and verify the host still builds/operates and the data remains. This is the acceptance test for port-in/port-out, not just a documentation claim.
+
+=== Commands and evidence
+
+Existing Huddle commands to preserve or intentionally update:
+
+[source,sh]
+----
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+pnpm test:browser
+pnpm test:package
+pnpm check:bundle
+----
+
+Add clear scripts for database conformance, server matrix and portability checks, and wire them into CI. Scripts must provision only explicit disposable fixtures, fail clearly when prerequisites are absent and tear down only resources they created. Do not silently skip a required database while reporting a green full-support matrix.
+
+Pronto release checks:
+
+[source,sh]
+----
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+----
+
+Run its marked disposable database and dedicated Huddle integration suites as documented by the updated setup. The existing `playwright.huddle.config.ts` can be adapted; it must not depend on separate Huddle product authentication anymore.
+
+Record source revisions, runtime/database/browser versions, archive checksum, commands, pass/fail/skipped counts and material limitations. Store private/raw reports under ignored output paths; check in only sanitized summaries where useful. Do not rerun unrelated expensive suites once appropriate checks pass unless new changes or failures justify it.
+
+== Completion checklist
+
+* [ ] The browser package requires no Huddle service, separate account or database driver.
+* [ ] All required collaboration features work through the public host adapter.
+* [ ] All four database implementations pass conformance; all twelve server combinations pass smoke tests.
+* [ ] Optional capabilities hide cleanly when unsupported; no Huddle role system remains.
+* [ ] Framework helpers and packed-package consumers pass actual build/runtime checks.
+* [ ] Cross-database transfer, large complete exports, import retry and uninstall tests pass.
+* [ ] Old Pronto feedback and any real old Huddle data are migrated and verified, or explicitly marked pending with original data preserved.
+* [ ] Pronto denies all public/guest feedback access, including legacy endpoints.
+* [ ] Named internal reviewers collaborate using Pronto's existing login and database.
+* [ ] No source-specific Pronto migration logic remains in Huddle's permanent runtime.
+* [ ] Standalone product server/manage/bootstrap requirements and stale setup documentation are retired.
+* [ ] New integration, storage installation, privacy, migration, troubleshooting and removal guides are complete.
+* [ ] The support matrix states verified, unsupported and pending configurations honestly, including WebKit.
+* [ ] Hosted migration and Render revision/access checks pass, or the precise external gate is reported without claiming completion.
+* [ ] Coherent atomic commits and a final cross-repository handoff identify revisions, tests, migrated data, rollback and remaining limitations.
+
+== Continuation instruction
+
+Use the following instruction when handing this to an implementation agent after the repositories and any required private data have been transferred:
+
+[source,text]
+----
+Read huddle/docs/implementation-plan.adoc and the applicable AGENTS.md files.
+The sibling repositories huddle/ and pronto-prod/ are under the same projects
+directory. Inspect their current state; preserve unrelated work and newer commits.
+
+Implement the approved plan thoroughly across both repositories, following its
+stages, safety boundaries, atomic commit guidance and acceptance criteria.
+The final product is a frontend-only Huddle library using each host's existing
+backend, database and authentication. No separately deployed Huddle service.
+
+Do not stop at scaffolding, mock-only adapters, incomplete exports or unverified
+compatibility claims. Perform the database, framework, portability and Pronto
+checks. Keep Pronto independently installable through the packed browser archive.
+
+Use only isolated disposable fixtures for destructive tests. Preserve original
+feedback, production data, credentials and the evaluation budget. Do not start
+inference loops or provision paid infrastructure. Use existing hosting only.
+
+If an external migration/deployment credential, dataset or internal-team session
+is unavailable, finish independent work and identify the exact pending gate.
+Never claim actual migration, hosted acceptance or browser/database support
+without the corresponding evidence. Finish with a concise handoff for both repos.
+----
+
+== Reference material
+
+* Huddle: `README.md`, `AGENTS.md`, `docs/architecture.md`, `docs/reliability.md`, `docs/framework-helpers.md`, `docs/framework-audit.md`, and existing import/export tests.
+* Pronto: `AGENTS.md`, `docs/integrations/huddle.md`, `docs/ops/prototype-feedback.md`, `docs/testing/safe-regression-baseline.md`, and installed Next.js documentation.
+* https://www.sqlite.org/wal.html[SQLite WAL behavior and single-writer constraints].
+* https://www.mongodb.com/docs/v8.0/core/transactions-production-consideration/[MongoDB transaction deployment requirements].
+* https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html[MySQL InnoDB transaction model].
+
+Recheck installed versions and current primary documentation during implementation; this document captures intent and verified starting structure, not an assurance that external versions or deployment state remain unchanged.
