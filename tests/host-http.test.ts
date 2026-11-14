@@ -2,6 +2,7 @@ import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {mkdtemp,readFile,rm,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
+import {runInNewContext} from 'node:vm';
 import {createHostHandler,type HostApi,type HostHttpOptions} from '../packages/host/src/http';
 import {installSqlite,SqliteBackend} from '../packages/host/src/sqlite';
 import {ReviewStore,CollaborationError} from '../packages/host/src/store';
@@ -78,6 +79,13 @@ it('authorizes every export environment and closes a transfer seam stream on com
   const response = await handler(request('/exports','POST',{scope:{workspace:'team',environments:['preview']},format:'json'})); expect(response.status).toBe(200); expect(await response.text()).toBe('{}'); expect(released).toBe(1);
   const cancelled = await handler(request('/exports','POST',{scope:{workspace:'team',environments:['preview']},format:'json'})); await cancelled.body!.cancel(); expect(released).toBe(2);
   expect((await handler(request('/exports','POST',{scope:{workspace:'team',environments:['preview','denied']},format:'json'}))).status).toBe(403);
+});
+it('streams genuine cross-realm bytes without accepting another array-buffer view',async () => {
+  const api = options.api, foreign = runInNewContext('new Uint8Array([123,125])') as Uint8Array;
+  expect(foreign instanceof Uint8Array).toBe(false);
+  const handler = (chunk:Uint8Array) => createHostHandler({...options,async api(request,signal) {return Object.assign(await api(request,signal),{async export() {return {filename:'review.json',contentType:'application/json',chunks:(async function*() {yield chunk;})()};}});}});
+  const response = await handler(foreign)(request('/exports','POST',{scope:{workspace:'team',environments:['preview']},format:'json'})); expect(response.status).toBe(200); expect(await response.text()).toBe('{}');
+  const invalid = await handler(new DataView(new ArrayBuffer(2)) as unknown as Uint8Array)(request('/exports','POST',{scope:{workspace:'team',environments:['preview']},format:'json'})); await expect(invalid.text()).rejects.toBeDefined();
 });
 it('bounds download prefetch and releases a stream that the caller never reads',async () => {
   const api = options.api; let produced = 0, released = 0;

@@ -1,4 +1,4 @@
-import {CollaborationError,isCollaborationError,type CollaborationAdapter,type Download,type Scope} from '../../shared/src/collaboration';
+import {CollaborationError,isCollaborationError,isByteChunk,type CollaborationAdapter,type Download,type Scope} from '../../shared/src/collaboration';
 import {httpSchemas} from '../../shared/src/protocol';
 import {z} from 'zod';
 import {abortable} from './cancellation';
@@ -56,7 +56,7 @@ async function downloadResponse(download: Download,format: 'json'|'markdown',sig
     const first = await abortable(() => iterator.next(),signal); if(first.done) throw new CollaborationError('unavailable','The feedback download was empty.'); let pending: IteratorResult<Uint8Array,unknown> = first;
     const body = new ReadableStream<Uint8Array>({
       start(controller) {streamController = controller; signal.addEventListener('abort',onAbort,{once:true}); if(signal.aborted) onAbort();},
-      async pull(controller) {try {signal.throwIfAborted(); const part = pending; if(part.done) {controller.close(); await close(); return;} if(!(part.value instanceof Uint8Array)) throw new Error('Invalid download chunk.'); controller.enqueue(part.value); pending = await abortable(() => iterator.next(),signal);} catch(value) {abort(); controller.error(value); await close();}},
+      async pull(controller) {try {signal.throwIfAborted(); const part = pending; if(part.done) {controller.close(); await close(); return;} if(!isByteChunk(part.value)) throw new Error('Invalid download chunk.'); controller.enqueue(part.value); pending = await abortable(() => iterator.next(),signal);} catch(value) {abort(); controller.error(value); await close();}},
       async cancel() {abort(); await close();},
     },{highWaterMark:0});
     return new Response(body,{headers:{...headers,'Content-Type':format === 'json' ? 'application/json; charset=utf-8' : 'text/markdown; charset=utf-8','Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(download.filename).replace(/['()*]/g,char => '%'+char.charCodeAt(0).toString(16).toUpperCase())}`}});
