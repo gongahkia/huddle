@@ -5,8 +5,10 @@ import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {postgresCluster} from '../tests/fixtures/postgres-cluster';
 import {mysqlCluster} from '../tests/fixtures/mysql-cluster';
-const flags = process.argv.slice(2); if(flags.length > 1 || flags.some(flag => !['--postgres','--mysql'].includes(flag))) throw new Error('Select one packed host backend: default SQLite, --postgres or --mysql.');
+import {mongodbCluster} from '../tests/fixtures/mongodb-cluster';
+const flags = process.argv.slice(2); if(flags.length > 1 || flags.some(flag => !['--postgres','--mysql','--mongodb'].includes(flag))) throw new Error('Select one packed host backend: default SQLite, --postgres, --mysql or --mongodb.');
 const database = flags[0]?.slice(2) || 'sqlite';
+let mongodb: Awaited<ReturnType<typeof mongodbCluster>> | undefined;
 let postgres: Awaited<ReturnType<typeof postgresCluster>> | undefined, mysql: Awaited<ReturnType<typeof mysqlCluster>> | undefined;
 const exec = promisify(execFile), dir = await mkdtemp(join(tmpdir(),'huddle-host-consumer-'));
 try {
@@ -25,6 +27,13 @@ try {
     setup = "const fixture=JSON.parse(await readFile('./fixture.json','utf8'));const pool=createPool(fixture.connection);const [proof]=await pool.query<RowDataPacket[]>('SELECT nonce FROM fixture_owner');assert.equal(proof[0].nonce,fixture.nonce);await installMysql(pool,{prefix:fixture.prefix});let backend=await MysqlBackend.open(pool,{prefix:fixture.prefix});";
     reopen = 'await MysqlBackend.open(pool,{prefix:fixture.prefix})'; finish = "const [alive]=await pool.query<RowDataPacket[]>('SELECT 1 alive');assert.equal(alive[0].alive,1);await pool.end();";
     dependencies = {mysql2:root.devDependencies.mysql2};
+  }
+  if(database === 'mongodb') {
+    mongodb = await mongodbCluster(); const prefix = mongodb.allocatePrefix(); await writeFile(join(dir,'fixture.json'),JSON.stringify({uri:mongodb.uri,nonce:mongodb.nonce,prefix}),{mode:0o600});
+    imports = "import {installMongodb,MongodbBackend} from '@huddle/host/mongodb';import {MongoClient} from 'mongodb';import {readFile} from 'node:fs/promises';";
+    setup = "const fixture=JSON.parse(await readFile('./fixture.json','utf8'));const client=new MongoClient(fixture.uri,{serverSelectionTimeoutMS:1000,connectTimeoutMS:1000,socketTimeoutMS:2000});const db=client.db('huddle_fixture');const proof=await db.collection('fixture_owner').findOne({nonce:fixture.nonce});assert.equal(proof?.nonce,fixture.nonce);await installMongodb(client,db,{prefix:fixture.prefix});let backend=await MongodbBackend.open(client,db,{prefix:fixture.prefix});";
+    reopen = 'await MongodbBackend.open(client,db,{prefix:fixture.prefix})'; finish = "assert.equal((await db.command({ping:1})).ok,1);await client.close();";
+    dependencies = {mongodb:root.devDependencies.mongodb};
   }
   await exec('pnpm',['--dir','packages/host','pack','--pack-destination',join(dir,'archive')]);
   await writeFile(join(dir,'package.json'),JSON.stringify({private:true,type:'module',dependencies:{...dependencies,'@huddle/host':`file:${join(dir,'archive',`huddle-host-${metadata.version}.tgz`)}`}}));
@@ -49,5 +58,5 @@ await backend.close();${finish}console.log('Packed ${database} host consumer: in
   await exec('npm',['install','--save-dev',`@types/node@${root.devDependencies['@types/node']}`,...development,'--ignore-scripts','--no-audit','--no-fund'],{cwd:dir});
   await exec(process.execPath,[resolve('node_modules/typescript/bin/tsc'),'-p',join(dir,'tsconfig.json')],{maxBuffer:2*1024*1024});
   const result = await exec(process.execPath,[join(dir,'compiled/consumer.js')],{cwd:dir}); console.log(result.stdout.trim());
-  await mkdir('output/package',{recursive:true}); await writeFile(`output/package/host-consumer${database === 'sqlite' ? '' : '-'+database}.json`,JSON.stringify({version:metadata.version,node:process.version,backend:database,databaseVersion:postgres?.version ?? mysql?.version,install:'passed',typecheck:'passed',persistence:'passed',retry:'passed',denial:'passed'},null,2)+'\n');
-} finally {try {await postgres?.close(); await mysql?.close();} finally {await rm(dir,{recursive:true,force:true});}}
+  await mkdir('output/package',{recursive:true}); await writeFile(`output/package/host-consumer${database === 'sqlite' ? '' : '-'+database}.json`,JSON.stringify({version:metadata.version,node:process.version,backend:database,databaseVersion:postgres?.version ?? mysql?.version ?? mongodb?.version,install:'passed',typecheck:'passed',persistence:'passed',retry:'passed',denial:'passed'},null,2)+'\n');
+} finally {try {await postgres?.close(); await mysql?.close(); await mongodb?.close();} finally {await rm(dir,{recursive:true,force:true});}}

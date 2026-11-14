@@ -9,7 +9,10 @@
     ".": {"types": "./dist/store.d.ts", "import": "./dist/store.js"},
     "./sqlite": {"types": "./dist/sqlite.d.ts", "import": "./dist/sqlite.js"},
     "./postgres": {"types": "./dist/postgres.d.ts", "import": "./dist/postgres.js"},
-    "./mysql": {"types": "./dist/mysql.d.ts", "import": "./dist/mysql.js"}
+    "./mysql": {"types": "./dist/mysql.d.ts", "import": "./dist/mysql.js"},
+    "./mongodb": {"types": "./dist/mongodb.d.ts", "import": "./dist/mongodb.js"}
   },
+  "peerDependencies": {"mongodb": "7.9.0"},
+  "peerDependenciesMeta": {"mongodb": {"optional": true}},
   "files": ["dist", "README.md"]
 }

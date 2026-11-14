@@ -39,7 +39,10 @@
     "bench:storage": "tsx scripts/storage-benchmark.ts",
     "test:storage:mysql": "vitest run --config vitest.storage.config.ts tests/database/mysql.spec.ts",
     "test:package:mysql": "tsx scripts/host-package-smoke.ts --mysql",
-    "fixtures:mysql": "tsx scripts/mysql-runtime.ts"
+    "fixtures:mysql": "tsx scripts/mysql-runtime.ts",
+    "test:storage:mongodb": "vitest run --config vitest.storage.config.ts tests/database/mongodb.spec.ts",
+    "test:package:mongodb": "tsx scripts/host-package-smoke.ts --mongodb",
+    "fixtures:mongodb": "tsx scripts/mongodb-runtime.ts"
   },
   "dependencies": {
     "@fastify/cors": "11.4.3",
@@ -71,6 +74,7 @@
     "esbuild": "0.28.2",
     "eslint": "10.14.0",
     "jsdom": "31.0.1",
+    "mongodb": "7.9.0",
     "mysql2": "3.24.6",
     "next": "16.4.6",
     "nuxt": "4.6.4",
