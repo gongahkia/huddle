@@ -24,6 +24,7 @@
     "examples:astro": "ASTRO_TELEMETRY_DISABLED=1 pnpm --dir output/frameworks/astro exec astro preview --host 127.0.0.1 --port 4325 --ignore-lock",
     "examples:next": "NEXT_TELEMETRY_DISABLED=1 next start examples/next -H 127.0.0.1 -p 4322",
     "check:bundle": "tsx scripts/bundle-budget.ts",
+    "generate:schemas": "tsx scripts/feedback-schema.ts && tsx scripts/http-schema.ts",
     "bench:load": "tsx scripts/load.ts",
     "bench:browser": "playwright test tests/browser/performance.spec.ts --reporter=line",
     "import:pronto": "tsx scripts/import.ts",

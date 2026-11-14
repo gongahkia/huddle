@@ -1,3 +1,5 @@
+> Architecture transition: the approved frontend-only plan is in [implementation-plan.adoc](implementation-plan.adoc). The service-backed setup and results below describe the legacy implementation. See [current progress](frontend-progress.md) for the active work.
+
 # Architecture and interfaces
 
 ## Components

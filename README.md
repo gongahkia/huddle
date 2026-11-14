@@ -1,3 +1,5 @@
+> Architecture transition: the approved frontend-only plan is in [docs/implementation-plan.adoc](docs/implementation-plan.adoc). The service-backed setup and results below describe the legacy implementation. See [current progress](docs/frontend-progress.md) for the active work.
+
 # Huddle
 
 A small, self-hosted layer for discussing working websites. Pin an element, leave a page observation, reply, mention a teammate, assign ownership and resolve the discussion. Export complete feedback as JSON or Markdown.

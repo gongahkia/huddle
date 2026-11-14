@@ -1,3 +1,5 @@
+> Architecture transition: the approved frontend-only plan is in [implementation-plan.adoc](implementation-plan.adoc). The service-backed setup and results below describe the legacy implementation. See [current progress](frontend-progress.md) for the active work.
+
 Build and verify a complete, usable first release of Huddle in a new standalone Git repository at /home/gongahkia/coding/projects/huddle. Extract and generalize the useful shared-commenting foundations from /home/gongahkia/coding/projects/pronto-prod without modifying that repository. Continue through implementation, testing, performance validation, documentation and atomic Git commits until the completion criteria below are satisfied.
 
 PRODUCT INTENT
