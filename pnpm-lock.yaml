@@ -154,6 +154,8 @@ importers:
         specifier: '>=3.3 <4'
         version: 3.5.45(typescript@6.0.3)
 
+  packages/host: {}
+
   packages/shared: {}
 
 packages:

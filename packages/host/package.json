@@ -1,0 +1,11 @@
+{
+  "name": "@huddle/host",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {"zod": "4.6.7"},
+  "exports": {
+    ".": "./src/store.ts",
+    "./sqlite": "./src/sqlite.ts"
+  }
+}
