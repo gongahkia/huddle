@@ -7,7 +7,8 @@
   "dependencies": {"zod": "4.6.7"},
   "exports": {
     ".": {"types": "./dist/store.d.ts", "import": "./dist/store.js"},
-    "./sqlite": {"types": "./dist/sqlite.d.ts", "import": "./dist/sqlite.js"}
+    "./sqlite": {"types": "./dist/sqlite.d.ts", "import": "./dist/sqlite.js"},
+    "./postgres": {"types": "./dist/postgres.d.ts", "import": "./dist/postgres.js"}
   },
   "files": ["dist", "README.md"]
 }

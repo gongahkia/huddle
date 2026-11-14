@@ -107,5 +107,13 @@ export function storageConformance(name: string,fixture: () => Promise<StorageFi
       const controller = new AbortController(); controller.abort(); await expect(store.create(scope,input(),controller.signal)).rejects.toMatchObject({name:'AbortError'});
       expect((await store.list(scope,{},signal())).items).toHaveLength(0);
     });
+    it('rejects cross-scope operations inside a scoped write transaction',async () => {
+      await expect(f.backend.transaction(scope,signal(),async tx => tx.get('threads',other,'guessed-id'))).rejects.toMatchObject({code:'forbidden'});
+      await expect(f.backend.transaction(scope,signal(),async tx => tx.put('threads',{...other,id:'guessed-id',time:'',data:{}},true))).rejects.toMatchObject({code:'forbidden'});
+    });
+    it('cancels a host authorization callback that ignores its abort signal',async () => {
+      const blocked = new ReviewStore(f.backend,async () => new Promise(() => {})), controller = new AbortController();
+      const rejected = expect(blocked.session(scope,controller.signal)).rejects.toMatchObject({name:'AbortError'}); controller.abort(); await rejected;
+    });
   });
 }

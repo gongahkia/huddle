@@ -1,4 +1,4 @@
-import type {Scope} from '../../shared/src/collaboration';
+import {CollaborationError,type Scope} from '../../shared/src/collaboration';
 export const collections = ['scopes','threads','comments','history','events','requests','uploads','previews','jobs','provenance'] as const;
 export type Collection = typeof collections[number];
 export type RecordValue<T = unknown> = Scope & {
@@ -23,4 +23,12 @@ export interface Backend {
   // Snapshot reads must remain consistent for the entire callback, including all pages.
   snapshot<T>(signal: AbortSignal,run: (tx: Transaction) => Promise<T>): Promise<T>;
   close(): Promise<void>;
+}
+export function scopedTransaction(tx: Transaction,expected: Scope): Transaction {
+  const check = (scope: Scope) => {if (scope.workspace !== expected.workspace || scope.environment !== expected.environment) throw new CollaborationError('forbidden','A feedback transaction cannot cross its authorized scope.');};
+  return {
+    get<T>(collection: Collection,scope: Scope,id: string) {check(scope); return tx.get<T>(collection,scope,id);},
+    scan<T>(collection: Collection,scope: Scope,query: Scan) {check(scope); return tx.scan<T>(collection,scope,query);},
+    put(collection,record,insert) {check(record); return tx.put(collection,record,insert);},
+  };
 }

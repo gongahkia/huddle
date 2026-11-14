@@ -3,7 +3,7 @@ import {randomBytes,randomUUID} from 'node:crypto';
 import {chmodSync,existsSync} from 'node:fs';
 import type {Scope} from '../../shared/src/collaboration';
 import {CollaborationError,isCollaborationError} from '../../shared/src/collaboration';
-import {collections,type Backend,type Collection,type RecordValue,type Scan,type Transaction} from './backend';
+import {collections,scopedTransaction,type Backend,type Collection,type RecordValue,type Scan,type Transaction} from './backend';
 import {abortable} from './cancellation';
 
 const schemaVersion = '1';
@@ -77,10 +77,10 @@ export class SqliteBackend implements Backend {
       signal.throwIfAborted(); if (this.closed) throw new CollaborationError('unavailable','Feedback storage is closed.'); return await run();
     } finally {signal.removeEventListener('abort',abort); void previous.finally(release);}
   }
-  async transaction<T>(_scope: Scope,signal: AbortSignal,run: (tx: Transaction) => Promise<T>): Promise<T> {
+  async transaction<T>(scope: Scope,signal: AbortSignal,run: (tx: Transaction) => Promise<T>): Promise<T> {
     signal = AbortSignal.any([signal,this.lifetime.signal]);
     return this.serialized(signal,async () => {
-      try {this.db.exec('BEGIN IMMEDIATE'); const result = await abortable(() => run(transactionView(this.db,signal)),signal); signal.throwIfAborted(); this.db.exec('COMMIT'); return result;}
+      try {this.db.exec('BEGIN IMMEDIATE'); const result = await abortable(() => run(scopedTransaction(transactionView(this.db,signal),scope)),signal); signal.throwIfAborted(); this.db.exec('COMMIT'); return result;}
       catch (value) {if (this.db.isTransaction) this.db.exec('ROLLBACK'); if (signal.aborted || isCollaborationError(value)) throw value; throw new CollaborationError('unavailable','Feedback storage could not complete this transaction.');}
     });
   }

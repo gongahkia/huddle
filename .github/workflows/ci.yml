@@ -4,6 +4,30 @@ on:
     branches: [main]
   pull_request:
 jobs:
+  postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: sudo apt-get update && sudo apt-get install -y build-essential bison flex
+      - uses: actions/cache@v4
+        with:
+          path: output/runtime/postgresql-source-18.6
+          key: postgres-source-18.6-555610c24d53-ubuntu-24.04-${{ runner.arch }}
+      - run: pnpm fixtures:postgres
+      - run: pnpm test:storage:postgres
+        env:
+          HUDDLE_TEST_PG_BIN: ${{ github.workspace }}/output/runtime/postgresql-source-18.6/bin
+      - run: pnpm build
+      - run: pnpm test:package:postgres
+        env:
+          HUDDLE_TEST_PG_BIN: ${{ github.workspace }}/output/runtime/postgresql-source-18.6/bin
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 25

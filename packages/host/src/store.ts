@@ -4,6 +4,7 @@ import {CollaborationError,type Capabilities,type ChangePage,type Comment,type C
 import {httpSchemas} from '../../shared/src/protocol';
 import type {Backend,Collection,RecordValue,Transaction} from './backend';
 import {decodeCursor,digest,encodeCursor,identitySchema,listSchema,detailSchema,scopeSchema,validate} from './validation';
+import {abortable} from './cancellation';
 export type {Backend,Collection,RecordValue,Scan,Transaction} from './backend';
 export {CollaborationError,isCollaborationError} from '../../shared/src/collaboration';
 export type {Identity,Scope,Capabilities} from '../../shared/src/collaboration';
@@ -21,7 +22,7 @@ export class ReviewStore {
   constructor(readonly backend: Backend,private authorize: Authorize,private members?: Directory) {}
   async access(scope: Scope,signal: AbortSignal): Promise<Access> {
     signal.throwIfAborted(); validate(scopeSchema,scope);
-    const result = await this.authorize(scope,signal); signal.throwIfAborted();
+    const result = await abortable(() => this.authorize(scope,signal),signal); signal.throwIfAborted();
     validate(identitySchema,result.actor);
     validate(z.object({mentions: z.boolean(),assignment: z.boolean(),directory: z.boolean()}).strict(),result.capabilities);
     if ((result.capabilities.mentions || result.capabilities.assignment || result.capabilities.directory) && !this.members) throw new CollaborationError('unavailable','The host directory is not configured.');
@@ -30,14 +31,14 @@ export class ReviewStore {
   async session(scope: Scope,signal: AbortSignal): Promise<Session> {const access = await this.access(scope,signal); return {actor: access.actor,scope,capabilities: access.capabilities};}
   private async identities(access: Access,ids: string[],signal: AbortSignal): Promise<Identity[]> {
     if (!ids.length) return [];
-    const unique = [...new Set(ids)], found = await this.members!.lookup(access.scope,unique,signal);
+    const unique = [...new Set(ids)], found = await abortable(() => this.members!.lookup(access.scope,unique,signal),signal);
     if (found.length !== unique.length || new Set(found.map(item => item.id)).size !== unique.length || found.some(item => !unique.includes(item.id))) throw new CollaborationError('validation','Choose existing workspace members.');
     for (const item of found) validate(identitySchema,item); return found;
   }
   async directory(scope: Scope,query: {search?: string; cursor?: string},signal: AbortSignal) {
     const access = await this.access(scope,signal); if (!access.capabilities.directory || !this.members) throw new CollaborationError('not_found','Member directory is unavailable.');
     validate(z.object({search: z.string().max(1000).optional(),cursor: z.string().max(2048).optional()}).strict(),query);
-    return this.members.list(scope,query,signal);
+    return abortable(() => this.members!.list(scope,query,signal),signal);
   }
   private async getThread(tx: Transaction,scope: Scope,id: string) {
     const row = await tx.get<Thread>('threads',scope,id); if (!row) throw new CollaborationError('not_found','Feedback thread is unavailable.'); return row;
