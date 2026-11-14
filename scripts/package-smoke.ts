@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {build} from 'esbuild';
 import {gzipSync} from 'node:zlib';
 import {createHash} from 'node:crypto';
+import {assertPackagedDocs} from './package-docs';
 const exec = promisify(execFile), directory = mkdtempSync(join(tmpdir(),'huddle-consumers-'));
 const root = JSON.parse(readFileSync('package.json','utf8')), pkg = JSON.parse(readFileSync('packages/browser/package.json','utf8'));
 const peers = Object.keys(pkg.peerDependencies) as string[];
@@ -35,7 +36,7 @@ try {
   const files = ['consumer.ts'];
   if(!item.entry) {
    const installedRoot = join(dir,'node_modules/@huddle/browser'), guide = readFileSync(join(installedRoot,'README.md'),'utf8'), example = guide.match(/```ts\n([\s\S]*?)```/)?.[1]; if(!example) throw new Error('The installed browser guide has no TypeScript integration example.');
-   for(const path of [...guide.matchAll(/\]\(\.\/([^#)]+)\)/g)].map(match => match[1])) if(!existsSync(join(installedRoot,path))) throw new Error('The installed guide links to a missing package file: '+path);
+   assertPackagedDocs(installedRoot);
    writeFileSync(join(dir,'readme-example.ts'),"const applicationCsrfToken='disposable-consumer-csrf';\n"+example); files.push('readme-example.ts');
   }
   writeFileSync(join(dir,'tsconfig.json'),JSON.stringify({compilerOptions: {target: 'ES2023',module: 'NodeNext',moduleResolution: 'NodeNext',strict: true,noEmit: true,skipLibCheck: false,types: [],lib: ['ES2023','DOM','DOM.Iterable']},files}));

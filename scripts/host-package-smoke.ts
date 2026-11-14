@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {postgresCluster} from '../tests/fixtures/postgres-cluster';
 import {mysqlCluster} from '../tests/fixtures/mysql-cluster';
 import {mongodbCluster} from '../tests/fixtures/mongodb-cluster';
+import {assertPackagedDocs} from './package-docs';
 const flags = process.argv.slice(2); if(flags.length > 1 || flags.some(flag => !['--postgres','--mysql','--mongodb'].includes(flag))) throw new Error('Select one packed host backend: default SQLite, --postgres, --mysql or --mongodb.');
 const database = flags[0]?.slice(2) || 'sqlite';
 let mongodb: Awaited<ReturnType<typeof mongodbCluster>> | undefined;
@@ -38,6 +39,7 @@ try {
   await exec('pnpm',['--dir','packages/host','pack','--pack-destination',join(dir,'archive')]);
   await writeFile(join(dir,'package.json'),JSON.stringify({private:true,type:'module',dependencies:{...dependencies,'@huddle/host':`file:${join(dir,'archive',`huddle-host-${metadata.version}.tgz`)}`}}));
   await exec('npm',['install','--ignore-scripts','--no-audit','--no-fund'],{cwd:dir});
+  assertPackagedDocs(join(dir,'node_modules/@huddle/host'));
   const source = `import {ReviewStore,CollaborationError,type Scope} from '@huddle/host';
 ${imports}
 import assert from 'node:assert/strict';
