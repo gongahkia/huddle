@@ -1,31 +1,21 @@
-import type {Actor, Anchor, Member, Page, ReviewContext, Thread, ThreadDetail} from '@huddle/shared';
-import {anchorWarnings, buildAnchor, pageAnchor, pickTarget, resolveAnchor, type ResolvedAnchor} from './anchor';
-import {LocalStore, remainderAfterSave, requestTracker} from './storage';
-import {Api, ApiError, ChangeStream, connect} from './transport';
+import type {Anchor,Context,Detail,Identity,Session,Thread,Update} from '../../shared/src/collaboration';
+import {isCollaborationError,CollaborationError} from '../../shared/src/collaboration';
+import {anchorWarnings,buildAnchor,pageAnchor,pickTarget,resolveAnchor,type ResolvedAnchor} from './anchor';
+import {LocalStore,MemoryStorage,remainderAfterSave,requestTracker} from './storage';
+import {operation} from './operations';
+import {validateOptions,type HuddleOptions} from './options';
 import {styles} from './styles';
-export type {Anchor, ReviewContext} from '@huddle/shared';
-export type HuddleOptions = {
-  serverUrl: string; projectId: string; environment: string; release?: string;
-  allowedQueryParameters?: string[]; includeHash?: boolean; pageIdentity?: (sanitizedUrl: URL) => string;
-  accessToken?: string; styleNonce?: string;
-  launcher?: 'floating' | 'hidden';
-  requestTimeoutMs?: number; onError?: (error: Error) => void;
-};
-export type Huddle = {open(): void; close(): void; updateContext(context: Partial<Pick<HuddleOptions,'environment' | 'release'>>): void; destroy(): void};
-const instances = new WeakMap<Document, {controller: Huddle; settings: HuddleOptions; owner?: symbol}>();
-type Draft = {body: string; mentions: string[]; anchor?: Anchor; threadId?: string};
-export function mount(options: HuddleOptions): Huddle {
-  return mountForOwner(options);
-}
-/** Internal acquisition seam, omitted from the public core entry point. */
-export function mountForOwner(options: HuddleOptions, owner?: symbol): Huddle {
+export type {HuddleOptions} from './options';
+export type {Anchor,Context as ReviewContext} from '../../shared/src/collaboration';
+export type Huddle = {open(): void; close(): void; updateContext(context: Partial<Pick<HuddleOptions,'workspace' | 'environment' | 'release'>>): void; destroy(): void};
+const instances = new WeakMap<Document,{controller: Huddle; settings: HuddleOptions; owner?: symbol}>();
+type CapturedContext = Omit<Context,'workspace' | 'environment'>;
+type Draft = {body: string; mentions: string[]; anchor?: Anchor; threadId?: string; context?: CapturedContext};
+export function mount(options: HuddleOptions): Huddle {return mountForOwner(options);}
+export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
   if (typeof document === 'undefined' || typeof window === 'undefined') throw new Error('Mount Huddle in a browser lifecycle hook after hydration, not during server rendering.');
-  const settings = {...options}; const serverUrl = new URL(settings.serverUrl);
-  if (!['http:','https:'].includes(serverUrl.protocol) || serverUrl.username || serverUrl.password || serverUrl.pathname !== '/' || serverUrl.search || serverUrl.hash) throw new Error('Use an HTTP(S) Huddle server origin without a path, query or credentials.');
-  if (!settings.projectId?.trim() || !/^[a-zA-Z0-9_-]{1,80}$/.test(settings.environment)) throw new Error('Provide a project ID and a valid environment.');
-  if (settings.launcher !== undefined && !['floating','hidden'].includes(settings.launcher)) throw new Error('launcher must be floating or hidden.');
-  if (settings.requestTimeoutMs !== undefined && (!Number.isFinite(settings.requestTimeoutMs) || settings.requestTimeoutMs < 100 || settings.requestTimeoutMs > 120000)) throw new Error('requestTimeoutMs must be between 100 and 120000.');
-  settings.serverUrl = serverUrl.origin;
+  validateOptions(options);
+  const settings = {...options}, adapter = settings.adapter;
   const prior = instances.get(document);
   if (prior) {
     if (prior.owner !== owner) throw new Error('Huddle is already owned by another integration. Remove that installation before mounting a helper.');
@@ -33,180 +23,276 @@ export function mountForOwner(options: HuddleOptions, owner?: symbol): Huddle {
     return prior.controller;
   }
   if (document.querySelector('[data-huddle-root]')) throw new Error('Another copy of Huddle is already mounted. Install the widget once per page.');
-  const api = new Api(serverUrl.origin,settings.projectId,settings.requestTimeoutMs), life = new AbortController(); api.token = settings.accessToken || '';
-  let actor: Actor | undefined, members: Member[] = [], opened = false, destroyed = false, pinning = false, reattach = false;
-  let threads: Thread[] = [], selected: ThreadDetail | undefined, anchor: Anchor | undefined, body = '', mentionIds: string[] = [];
-  let busy = false, error = '', notice = '', loading = false, allPages = false, resolved = false, nextCursor: number | null = null;
-  let stream: ChangeStream | undefined, connection: AbortController | undefined, loadSequence = 0, detailSequence = 0, refreshAttempt = 0, queuedRefresh: ReturnType<typeof setTimeout> | undefined;
-  let store: LocalStore | undefined, seen: Record<string,string> = {}, draftKey = '', restoredTarget = '';
+  const life = new AbortController(), memory = new MemoryStorage();
+  let contextLife = new AbortController(), epoch = 0, session: Session | undefined, members: Identity[] = [];
+  let draftContext: CapturedContext | undefined;
+  let opened = false, destroyed = false, pinning = false, reattach = false, busy = false, loading = false, connecting = false, stale = false;
+  let threads: Thread[] = [], selected: Detail | undefined, anchor: Anchor | undefined, body = '', mentionIds: string[] = [];
+  let error = '', notice = '', allPages = false, resolved = false, nextCursor: string | null = null, cursor: string | undefined;
+  let listCursor: string | undefined, commentCursor: string | undefined, historyCursor: string | undefined;
+  let loadSequence = 0, detailSequence = 0, pollTimer: ReturnType<typeof setTimeout> | undefined, polling = false, pollAttempt = 0;
+  let unsubscribe: (() => void) | undefined, subscriptionLife: AbortController | undefined, updateQueued = false;
+  let store: LocalStore | undefined, seen: Record<string,string> = {}, draftKey = '', restoredTarget = '', opener: HTMLElement | null = null;
+  const scope = () => ({workspace: settings.workspace,environment: settings.environment});
   let currentContext = getContext(), geometryFrame = 0, resolveFrame = 0, resolutions = new Map<string,ResolvedAnchor>();
   const requests = requestTracker(() => store ? {store,key: `request:${draftKey}`} : undefined);
+  const updates = requestTracker(() => store ? {store,key: `update:${draftKey}`} : undefined);
   const host = document.createElement('div'); host.dataset.huddleRoot = ''; host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;pointer-events:none';
   const shadow = host.attachShadow({mode: 'open'}), style = document.createElement('style'); style.textContent = styles; if (settings.styleNonce) style.nonce = settings.styleNonce;
   const surface = document.createElement('div'); surface.className = 'surface'; surface.setAttribute('popover','manual');
   const ui = document.createElement('div'), pins = document.createElement('div'), highlight = document.createElement('div'); highlight.className = 'highlight'; highlight.hidden = true;
   surface.append(pins,highlight,ui); shadow.append(style,surface); document.documentElement.append(host);
-  function topLayer() {try {if (typeof surface.showPopover === 'function' && !surface.matches(':popover-open')) surface.showPopover();} catch { /* fallback fixed host */ }}
-  topLayer();
-  function notify(error: unknown) {try {settings.onError?.(error instanceof Error ? error : new Error('Huddle could not complete this action.'));} catch { /* Host diagnostics must not break navigation. */ }}
-  function getContext(): ReviewContext {
+  const call = <T>(run: (signal: AbortSignal) => Promise<T>) => operation(run,AbortSignal.any([life.signal,contextLife.signal]),settings.requestTimeoutMs);
+  const active = () => opened && !destroyed && document.visibilityState !== 'hidden';
+  const capability = (name: 'mentions' | 'assignment' | 'directory') => !!session?.capabilities[name] && settings.capabilities?.[name] !== false;
+  function topLayer() {try {if (typeof surface.showPopover === 'function' && !surface.matches(':popover-open')) surface.showPopover();} catch { /* fixed-host fallback */ }}
+  function notify(value: unknown) {try {settings.onError?.(value instanceof Error ? value : new Error('Review could not complete this action.'));} catch { /* host diagnostics must not break navigation */ }}
+  function redact(value: string,field: string) {const result = settings.redact ? settings.redact(value,field) : value; if (typeof result !== 'string') throw new Error('The redaction hook must return a string.'); return result;}
+  function getContext(): Context {
     const url = new URL(location.href); url.username = ''; url.password = '';
     for (const name of [...url.searchParams.keys()]) if (!settings.allowedQueryParameters?.includes(name)) url.searchParams.delete(name);
     if (!settings.includeHash) url.hash = '';
     let page = `${url.pathname}${url.search}${url.hash}`;
-    try {const custom = settings.pageIdentity?.(new URL(url)); if (typeof custom === 'string' && custom.length > 0 && custom.length <= 2000) page = custom;} catch (error) {notify(error);}
-    return {environment: settings.environment,page,pageUrl: url.href,release: settings.release};
+    try {const custom = settings.pageIdentity?.(new URL(url)); if (typeof custom === 'string' && custom.length > 0 && custom.length <= 4096) page = custom;} catch (value) {notify(value);}
+    return {...scope(),page,pageUrl: url.href,release: settings.release};
   }
   function setupStorage() {
-    if (!actor) return;
-    store = new LocalStore(JSON.stringify([api.baseUrl,actor.id,settings.projectId,currentContext.environment]));
+    if (!session) return;
+    let storage: Storage | null = memory;
+    if (settings.persistence === 'disabled') storage = null;
+    else if (!settings.persistence || settings.persistence === 'local') {try {storage = window.localStorage;} catch { /* memory fallback */ }}
+    store = new LocalStore(JSON.stringify([settings.namespace,settings.workspace,session.actor.id,settings.environment]),storage,settings.persistence === 'disabled' ? undefined : memory);
     seen = store.read<Record<string,string>>('seen') || {}; draftKey = `draft:${currentContext.page}`;
     const draft = store.read<Draft>(draftKey);
-    if (draft && typeof draft.body === 'string') {body = draft.body.slice(0,3000); mentionIds = Array.isArray(draft.mentions) ? draft.mentions.slice(0,30) : []; anchor = draft.anchor; restoredTarget = draft.threadId || ''; notice = 'Restored your unsent comment from this device.';}
+    if (draft && typeof draft.body === 'string') {body = draft.body.slice(0,3000); mentionIds = capability('mentions') && Array.isArray(draft.mentions) ? draft.mentions.slice(0,30) : []; anchor = draft.anchor; draftContext = draft.context; restoredTarget = draft.threadId || ''; notice = 'Restored your unsent comment from this device.';}
   }
   function persistDraft() {
-    if (!store) return;
+    if (!store || !session) return;
     if (!body.trim()) {store.remove(draftKey); return;}
-    store.write(draftKey,{body,mentions: mentionIds,anchor,threadId: anchor ? undefined : selected?.id} satisfies Draft);
+    store.write(draftKey,{body,mentions: mentionIds,anchor,context: draftContext,threadId: anchor ? undefined : selected?.thread.id} satisfies Draft);
   }
-  function unread(t: Thread) {return !!t.latestComment && t.latestComment.authorId !== actor?.id && seen[t.id] !== t.latestComment.id;}
+  function unread(t: Thread) {return !!t.latestComment && t.latestComment.author.id !== session?.actor.id && seen[t.id] !== t.latestComment.id;}
   function markRead(t: Thread) {if (t.latestComment) {seen[t.id] = t.latestComment.id; seen = Object.fromEntries(Object.entries(seen).slice(-1000)); store?.write('seen',seen);}}
-  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, cls?: string) => {const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (cls) node.className = cls; return node;};
-  function button(text: string, action: () => void, cls = '') {const b = el('button',text,cls); b.type = 'button'; b.addEventListener('click',action); return b;}
-  function link(text: string, href: string) {const a = el('a',text); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a;}
-  function setError(e: unknown) {if (destroyed || life.signal.aborted) return; notify(e); error = e instanceof Error ? e.message : 'Could not complete this action.'; if (e instanceof ApiError && [401,403].includes(e.status)) {persistDraft(); stream?.stop(); stream = undefined; actor = undefined; api.token = ''; threads = []; selected = undefined; members = []; resolutions.clear();} render();}
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K,text?: string,cls?: string) => {const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (cls) node.className = cls; return node;};
+  function button(text: string,action: () => void,cls = '') {const node = el('button',text,cls); node.type = 'button'; node.disabled = busy; node.addEventListener('click',action); return node;}
+  function link(text: string,href: string) {const node = el('a',text); try {const url = new URL(href); if (['http:','https:'].includes(url.protocol) && !url.username && !url.password) {node.href = url.href; node.target = '_blank'; node.rel = 'noopener noreferrer';}} catch { /* imported URLs remain inert */ } return node;}
+  function stopUpdates() {clearTimeout(pollTimer); pollTimer = undefined; subscriptionLife?.abort(); subscriptionLife = undefined; const cleanup = unsubscribe; unsubscribe = undefined; try {cleanup?.();} catch (value) {notify(value);}}
+  function invalidate() {stopUpdates(); contextLife.abort(); contextLife = new AbortController(); epoch++; loadSequence++; detailSequence++; polling = false; connecting = false; busy = false; loading = false;}
+  function clearPrivate() {requests.forget(); updates.forget(); session = undefined; members = []; threads = []; selected = undefined; anchor = undefined; body = ''; mentionIds = []; draftContext = undefined; store = undefined; seen = {}; restoredTarget = ''; resolutions.clear(); pins.replaceChildren(); pinning = false; highlight.hidden = true;}
+  function setError(value: unknown) {
+    if (destroyed || (value instanceof Error && value.name === 'AbortError')) return;
+    notify(value); error = isCollaborationError(value) ? value.message : 'Review could not complete this action. Your draft is kept.';
+    if (isCollaborationError(value) && ['unauthenticated','forbidden'].includes(value.code)) {persistDraft(); invalidate(); clearPrivate(); notice = 'Review access is unavailable. Sign in through this application or contact your team.';}
+    render();
+  }
   function render() {
     if (destroyed) return;
     host.toggleAttribute('data-huddle-open',opened || pinning);
-    const previousFocus = shadow.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
-    const focusId = previousFocus?.id, selectionStart = previousFocus && 'selectionStart' in previousFocus ? previousFocus.selectionStart : null;
-    const oldScroll = shadow.querySelector('.content')?.scrollTop || 0;
-    ui.replaceChildren();
+    const focused = shadow.activeElement as HTMLTextAreaElement | null, focusId = focused?.id;
+    const selection = focused instanceof HTMLTextAreaElement ? focused.selectionStart : null;
+    const scroll = shadow.querySelector('.content')?.scrollTop || 0; ui.replaceChildren();
     if (pinning) {pins.replaceChildren(); const note = el('div',undefined,'pick-note'); note.append(el('span',reattach ? 'Click the new target. Escape to cancel.' : 'Click an element to comment. Escape to cancel.'),button('Cancel',cancelPin)); ui.append(note); return;}
-    if (!opened) {if (settings.launcher !== 'hidden') {const count = threads.filter(t => t.status === 'open' && unread(t)).length; const launch = button(`Huddle${count ? ` · ${count} new` : ''}`,() => controller.open(),'launcher'); launch.setAttribute('aria-label','Open Huddle'); ui.append(launch);} pins.replaceChildren(); return;}
+    if (!opened) {if (settings.launcher !== 'hidden') {const launch = button('Huddle',() => controller.open(),'launcher'); launch.setAttribute('aria-label','Open Huddle'); ui.append(launch);} pins.replaceChildren(); return;}
     const panel = el('aside',undefined,'panel'); panel.setAttribute('aria-label','Huddle feedback');
-    const header = el('header'); const heading = el('div',undefined,'row between'); heading.append(el('h2','Huddle'),button('Close',() => controller.close())); header.append(heading,el('p',currentContext.environment,'muted'));
+    const header = el('header'), heading = el('div',undefined,'row between'); const close = button('Close',() => controller.close()); close.disabled = false; heading.append(el('h2','Huddle'),close); header.append(heading,el('p',`${currentContext.workspace} · ${currentContext.environment}`,'muted'));
     const content = el('div',undefined,'content');
-    if (error) {const n = el('p',error,'notice error'); n.setAttribute('role','alert'); content.append(n);}
-    if (notice) {const n = el('p',notice,'notice'); n.setAttribute('role','status'); content.append(n);}
-    if (!actor) {
-      content.append(el('h3','Review this website together'),el('p','Connect to your Huddle project to see and leave feedback.','muted'),button(busy ? 'Connecting…' : 'Connect Huddle',() => {void authorize();},'primary'));
-    } else {
-      if (!anchor && !selected) renderList(header,content); else renderThread(content);
-    }
-    const footer = el('footer'); footer.append(link('Open project workspace',`${api.baseUrl}/?project=${encodeURIComponent(settings.projectId)}`));
-    panel.append(header,content,footer); ui.append(panel); content.scrollTop = oldScroll;
-    if (focusId) {const target = shadow.getElementById(focusId); target?.focus({preventScroll: true}); if (selectionStart !== null && target instanceof HTMLTextAreaElement) target.setSelectionRange(selectionStart,selectionStart);}
+    if (error) {const node = el('p',error,'notice error'); node.setAttribute('role','alert'); content.append(node);}
+    if (notice) {const node = el('p',notice,'notice'); node.setAttribute('role','status'); content.append(node);}
+    if (!session) content.append(el('p',connecting ? 'Checking review access…' : 'Use your application’s existing sign-in to access team feedback.','muted'),button('Check access again',() => {void initialize();}));
+    else if (!anchor && !selected) renderList(header,content); else renderThread(content);
+    panel.append(header,content); ui.append(panel); content.scrollTop = scroll;
+    if (focusId) {const target = shadow.getElementById(focusId); target?.focus({preventScroll: true}); if (selection !== null && target instanceof HTMLTextAreaElement) target.setSelectionRange(selection,selection);}
     scheduleResolution();
   }
-  function renderList(header: HTMLElement, content: HTMLElement) {
-    header.append(button('Refresh feedback',() => {error = ''; void initialize().catch(setError);}));
-    const actions = el('div',undefined,'row'); actions.append(button('Pin a comment',() => startPin(false),'primary'),button('Page comment',() => {anchor = pageAnchor(); selected = undefined; body = ''; mentionIds = []; error = ''; render(); shadow.getElementById('huddle-body')?.focus();})); header.append(actions);
+  function pageComment() {try {draftContext = capturedContext(); anchor = pageAnchor(); selected = undefined; body = ''; mentionIds = []; error = ''; render(); shadow.getElementById('huddle-body')?.focus();} catch (value) {setError(value);}}
+  function renderList(header: HTMLElement,content: HTMLElement) {
+    header.append(button('Refresh feedback',() => {void initialize();}));
+    const actions = el('div',undefined,'row'); actions.append(button('Pin a comment',() => startPin(false),'primary'),button('Page comment',pageComment)); header.append(actions);
     const filters = el('div',undefined,'row');
-    for (const [label,value,change] of [['All pages',allPages,() => {allPages = !allPages; void refresh();}],['Show resolved',resolved,() => {resolved = !resolved; void refresh();}]] as const) {const l = el('label'); const check = el('input'); check.type = 'checkbox'; check.checked = value; check.addEventListener('change',change); l.append(check,document.createTextNode(label)); filters.append(l);} content.append(filters);
-    for (const thread of threads.filter(t => resolved || t.status === 'open')) {
-      const card = button('',() => {void chooseThread(thread.id);},'thread');
-      const title = el('div',undefined,'row between'); title.append(el('strong',thread.anchor.label));
-      if (unread(thread)) title.append(el('span',thread.mentionedIds.includes(actor!.id) ? 'Mentioned you · New' : 'New','badge new'));
+    for (const [label,value,change] of [['All pages',allPages,() => {allPages = !allPages; listCursor = undefined; void refresh().catch(() => {});}],['Show resolved',resolved,() => {resolved = !resolved; listCursor = undefined; void refresh().catch(() => {});}]] as const) {const labelNode = el('label'), check = el('input'); check.type = 'checkbox'; check.checked = value; check.addEventListener('change',change); labelNode.append(check,document.createTextNode(label)); filters.append(labelNode);} content.append(filters);
+    for (const thread of threads) {
+      const card = button('',() => {void chooseThread(thread.id);},'thread'), title = el('div',undefined,'row between'); title.append(el('strong',thread.anchor.label));
+      if (unread(thread)) title.append(el('span','New','badge new'));
       const found = resolutions.get(thread.id); if (found && found.state !== 'ok') title.append(el('span',found.state,'badge'));
-      card.append(title,el('p',thread.latestComment?.body.slice(0,180) || ''),el('small',`${thread.latestComment?.authorName || ''} · ${thread.commentCount} comments · ${thread.status}`));
+      card.append(title,el('p',thread.latestComment?.body.slice(0,180) || ''),el('small',`${thread.latestComment?.author.name || ''} · ${thread.commentCount} comments · ${thread.status}`));
       if (thread.page !== currentContext.page) card.append(el('p',thread.page,'muted')); content.append(card);
     }
     if (!threads.length) content.append(el('p',loading ? 'Loading feedback…' : 'No feedback here yet. Start a discussion.','muted'));
-    if (nextCursor && threads.length < 150) content.append(button('Load more threads',() => {void refresh(nextCursor!);}));
-    if (threads.length >= 150) content.append(el('p','Showing 150 threads. Narrow the page filter or use the project workspace.','muted'));
+    if (listCursor) content.append(button('First threads',() => {listCursor = undefined; void refresh().catch(() => {});}));
+    if (nextCursor !== null) content.append(button('Next threads',() => {listCursor = nextCursor!; void refresh().catch(() => {});}));
   }
   function renderThread(content: HTMLElement) {
     content.append(button('Back to comments',() => {persistDraft(); selected = undefined; anchor = undefined; body = ''; mentionIds = []; render();}));
-    const target = anchor || selected!.anchor; const box = el('div',undefined,'target'); box.append(el('h3',target.label));
-    if (target.quote) box.append(el('blockquote',target.quote));
-    if (selected) {
-      const warning = selected.page === currentContext.page ? resolveAnchor(selected.anchor) : null;
-      if (warning && warning.state !== 'ok') box.append(el('p',anchorWarnings[warning.state],'muted'));
-      if (selected.page === currentContext.page) box.append(button('Locate on page',() => {const found = resolveAnchor(selected!.anchor); if (found.element) found.element.scrollIntoView({block: 'center',behavior: 'instant'}); else {notice = anchorWarnings[found.state]; render();}}));
-      else box.append(link('Open original page',selected.pageUrl));
-      if (actor!.role !== 'guest' && selected.page === currentContext.page) box.append(button('Reattach pin',() => startPin(true)));
+    const thread = selected?.thread, target = anchor || thread!.anchor, box = el('div',undefined,'target'); box.append(el('h3',target.label)); if (target.quote) box.append(el('blockquote',target.quote));
+    if (thread) {
+      if (thread.page === currentContext.page) {const warning = resolveAnchor(thread.anchor); if (warning.state !== 'ok') box.append(el('p',anchorWarnings[warning.state],'muted')); box.append(button('Locate on page',() => {const found = resolveAnchor(thread.anchor); if (found.element && !excluded(found.element)) found.element.scrollIntoView({block: 'center',behavior: 'instant'}); else {notice = 'Target is unavailable or excluded.'; render();}}),button('Reattach pin',() => startPin(true)));}
+      else box.append(link('Open original page',thread.pageUrl));
     }
+    if (anchor && draftContext?.viewContext !== undefined) box.append(el('p','Captured view context'),el('pre',JSON.stringify(draftContext.viewContext,null,2)));
     content.append(box);
-    for (const comment of selected?.comments || []) {const article = el('article'); article.append(el('h3',comment.authorName),el('p',comment.body)); if (comment.mentions.length) article.append(el('small',`Mentions: ${comment.mentions.map(id => members.find(m => m.id === id)?.name || 'Member').join(', ')}`)); const time = el('time',new Date(comment.createdAt).toLocaleString()); time.dateTime = comment.createdAt; article.append(time); content.append(article);}
-    if (selected?.nextCursor && selected.comments.length < 250) content.append(button('Load more replies',() => {void moreReplies();}));
-    if (selected && selected.commentCount > selected.comments.length && selected.comments.length >= 250) content.append(el('p','Open the workspace or export feedback for the complete history.','muted'));
-    if (selected && actor!.role !== 'guest') {
-      const coordination = el('div',undefined,'row'); coordination.append(button(selected.status === 'open' ? 'Resolve thread' : 'Reopen thread',() => {void patch({status: selected!.status === 'open' ? 'resolved' : 'open'});}));
-      const assignLabel = el('label','Assignee'); const assign = el('select'); assign.setAttribute('aria-label','Assignee'); assign.append(new Option('Unassigned','')); for (const member of members) assign.append(new Option(member.name,member.id)); assign.value = selected.assigneeId || ''; assign.addEventListener('change',() => {void patch({assigneeId: assign.value || null});}); assignLabel.append(assign); coordination.append(assignLabel); content.append(coordination);
+    for (const comment of selected?.comments.items || []) {const article = el('article'); article.append(el('h3',comment.author.name),el('p',comment.body)); if (comment.mentions.length) article.append(el('small',`Mentions: ${comment.mentions.map(item => item.name).join(', ')}`)); const time = el('time',new Date(comment.createdAt).toLocaleString()); time.dateTime = comment.createdAt; article.append(time); content.append(article);}
+    if (selected) {
+      if (commentCursor) content.append(button('First replies',() => {commentCursor = undefined; void loadDetail(selected!.thread.id).catch(() => {});}));
+      if (selected.comments.nextCursor !== null) content.append(button('Next replies',() => {commentCursor = selected!.comments.nextCursor!; void loadDetail(selected!.thread.id).catch(() => {});}));
+      const history = el('details'), summary = el('summary','Thread history'); history.append(summary);
+      for (const record of selected.history.items) history.append(el('p',`${record.actor.name} · ${record.action} · ${new Date(record.createdAt).toLocaleString()}`));
+      if (historyCursor) history.append(button('First history',() => {historyCursor = undefined; void loadDetail(selected!.thread.id).catch(() => {});}));
+      if (selected.history.nextCursor !== null) history.append(button('Next history',() => {historyCursor = selected!.history.nextCursor!; void loadDetail(selected!.thread.id).catch(() => {});}));
+      content.append(history);
+      const coordination = el('div',undefined,'row'); coordination.append(button(thread!.status === 'open' ? 'Resolve thread' : 'Reopen thread',() => {void patch({status: thread!.status === 'open' ? 'resolved' : 'open'});}));
+      if (capability('assignment') && capability('directory') && adapter.directory) {const label = el('label','Assignee'), assign = el('select'); assign.setAttribute('aria-label','Assignee'); assign.append(new Option('Unassigned','')); for (const member of members) assign.append(new Option(member.name,member.id)); if (thread!.assignee && !members.some(item => item.id === thread!.assignee!.id)) assign.append(new Option(thread!.assignee.name,thread!.assignee.id)); assign.value = thread!.assignee?.id || ''; assign.addEventListener('change',() => {void patch({assigneeId: assign.value || null});}); label.append(assign); coordination.append(label);}
+      content.append(coordination);
     }
-    const form = el('form'); const label = el('label',selected ? 'Reply' : 'Your comment'); label.htmlFor = 'huddle-body'; const textarea = el('textarea'); textarea.id = 'huddle-body'; textarea.maxLength = 3000; textarea.required = true; textarea.value = body; textarea.placeholder = 'What should the team know?'; textarea.addEventListener('input',() => {body = textarea.value; persistDraft();});
-    const mentions = el('fieldset'); mentions.append(el('legend','Mention members'));
-    for (const member of members.slice(0,100)) {const label = el('label'); const input = el('input'); input.type = 'checkbox'; input.checked = mentionIds.includes(member.id); input.addEventListener('change',() => {mentionIds = input.checked ? [...new Set([...mentionIds,member.id])].slice(0,30) : mentionIds.filter(id => id !== member.id); persistDraft();}); label.append(input,document.createTextNode(member.name)); mentions.append(label);}
-    const submit = el('button',busy ? 'Saving…' : selected ? 'Post reply' : 'Post comment','primary'); submit.type = 'submit'; submit.disabled = busy; form.append(label,textarea,mentions,submit); form.addEventListener('submit',event => {event.preventDefault(); void save();}); content.append(form);
+    const form = el('form'), label = el('label',selected ? 'Reply' : 'Your comment'); label.htmlFor = 'huddle-body'; const textarea = el('textarea'); textarea.id = 'huddle-body'; textarea.maxLength = 3000; textarea.required = true; textarea.value = body; textarea.addEventListener('input',() => {body = textarea.value; persistDraft();}); form.append(label,textarea);
+    if (capability('mentions') && capability('directory') && adapter.directory) {const mentions = el('fieldset'); mentions.append(el('legend','Mention members')); for (const member of members) {const label = el('label'), input = el('input'); input.type = 'checkbox'; input.checked = mentionIds.includes(member.id); input.addEventListener('change',() => {mentionIds = input.checked ? [...new Set([...mentionIds,member.id])].slice(0,30) : mentionIds.filter(id => id !== member.id); persistDraft();}); label.append(input,document.createTextNode(member.name)); mentions.append(label);} form.append(mentions);}
+    const submit = el('button',busy ? 'Saving…' : selected ? 'Post reply' : 'Post comment','primary'); submit.type = 'submit'; submit.disabled = busy; form.append(submit); form.addEventListener('submit',event => {event.preventDefault(); void save();}); content.append(form);
   }
-  async function authorize() {
-    if (busy) return; busy = true; error = ''; render();
-    const attempt = new AbortController(); connection = attempt;
-    try {const next = await connect(api,currentContext.environment,AbortSignal.any([life.signal,attempt.signal])); if (destroyed || attempt.signal.aborted) return; actor = next; setupStorage(); await initialize();} catch (e) {if (!attempt.signal.aborted) setError(e);} finally {if (connection === attempt) connection = undefined; busy = false; render();}
+  async function resolveSession(): Promise<boolean> {
+    const stamp = epoch, result = await call(signal => adapter.session(scope(),signal));
+    if (stamp !== epoch || destroyed) return false;
+    if (result.scope.workspace !== settings.workspace || result.scope.environment !== settings.environment || !result.actor?.id || !result.actor.name) throw new CollaborationError('forbidden','The host did not authorize this review scope.');
+    if (session && session.actor.id !== result.actor.id) {persistDraft(); invalidate(); clearPrivate(); cursor = undefined; listCursor = undefined; session = result; setupStorage(); queueMicrotask(() => {if (active()) void initialize();}); return false;}
+    const first = !session; session = result; if (first) setupStorage();
+    return true;
   }
   async function initialize() {
-    const token = api.token, nextMembers = await api.request<Member[]>(api.project('/members')); if (destroyed || token !== api.token) return; members = nextMembers; await refresh();
-    if (restoredTarget) {const id = restoredTarget; restoredTarget = ''; try {selected = await api.request<ThreadDetail>(api.project(`/threads/${id}`));} catch {anchor = pageAnchor(); notice = 'The original thread is unavailable. Your draft is kept as a page comment.';} render();}
+    if (!active() || connecting) return; if (polling) {updateQueued = true; return;} stopUpdates(); connecting = true; error = ''; const stamp = epoch; render();
+    try {
+      if (!await resolveSession() || stamp !== epoch) return;
+      const baseline = await call(signal => adapter.changes(scope(),undefined,signal)); if (stamp !== epoch) return; cursor = baseline.cursor;
+      if (capability('directory') && adapter.directory) {const result = await call(signal => adapter.directory!(scope(),{},signal)); if (stamp !== epoch) return; members = result.items.slice(0,100);}
+      await refresh();
+      if (restoredTarget && stamp === epoch) {const id = restoredTarget; restoredTarget = ''; try {const result = await call(signal => adapter.detail(scope(),id,{},signal)); if (stamp === epoch) selected = result;} catch (value) {if (stamp === epoch && isCollaborationError(value) && value.code === 'not_found') {anchor = pageAnchor(); notice = 'The original thread is unavailable. Your draft is kept as a page comment.';} else throw value;}}
+      if (stamp === epoch) {pollAttempt = 0; startUpdates();}
+    } catch (value) {if (stamp === epoch) {setError(value); if (stamp === epoch && (!(isCollaborationError(value)) || ['network','timeout','rate_limited','unavailable'].includes(value.code))) schedulePoll(backoff(value));}}
+    finally {if (stamp === epoch) {connecting = false; render();}}
   }
-  async function refresh(before?: number) {
-    if (!actor || destroyed) return; const seq = ++loadSequence; const page = currentContext.page; loading = true;
-    const params = new URLSearchParams({environment: currentContext.environment,limit: '30'}); if (!allPages) params.set('page',page); if (before) params.set('before',String(before));
-    try {const result = await api.request<Page<Thread>>(api.project(`/threads?${params}`)); if (destroyed || seq !== loadSequence || page !== currentContext.page) return;
-      const first = store?.read('baseline') === null; threads = before ? [...threads,...result.items].slice(0,150) : result.items;
-      if (first) {for (const t of threads) markRead(t); store?.write('baseline',true);}
-      nextCursor = result.nextCursor; loading = false; refreshAttempt = 0; error = '';
-      if (!stream) {stream = new ChangeStream(api,result.cursor,event => {if (event.environment === currentContext.environment) scheduleRefresh();},(message,terminal) => {notice = message; if (terminal) {persistDraft(); actor = undefined; api.token = ''; threads = []; selected = undefined; members = []; resolutions.clear(); stream?.stop(); stream = undefined;} render();}); stream.start();}
+  async function refresh() {
+    if (!session || !active()) return;
+    const seq = ++loadSequence, stamp = epoch; loading = true;
+    try {
+      const result = await call(signal => adapter.list(scope(),{page: allPages ? undefined : currentContext.page,status: resolved ? undefined : 'open',cursor: listCursor,limit: 50},signal));
+      if (stamp !== epoch || seq !== loadSequence) return;
+      threads = result.items.slice(0,100); nextCursor = result.nextCursor; error = ''; stale = false;
+      if (store?.read('baseline') === null) {for (const thread of threads) markRead(thread); store.write('baseline',true);}
       render();
-    } catch (e) {if (destroyed || seq !== loadSequence || page !== currentContext.page) return; setError(e); if (actor && e instanceof ApiError && (e.status === 0 || e.status === 408 || e.status === 429 || e.status >= 500)) scheduleRefresh(Math.min(30000,1000 * 2 ** Math.min(refreshAttempt++,5)));} finally {if (seq === loadSequence) loading = false;}
+    } catch (value) {if (stamp === epoch && seq === loadSequence) {stale = true; setError(value); throw value;}}
+    finally {if (stamp === epoch && seq === loadSequence) loading = false;}
   }
-  function scheduleRefresh(delay = 60) {if (destroyed) return; clearTimeout(queuedRefresh); queuedRefresh = setTimeout(() => {void refresh(); if (selected) void loadDetail(selected.id);},delay);}
   async function loadDetail(id: string) {
-    const seq = ++detailSequence; try {const result = await api.request<ThreadDetail>(api.project(`/threads/${id}`)); if (destroyed || seq !== detailSequence || selected?.id !== id) return; selected = result; markRead(result); render();} catch (e) {if (seq === detailSequence && selected?.id === id) setError(e);}
+    const seq = ++detailSequence, stamp = epoch;
+    try {const result = await call(signal => adapter.detail(scope(),id,{commentsCursor: commentCursor,historyCursor,limit: 50},signal)); if (stamp !== epoch || seq !== detailSequence || selected?.thread.id !== id) return; selected = result; markRead(result.thread); render();}
+    catch (value) {if (stamp === epoch && seq === detailSequence) {stale = true; setError(value); throw value;}}
   }
   async function chooseThread(id: string) {
-    persistDraft(); body = ''; mentionIds = []; anchor = undefined; selected = threads.find(t => t.id === id) ? {...threads.find(t => t.id === id)!,comments: [],history: [],nextCursor: null} : undefined;
-    error = ''; const draft = store?.read<Draft>(draftKey); if (draft?.threadId === id) {body = draft.body; mentionIds = draft.mentions;}
-    await loadDetail(id); render();
+    persistDraft(); const thread = threads.find(item => item.id === id); if (!thread) return;
+    body = ''; mentionIds = []; anchor = undefined; commentCursor = historyCursor = undefined;
+    selected = {thread,comments: {items: [],nextCursor: null},history: {items: [],nextCursor: null}}; error = '';
+    const draft = store?.read<Draft>(draftKey); if (draft?.threadId === id) {body = draft.body; mentionIds = draft.mentions;}
+    render(); try {await loadDetail(id);} catch { /* detail error is rendered */ }
   }
-  async function moreReplies() {if (!selected?.nextCursor) return; const id = selected.id, after = selected.nextCursor; try {const more = await api.request<ThreadDetail>(api.project(`/threads/${id}?after=${after}`)); if (selected?.id !== id) return; selected = {...more,comments: [...selected.comments,...more.comments].slice(0,250)}; render();} catch (e) {setError(e);}}
+  function capturedContext(): Omit<Context,'workspace' | 'environment'> {
+    const {workspace: _workspace,environment: _environment,...context} = currentContext;
+    const result = {...context,page: redact(context.page,'page'),pageUrl: redact(context.pageUrl,'pageUrl'),release: context.release === undefined ? undefined : redact(context.release,'release')};
+    if (settings.viewContext) {
+      let budget = 1000;
+      const clean = (value: unknown,depth: number): unknown => {
+        if (depth > 16 || --budget < 0) throw new Error('View context is too complex.');
+        if (typeof value === 'string') return redact(value,'viewContext');
+        if (typeof value === 'number') {if (!Number.isFinite(value)) throw new Error('View context numbers must be finite.'); return value;}
+        if (value === null || typeof value === 'boolean') return value;
+        if (Array.isArray(value)) return value.map(item => clean(item,depth + 1));
+        if (value && typeof value === 'object' && [Object.prototype,null].includes(Object.getPrototypeOf(value))) {
+          const entries = Object.entries(value).map(([key,item]) => [redact(key,'viewContextKey'),clean(item,depth + 1)] as const);
+          if (new Set(entries.map(([key]) => key)).size !== entries.length) throw new Error('Redacted context keys collide.');
+          return Object.fromEntries(entries);
+        }
+        throw new Error('View context must contain only JSON values.');
+      };
+      const viewContext = clean(settings.viewContext(),0) as Context['viewContext'];
+      if (new TextEncoder().encode(JSON.stringify(viewContext)).byteLength > 8192) throw new Error('View context must be bounded JSON (at most 8 KiB).');
+      return {...result,viewContext};
+    }
+    return result;
+  }
   async function save() {
-    if (busy || !body.trim() || (!anchor && !selected)) return;
-    busy = true; error = ''; const sent = body, sentMentions = [...mentionIds], target = anchor, id = selected?.id, savedKey = draftKey, savedStore = store;
-    const payload = target ? {...currentContext,anchor: target,body: sent,mentions: sentMentions} : {body: sent,mentions: sentMentions};
-    const requestId = requests.idFor({path: target ? 'new' : id,payload}); render();
+    if (busy || !session || !body.trim() || (!anchor && !selected)) return;
+    busy = true; error = ''; const stamp = epoch, sent = body, sentMentions = capability('mentions') ? [...mentionIds] : [], target = anchor, id = selected?.thread.id, savedKey = draftKey, savedStore = store;
+    render();
     try {
-      const result = await api.request<ThreadDetail>(api.project(target ? '/threads' : `/threads/${id}/replies`),'POST',{...payload,requestId}); requests.clear();
+      if (!await resolveSession() || stamp !== epoch) return;
+      const context = target ? (draftContext ||= capturedContext()) : undefined;
+      persistDraft();
+      const payload = target ? {...context,anchor: target,body: sent,mentions: sentMentions} : {body: sent,mentions: sentMentions};
+      const idempotencyKey = requests.idFor({scope: scope(),actor: session!.actor.id,path: target ? 'new' : id,payload});
+      const result = target ? await call(signal => adapter.create(scope(),{...context!,anchor: target,body: sent,mentions: sentMentions,idempotencyKey},signal)) : await call(signal => adapter.reply(scope(),id!,{body: sent,mentions: sentMentions,idempotencyKey},signal));
+      if (stamp !== epoch) return; requests.clear();
       const saved = savedStore?.read<Draft>(savedKey); if (saved?.body === sent && JSON.stringify(saved.mentions) === JSON.stringify(sentMentions)) savedStore?.remove(savedKey,saved);
-      if (draftKey === savedKey && anchor === target && selected?.id === id) {body = remainderAfterSave(body,sent); if (body.trim()) {selected = result; anchor = undefined; persistDraft();} else {selected = result; anchor = undefined; mentionIds = [];} markRead(result);}
+      if (draftKey === savedKey && anchor === target && selected?.thread.id === id) {body = remainderAfterSave(body,sent); selected = result; anchor = undefined; if (body.trim()) persistDraft(); else mentionIds = []; markRead(result.thread);}
       notice = 'Comment saved.'; await refresh();
-    } catch (e) {persistDraft(); setError(e);} finally {busy = false; render();}
+    } catch (value) {if (stamp === epoch) {persistDraft(); setError(value);}}
+    finally {if (stamp === epoch) {busy = false; render();}}
   }
-  async function patch(change: {status?: 'open' | 'resolved'; assigneeId?: string | null; anchor?: Anchor}) {
-    if (!selected || busy) return; busy = true; const id = selected.id; error = '';
-    try {const updated = await api.request<ThreadDetail>(api.project(`/threads/${id}`),'PATCH',{...change,expectedVersion: selected.version,requestId: crypto.randomUUID()}); if (selected?.id === id) selected = updated; await refresh();}
-    catch (e) {setError(e); if (selected) await loadDetail(selected.id);} finally {busy = false; render();}
+  async function patch(change: Omit<Update,'expectedVersion' | 'idempotencyKey'>) {
+    if (!selected || busy || !session) return; busy = true; const stamp = epoch, id = selected.thread.id; error = ''; render();
+    const payload = {...change,expectedVersion: selected.thread.version};
+    try {
+      if (!await resolveSession() || stamp !== epoch) return;
+      const idempotencyKey = updates.idFor({scope: scope(),actor: session!.actor.id,id,payload});
+      const result = await call(signal => adapter.update(scope(),id,{...payload,idempotencyKey},signal)); if (stamp !== epoch) return; updates.clear(); if (selected?.thread.id === id) selected = result; await refresh();
+    } catch (value) {if (stamp === epoch) {setError(value); if (isCollaborationError(value) && value.code === 'conflict' && selected) {try {await loadDetail(id);} catch { /* keep the conflict visible */ } notice = 'The thread changed. Review the current version before trying again.';}}}
+    finally {if (stamp === epoch) {busy = false; render();}}
+  }
+  function backoff(value: unknown) {const server = isCollaborationError(value) ? value.retryAfterMs || 0 : 0; return Math.min(120000,Math.max(server,Math.min(30000,1000 * 2 ** Math.min(pollAttempt++,5)) * (.75 + Math.random() * .25)));}
+  function schedulePoll(delay = 10000) {clearTimeout(pollTimer); pollTimer = undefined; if (active()) pollTimer = setTimeout(() => {pollTimer = undefined; if (session) void poll(); else void initialize();},delay);}
+  async function poll() {
+    if (!active() || !session) return; if (connecting) {schedulePoll(); return;} if (polling) {updateQueued = true; return;} polling = true; const stamp = epoch; let delay = 10000;
+    try {
+      if (!await resolveSession() || stamp !== epoch) return;
+      const result = await call(signal => adapter.changes(scope(),cursor,signal)); if (stamp !== epoch) return;
+      if (result.reset) {listCursor = commentCursor = historyCursor = undefined; threads = []; resolutions.clear();}
+      if (result.items.length || result.reset || stale) {await refresh(); if (selected) await loadDetail(selected.thread.id);}
+      if (stamp !== epoch) return; cursor = result.cursor; notice = ''; error = ''; pollAttempt = 0; if (result.hasMore) delay = 0;
+    } catch (value) {if (stamp === epoch) {setError(value); delay = backoff(value);}}
+    finally {if (stamp === epoch) {polling = false; render(); const queued = updateQueued; updateQueued = false; schedulePoll(queued ? 0 : delay);}}
+  }
+  function startUpdates() {
+    stopUpdates(); schedulePoll();
+    if (!adapter.subscribe || !active() || !session) return;
+    const subscription = new AbortController(); subscriptionLife = subscription; const stamp = epoch;
+    try {const cleanup = adapter.subscribe(scope(),() => {if (stamp === epoch) schedulePoll(60);},value => {if (stamp !== epoch) return; setError(value); if (stamp === epoch && session) {stopUpdates(); schedulePoll();}},AbortSignal.any([life.signal,contextLife.signal,subscription.signal])); if (stamp !== epoch || subscription.signal.aborted) cleanup(); else unsubscribe = cleanup;}
+    catch (value) {setError(value); if (session) schedulePoll();}
   }
   function cancelPin() {pinning = false; reattach = false; highlight.hidden = true; opened = true; render();}
   function startPin(isReattach: boolean) {persistDraft(); pinning = true; reattach = isReattach; error = ''; render();}
+  function excluded(element: Element): boolean {
+    if (element.closest('[data-huddle-root],[data-feedback-ui],[data-huddle-exclude],input[type=password],textarea')) return true;
+    try {for (let node: Element | null = element; node; node = node.parentElement) if (settings.excludeElement?.(node)) return true;} catch (value) {notify(value); return true;}
+    return false;
+  }
   function pointer(event: PointerEvent) {
     if (!pinning || event.composedPath().includes(host)) return;
     const target = event.composedPath().find(node => node instanceof Element) as Element | undefined; if (!target) return;
-    const r = pickTarget(target).getBoundingClientRect(); highlight.hidden = false; Object.assign(highlight.style,{left: `${r.left}px`,top: `${r.top}px`,width: `${r.width}px`,height: `${r.height}px`});
+    const element = pickTarget(target); if (excluded(element)) {highlight.hidden = true; return;}
+    const rect = element.getBoundingClientRect(); highlight.hidden = false; Object.assign(highlight.style,{left: `${rect.left}px`,top: `${rect.top}px`,width: `${rect.width}px`,height: `${rect.height}px`});
   }
   function click(event: MouseEvent) {
     if (!pinning || event.composedPath().includes(host)) return;
     const target = event.composedPath().find(node => node instanceof Element) as Element | undefined; if (!target) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-    const element = pickTarget(target), rect = element.getBoundingClientRect(); const built = buildAnchor(element,{quote: window.getSelection()?.toString() || '',x: (event.clientX - rect.left) / Math.max(1,rect.width),y: (event.clientY - rect.top) / Math.max(1,rect.height)});
-    const update = reattach; cancelPin();
-    if (update) void patch({anchor: built}); else {selected = undefined; anchor = built; body = ''; mentionIds = []; persistDraft(); render(); shadow.getElementById('huddle-body')?.focus();}
+    event.preventDefault(); event.stopImmediatePropagation(); const element = pickTarget(target);
+    if (excluded(element)) {notice = 'This element is excluded from review capture.'; return;}
+    try {
+      const rect = element.getBoundingClientRect(), built = buildAnchor(element,{quote: window.getSelection()?.toString() || '',x: (event.clientX - rect.left) / Math.max(1,rect.width),y: (event.clientY - rect.top) / Math.max(1,rect.height)});
+      for (const key of ['selector','label','quote','tag','stableKey','context'] as const) if (built[key] !== undefined) built[key] = redact(built[key]!,`anchor.${key}`);
+      const update = reattach; cancelPin();
+      if (update) void patch({anchor: built}); else {draftContext = capturedContext(); selected = undefined; anchor = built; body = ''; mentionIds = []; persistDraft(); render(); shadow.getElementById('huddle-body')?.focus();}
+    } catch (value) {cancelPin(); setError(value);}
   }
   function geometry() {
     geometryFrame = 0; pins.replaceChildren(); if (!opened || pinning || document.visibilityState === 'hidden') return;
     for (const [i,t] of threads.entries()) {
       if (t.page !== currentContext.page || (t.status === 'resolved' && !resolved)) continue;
-      const found = resolutions.get(t.id); if (!found?.element?.isConnected || ['missing','hidden','ambiguous'].includes(found.state)) continue;
+      const found = resolutions.get(t.id); if (!found?.element?.isConnected || excluded(found.element) || ['missing','hidden','ambiguous'].includes(found.state)) continue;
       const rect = found.element.getBoundingClientRect(); if (!rect.width || !rect.height) continue;
       const x = rect.left + rect.width * t.anchor.x, y = rect.top + rect.height * t.anchor.y; if (y < 0 || y > innerHeight || x < 0 || x > innerWidth) continue;
       const pin = button(String(i + 1),() => {void chooseThread(t.id);},`pin${found.state !== 'ok' ? ' warning' : ''}`); pin.setAttribute('aria-label',`Open feedback: ${t.anchor.label}`); pin.style.left = `${x}px`; pin.style.top = `${y}px`; pins.append(pin);
@@ -228,11 +314,12 @@ export function mountForOwner(options: HuddleOptions, owner?: symbol): Huddle {
   function routeChange() {
     if (destroyed) return;
     const next = getContext(); if (JSON.stringify(next) === JSON.stringify(currentContext)) return;
-    persistDraft(); currentContext = next; loadSequence++; detailSequence++; selected = undefined; anchor = undefined; body = ''; mentionIds = []; threads = []; resolutions.clear(); notice = ''; error = ''; setupStorage(); render(); void refresh();
+    const scopeChanged = next.workspace !== currentContext.workspace || next.environment !== currentContext.environment;
+    persistDraft(); invalidate(); currentContext = next; draftContext = undefined; selected = undefined; anchor = undefined; body = ''; mentionIds = []; threads = []; resolutions.clear(); notice = ''; error = ''; cursor = undefined; listCursor = commentCursor = historyCursor = undefined; restoredTarget = '';
+    if (scopeChanged) clearPrivate(); else setupStorage(); render(); if (active()) void initialize();
   }
-  const onVisibility = () => {if (document.visibilityState === 'hidden') {stream?.pause(); cancelAnimationFrame(geometryFrame); cancelAnimationFrame(resolveFrame); geometryFrame = resolveFrame = 0;} else {stream?.start(); routeChange(); scheduleResolution();}};
-  const keydown = (event: KeyboardEvent) => {if (event.key === 'Escape') {if (pinning) {event.preventDefault(); cancelPin();} else if (opened && event.composedPath().includes(host)) controller.close();}};
-  // Observe History API calls while preserving originals and other wrappers.
+  const onVisibility = () => {if (document.visibilityState === 'hidden') {persistDraft(); invalidate(); cancelAnimationFrame(geometryFrame); cancelAnimationFrame(resolveFrame); geometryFrame = resolveFrame = 0;} else {routeChange(); if (active()) void initialize(); scheduleResolution();}};
+  const keydown = (event: KeyboardEvent) => {if (event.key === 'Escape') {if (pinning) {event.preventDefault(); cancelPin();} else if (opened && event.composedPath().includes(host)) {event.preventDefault(); controller.close();}}};
   const originalPush = history.pushState, originalReplace = history.replaceState;
   const push: History['pushState'] = function(this: History,...args) {originalPush.apply(this,args); routeChange();};
   const replace: History['replaceState'] = function(this: History,...args) {originalReplace.apply(this,args); routeChange();};
@@ -241,17 +328,13 @@ export function mountForOwner(options: HuddleOptions, owner?: symbol): Huddle {
   window.addEventListener('keydown',keydown,{signal: life.signal}); window.addEventListener('scroll',scheduleGeometry,{signal: life.signal,capture: true,passive: true});
   window.addEventListener('resize',scheduleResolution,{signal: life.signal}); window.addEventListener('popstate',routeChange,{signal: life.signal}); window.addEventListener('hashchange',routeChange,{signal: life.signal});
   document.addEventListener('visibilitychange',onVisibility,{signal: life.signal});
-  window.addEventListener('online',() => {stream?.pause(); stream?.start(); if (actor) void refresh();},{signal: life.signal});
-  document.addEventListener('toggle',event => {
-    if (event.composedPath().includes(host) || !(event.target instanceof HTMLElement) || !event.target.matches('[popover]')) return;
-    try {surface.hidePopover(); topLayer();} catch { /* non-popover fallback */ }
-    scheduleResolution();
-  },{capture: true,signal: life.signal});
+  window.addEventListener('online',() => {if (active()) void initialize();},{signal: life.signal});
+  document.addEventListener('toggle',event => {if (event.composedPath().includes(host) || !(event.target instanceof HTMLElement) || !event.target.matches('[popover]')) return; try {surface.hidePopover(); topLayer();} catch { /* fixed-host fallback */ } scheduleResolution();},{capture: true,signal: life.signal});
   const controller: Huddle = {
-    open() {if (destroyed) return; opened = true; topLayer(); render(); shadow.querySelector<HTMLElement>('.panel button')?.focus(); const token = api.token; if (token && !actor) void api.request<{actor: Actor}>('/api/session').then(async result => {if (destroyed || token !== api.token) return; actor = result.actor; setupStorage(); await initialize();}).catch(e => {if (token === api.token) setError(e);}); else if (actor) void refresh();},
-    close() {persistDraft(); opened = false; pinning = false; highlight.hidden = true; render(); shadow.querySelector<HTMLElement>('.launcher')?.focus();},
-    updateContext(context) {if (destroyed) return; if (context.environment !== undefined && !/^[a-zA-Z0-9_-]{1,80}$/.test(context.environment)) throw new Error('Provide a valid environment.'); const changedEnvironment = context.environment && context.environment !== settings.environment; if (changedEnvironment) persistDraft(); Object.assign(settings,context); if (changedEnvironment) {connection?.abort(); stream?.stop(); stream = undefined; actor = undefined; api.token = '';} routeChange();},
-    destroy() {if (destroyed) return; persistDraft(); destroyed = true; life.abort(); api.destroy(); stream?.stop(); observer.disconnect(); cancelAnimationFrame(geometryFrame); cancelAnimationFrame(resolveFrame); clearTimeout(queuedRefresh); if (history.pushState === push) history.pushState = originalPush; if (history.replaceState === replace) history.replaceState = originalReplace; host.remove(); instances.delete(document); threads = []; selected = undefined; actor = undefined; members = []; resolutions.clear();},
+    open() {if (destroyed || opened) return; opener = document.activeElement instanceof HTMLElement && !host.contains(document.activeElement) ? document.activeElement : null; opened = true; topLayer(); render(); shadow.querySelector<HTMLElement>('.panel button')?.focus(); void initialize();},
+    close() {if (destroyed) return; persistDraft(); invalidate(); clearPrivate(); cursor = undefined; listCursor = commentCursor = historyCursor = undefined; opened = false; pinning = false; highlight.hidden = true; render(); if (opener?.isConnected) opener.focus(); else shadow.querySelector<HTMLElement>('.launcher')?.focus();},
+    updateContext(context) {if (destroyed) return; validateOptions({...settings,...context}); Object.assign(settings,context); routeChange();},
+    destroy() {if (destroyed) return; persistDraft(); destroyed = true; invalidate(); life.abort(); observer.disconnect(); cancelAnimationFrame(geometryFrame); cancelAnimationFrame(resolveFrame); if (history.pushState === push) history.pushState = originalPush; if (history.replaceState === replace) history.replaceState = originalReplace; host.remove(); instances.delete(document); clearPrivate(); memory.clear(); if (opened && opener?.isConnected) opener.focus();},
   };
-  instances.set(document,{controller,settings,owner}); render(); return controller;
+  instances.set(document,{controller,settings,owner}); topLayer(); render(); return controller;
 }

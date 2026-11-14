@@ -5,7 +5,8 @@ import {createRoot} from 'react-dom/client';
 import {createBinding} from '../packages/browser/src/adapters/binding';
 import {useHuddle} from '../packages/browser/src/adapters/react';
 import {mount,type HuddleOptions} from '../packages/browser/src/index';
-const options: HuddleOptions = {serverUrl: 'https://huddle.test',projectId: '11111111-1111-4111-8111-111111111111',environment: 'staging'};
+import {TestAdapter} from './fixtures/adapter';
+const options: HuddleOptions = {adapter: new TestAdapter(),namespace: 'helpers',workspace: 'team',environment: 'staging'};
 const dispose: (() => void)[] = [];
 it('supports a host trigger without a floating launcher and exposes open/pinning state',() => {
  const widget = mount({...options,launcher: 'hidden'}); dispose.push(widget.destroy);
@@ -42,7 +43,7 @@ it('updates context in place, remounts installation changes and validates before
  const first = document.querySelector('[data-huddle-root]'); binding.update({...options,release: 'v2',environment: 'production'});
  expect(document.querySelector('[data-huddle-root]')).toBe(first);
  binding.controls.open(); expect(first!.shadowRoot!.textContent).toContain('production');
- expect(() => binding.update({...options,serverUrl: 'https://huddle.test/unsupported'})).toThrow('origin');
+ expect(() => binding.update({...options,namespace: ''})).toThrow('namespace');
  expect(document.querySelector('[data-huddle-root]')).toBe(first);
  binding.update({...options,styleNonce: 'replacement'}); expect(document.querySelector('[data-huddle-root]')).not.toBe(first);
  binding.update(null); expect(binding.controls.current).toBeNull(); expect(document.querySelector('[data-huddle-root]')).toBeNull();

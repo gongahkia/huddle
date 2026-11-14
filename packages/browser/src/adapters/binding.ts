@@ -1,4 +1,5 @@
 import {mountForOwner,type Huddle,type HuddleOptions} from '../engine';
+import {validateOptions} from '../options';
 export type {HuddleOptions} from '../engine';
 /** Controls for the helper's own widget. Before mounting, these are safe no-ops. */
 export type HuddleControls = {readonly current: Huddle | null; open(): void; close(): void};
@@ -9,16 +10,14 @@ export function createBinding() {
   function dispose() {current?.destroy(); current = null; previous = null;}
   function update(options: HuddleOptions | null) {
     if (!options) {dispose(); return;}
-    const url = new URL(options.serverUrl);
-    if (!['http:','https:'].includes(url.protocol) || url.pathname !== '/' || url.search || url.hash || url.username || url.password) throw new Error('Use an HTTP(S) Huddle server origin without a path, query or credentials.');
-    const next = {...options,serverUrl: url.origin,allowedQueryParameters: options.allowedQueryParameters ? [...options.allowedQueryParameters] : undefined};
+    validateOptions(options);
+    const next = {...options,allowedQueryParameters: options.allowedQueryParameters ? [...options.allowedQueryParameters] : undefined};
     // Context changes preserve drafts and the current connection where possible.
-    if (current && previous && equal({...previous,environment: next.environment,release: next.release},next)) {
-      if (previous.environment !== next.environment || previous.release !== next.release) current.updateContext({environment: next.environment,release: next.release});
+    if (current && previous && equal({...previous,workspace: next.workspace,environment: next.environment,release: next.release},next)) {
+      if (previous.workspace !== next.workspace || previous.environment !== next.environment || previous.release !== next.release) current.updateContext({workspace: next.workspace,environment: next.environment,release: next.release});
       previous = next; return;
     }
     if (current) dispose();
-    // Validate the original URL through the core; do not silently accept paths.
     current = mountForOwner(options,owner); previous = next;
   }
   return {controls,update,dispose};

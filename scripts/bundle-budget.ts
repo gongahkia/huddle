@@ -9,4 +9,4 @@ async function graph(path: string, seen = new Set<string>()): Promise<number> {
  for (const dependency of record?.imports || []) {if (dependency.external) throw new Error(`Core unexpectedly requires ${dependency.path}`); const target = outputs.has(resolve(dependency.path)) ? resolve(dependency.path) : resolve(dirname(path),dependency.path); bytes += await graph(target,seen);}
  return bytes;
 }
-for (const file of ['dist/public/embed.js','packages/browser/dist/huddle.js']) {const bytes = await graph(file); console.log(`${file}: ${bytes} bytes gzip including shared chunks (budget 76800)`); if (bytes > 75 * 1024) throw new Error('Widget exceeds 75 KiB gzip.');}
+for (const file of ['dist/public/embed.js','packages/browser/dist/huddle.js','packages/browser/dist/http.js']) {const bytes = await graph(file); console.log(`${file}: ${bytes} bytes gzip including shared chunks (budget 76800)`); if (bytes > 75 * 1024) throw new Error('Widget exceeds 75 KiB gzip.');}

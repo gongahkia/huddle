@@ -3,7 +3,8 @@ test('emitted core and helper entry points share ownership and cleanup cannot re
  await page.goto('http://localhost:4321/html/');
  const result = await page.evaluate(async () => {
   const {mount} = await import(new URL('/sdk/huddle.js',location.href).href), {huddle} = await import(new URL('/sdk/svelte.js',location.href).href);
-  const options = {serverUrl: 'http://127.0.0.1:4311',projectId: '11111111-1111-4111-8111-111111111111',environment: 'staging'};
+  const {createHttpAdapter} = await import(new URL('/sdk/http.js',location.href).href);
+  const options = {adapter:createHttpAdapter(),namespace:'ownership',workspace:'team',environment:'staging'};
   const manual = mount(options); let helperConflict = '', coreConflict = '';
   try {huddle(document.body,options);} catch (error) {helperConflict = (error as Error).message;}
   const manualStillPresent = document.querySelectorAll('[data-huddle-root]').length === 1; manual.destroy();

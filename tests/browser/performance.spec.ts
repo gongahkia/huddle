@@ -9,13 +9,13 @@ test('records idle CPU/network and heap behavior separately from server load',as
  await expect(page.locator('[data-huddle-root]')).toHaveCount(0);
  const metrics = async () => {await cdp.send('HeapProfiler.collectGarbage'); const result = await cdp.send('Performance.getMetrics'); return Object.fromEntries(result.metrics.map(m => [m.name,m.value]));};
  const base = await metrics(); let requests = 0; page.on('request',() => requests++);
- await page.evaluate(async () => {const {mount} = await import(new URL('/huddle.js',location.href).href); (window as Window & {review?: import('../../packages/browser/src/index').Huddle}).review = mount({serverUrl: 'http://127.0.0.1:4311',projectId: '11111111-1111-4111-8111-111111111111',environment: 'staging'});});
+ await page.evaluate(async () => {const {mount} = await import(new URL('/huddle.js',location.href).href),{createHttpAdapter} = await import(new URL('/sdk/http.js',location.href).href); (window as Window & {review?: import('../../packages/browser/src/index').Huddle}).review = mount({adapter:createHttpAdapter(),namespace:'performance',workspace:'team',environment:'staging'});});
  const mounted = await metrics(); const beforeIdle = requests;
- await page.waitForTimeout(3000); const idle = await metrics();
+ await page.waitForTimeout(3000); const idle = await metrics(); const idleRequests = requests - beforeIdle;
  await page.getByRole('button',{name: 'Open Huddle',exact: true}).click(); await page.screenshot({path: 'output/browser/widget.png'});
  await page.evaluate(() => {const w = window as Window & {review?: import('../../packages/browser/src/index').Huddle}; w.review?.destroy(); delete w.review;});
  await expect(page.locator('[data-huddle-root]')).toHaveCount(0); const cleaned = await metrics();
- expect(requests - beforeIdle).toBe(0); expect(cleaned.JSEventListeners - base.JSEventListeners).toBeLessThanOrEqual(2);
- const report = {at: new Date().toISOString(),browser: 'Chromium',os: release(),cpu: cpus()[0]?.model,baselineHeapBytes: base.JSHeapUsedSize,mountedHeapBytes: mounted.JSHeapUsedSize,incrementalMountedHeapBytes: mounted.JSHeapUsedSize - base.JSHeapUsedSize,afterDestroyHeapBytes: cleaned.JSHeapUsedSize,listenerDeltaAfterDestroy: cleaned.JSEventListeners - base.JSEventListeners,idleWindowSeconds: 3,idleRequests: requests - beforeIdle,idleTaskSeconds: idle.TaskDuration - mounted.TaskDuration,idleLayoutCount: idle.LayoutCount - mounted.LayoutCount,notes: 'Unauthenticated widget, static HTML page, forced GC; not a universal memory guarantee. Authenticated 100-client activity is measured separately.'};
+ expect(idleRequests).toBe(0); expect(cleaned.JSEventListeners - base.JSEventListeners).toBeLessThanOrEqual(2);
+ const report = {at: new Date().toISOString(),browser: 'Chromium',os: release(),cpu: cpus()[0]?.model,baselineHeapBytes: base.JSHeapUsedSize,mountedHeapBytes: mounted.JSHeapUsedSize,incrementalMountedHeapBytes: mounted.JSHeapUsedSize - base.JSHeapUsedSize,afterDestroyHeapBytes: cleaned.JSHeapUsedSize,listenerDeltaAfterDestroy: cleaned.JSEventListeners - base.JSEventListeners,idleWindowSeconds: 3,idleRequests,idleTaskSeconds: idle.TaskDuration - mounted.TaskDuration,idleLayoutCount: idle.LayoutCount - mounted.LayoutCount,notes: 'Closed widget, static HTML page, forced GC. Open-panel and long-lived memory/request acceptance are separate pending gates.'};
  mkdirSync('output/browser',{recursive: true}); writeFileSync('output/browser/latest.json',JSON.stringify(report,null,2) + '\n'); console.log(JSON.stringify(report)); await cdp.detach();
 });

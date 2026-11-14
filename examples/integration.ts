@@ -1,6 +1,7 @@
 import type {HuddleOptions} from '@huddle/browser';
+import {createHttpAdapter} from '@huddle/browser/http';
+const adapter = createHttpAdapter();
 export function reviewOptions(framework: string): HuddleOptions | null {
-  const params = new URLSearchParams(location.search), projectId = params.get('project');
-  if (!projectId) return null;
-  return {serverUrl: params.get('server') || 'http://localhost:4310',projectId,environment: 'staging',release: `${framework}-example-v1`};
+  const workspace = new URLSearchParams(location.search).get('workspace');
+  return workspace ? {adapter,namespace: 'huddle-examples',workspace,environment: 'staging',release: `${framework}-example-v2`} : null;
 }

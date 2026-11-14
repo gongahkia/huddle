@@ -1,6 +1,6 @@
 {
   "name": "@huddle/browser",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -9,6 +9,7 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/huddle.js"
     },
+    "./http": {"types":"./dist/http.d.ts","import":"./dist/http.js"},
     "./react": {"types":"./dist/react.d.ts","import":"./dist/react.js"},
     "./preact": {"types":"./dist/preact.d.ts","import":"./dist/preact.js"},
     "./vue": {"types":"./dist/vue.d.ts","import":"./dist/vue.js"},

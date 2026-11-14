@@ -3,7 +3,7 @@
 :toclevels: 3
 :sectnums:
 
-Status: approved design, implementation not started. Prepared 14 November 2026.
+Status: approved design, implementation in progress under the user's implementation goal. Prepared 14 November 2026. See `docs/frontend-progress.md` for current evidence and remaining gates.
 
 This document is a self-contained handoff for implementing Huddle on another machine. It records the agreed product direction, the existing implementation, the changes required in both repositories, and the checks required before claiming completion.
 

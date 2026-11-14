@@ -27,6 +27,7 @@
       "@huddle/browser": [
         "./packages/browser/src/index.ts"
       ],
+      "@huddle/browser/http": ["./packages/browser/src/http.ts"],
       "@huddle/browser/*": [
         "./packages/browser/src/adapters/*.ts"
       ]

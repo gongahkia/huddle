@@ -25,6 +25,11 @@ export type ErrorCode = 'unauthenticated' | 'forbidden' | 'validation' | 'not_fo
 export class CollaborationError extends Error {
   constructor(readonly code: ErrorCode, message: string, readonly retryAfterMs?: number) {super(message); this.name = 'CollaborationError';}
 }
+export function isCollaborationError(value: unknown): value is CollaborationError {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Partial<CollaborationError>;
+  return item.name === 'CollaborationError' && typeof item.message === 'string' && ['unauthenticated','forbidden','validation','not_found','conflict','rate_limited','timeout','network','unavailable'].includes(item.code || '') && (item.retryAfterMs === undefined || (Number.isSafeInteger(item.retryAfterMs) && item.retryAfterMs >= 0));
+}
 export type Mutation = {idempotencyKey: string};
 export type Create = Mutation & Omit<Context,'workspace' | 'environment'> & {anchor: Anchor; body: string; mentions?: string[]};
 export type Reply = Mutation & {body: string; mentions?: string[]};

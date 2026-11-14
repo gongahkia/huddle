@@ -1,3 +1,5 @@
+> The v0.2 API uses a host collaboration adapter. See [the migration guide](migration-v0.2.md). The service-backed instructions below describe v0.1 and are retained temporarily during migration.
+
 # Framework helpers
 
 All helpers use the same framework-independent engine. They are optional subpaths of `@huddle/browser`; installing the core does not install frontend frameworks. A helper uses the framework already installed in your application. Tested versions and browser coverage are in [integration.md](integration.md).

@@ -3,14 +3,24 @@ export const STORAGE_LIMIT = 2 * 1024 * 1024;
 const PREFIX = 'huddle:v1:';
 const AGE = 14 * 86400000;
 type Entry<T> = {at: number; value: T};
+export class MemoryStorage implements Storage {
+  private values = new Map<string,string>();
+  get length() {return this.values.size;}
+  clear() {this.values.clear();}
+  key(index: number) {return [...this.values.keys()][index] ?? null;}
+  getItem(key: string) {return this.values.get(key) ?? null;}
+  setItem(key: string,value: string) {this.values.set(key,value);}
+  removeItem(key: string) {this.values.delete(key);}
+}
 export class LocalStore {
-  constructor(private scope: string, private storage: Storage | null = (() => {try {return globalThis.localStorage;} catch {return null;}})()) {}
+  constructor(private scope: string, private storage: Storage | null = (() => {try {return globalThis.localStorage;} catch {return null;}})(), private fallback?: Storage) {}
   private key(key: string) {return PREFIX + JSON.stringify([this.scope, key]);}
   read<T>(key: string): T | null {
-    try {const raw = this.storage?.getItem(this.key(key)); if (!raw) return null;
-      const entry = JSON.parse(raw) as Entry<T>;
+    try {const raw = this.storage?.getItem(this.key(key)), backup = this.fallback?.getItem(this.key(key)); if (!raw && !backup) return null;
+      let entry = JSON.parse(raw || backup!) as Entry<T>;
+      if (backup) {const saved = JSON.parse(backup) as Entry<T>; if (saved.at >= entry.at) entry = saved;}
       if (typeof entry.at !== 'number' || Date.now() - entry.at > AGE) {this.remove(key); return null;} return entry.value;
-    } catch {return null;}
+    } catch {return this.fallback ? new LocalStore(this.scope,this.fallback).read<T>(key) : null;}
   }
   write(key: string, value: unknown) {
     if (!this.storage) return;
@@ -25,10 +35,13 @@ export class LocalStore {
       entries.sort((a, b) => a.at - b.at);
       for (const entry of entries) {if (total <= STORAGE_LIMIT) break; this.storage.removeItem(entry.key); total -= entry.bytes;}
       this.storage.setItem(k, data);
-    } catch { /* In-memory draft remains usable if persistence is unavailable. */ }
+      if (this.fallback !== this.storage) this.fallback?.removeItem(k);
+    } catch {if (this.fallback) {this.storage = this.fallback; this.fallback = undefined; this.write(key,value);}}
   }
   remove(key: string, expected?: unknown) {
-    try {if (expected !== undefined && JSON.stringify(this.read(key)) !== JSON.stringify(expected)) return; this.storage?.removeItem(this.key(key));} catch { /* blocked storage */ }
+    if (expected !== undefined && JSON.stringify(this.read(key)) !== JSON.stringify(expected)) return;
+    try {this.storage?.removeItem(this.key(key));} catch { /* blocked storage */ }
+    this.fallback?.removeItem(this.key(key));
   }
 }
 export const remainderAfterSave = (current: string, sent: string) => current.startsWith(sent) ? current.slice(sent.length).trimStart() : current;
@@ -43,5 +56,6 @@ export function requestTracker(persistence?: () => {store: LocalStore; key: stri
       current = {record,location}; location?.store.write(location.key,record); return record.id;
     },
     clear() {if (current) current.location?.store.remove(current.location.key,current.record); current = undefined;},
+    forget() {current = undefined;},
   };
 }

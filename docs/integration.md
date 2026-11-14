@@ -1,3 +1,5 @@
+> The v0.2 API uses a host collaboration adapter. See [the migration guide](migration-v0.2.md). The service-backed instructions below describe v0.1 and are retained temporarily during migration.
+
 # Integration and compatibility
 
 Huddle attaches to rendered browser DOM. JavaScript, TypeScript, JSX/TSX, HTML and CSS frontends use the same client, without a framework dependency. A backend's language does not determine compatibility with the HTML it serves. Huddle does not inspect source code or native app views.

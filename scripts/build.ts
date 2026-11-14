@@ -9,7 +9,7 @@ import solid from 'vite-plugin-solid';
 await mkdir('dist/public',{recursive: true}); await rm('packages/browser/dist',{recursive: true,force: true}); await mkdir('packages/browser/dist',{recursive: true});
 await build({entryPoints: ['packages/browser/src/embed.ts'],bundle: true,format: 'iife',globalName: 'Huddle',minify: true,target: 'es2022',outfile: 'dist/public/embed.js'});
 const helpers = ['react','preact','vue','svelte','solid','angular','astro'];
-const entries = {huddle: 'packages/browser/src/index.ts',...Object.fromEntries(helpers.map(name => [name,`packages/browser/src/adapters/${name}.ts`]))};
+const entries = {huddle: 'packages/browser/src/index.ts',http: 'packages/browser/src/http.ts',...Object.fromEntries(helpers.map(name => [name,`packages/browser/src/adapters/${name}.ts`]))};
 const browser = await build({entryPoints: entries,bundle: true,splitting: true,format: 'esm',packages: 'external',minify: true,target: 'es2022',outdir: 'packages/browser/dist',chunkNames: 'chunks/[name]-[hash]',metafile: true});
 await writeFile('packages/browser/dist/react.js',"'use client';\n" + await readFile('packages/browser/dist/react.js','utf8'));
 await mkdir('output/build',{recursive: true}); await writeFile('output/build/browser-meta.json',JSON.stringify(browser.metafile));
@@ -27,7 +27,7 @@ await mkdir('dist/examples/html',{recursive: true}); await cp('examples/html/ind
 await rm('dist/examples/chunks',{recursive: true,force: true}); await cp('dist/public/chunks','dist/examples/chunks',{recursive: true});
 await rm('dist/examples/sdk',{recursive: true,force: true}); await cp('packages/browser/dist','dist/examples/sdk',{recursive: true});
 for (const example of ['react','angular','vue','svelte','preact','solid']) {
- await viteBuild({root: `examples/${example}`,base: `/${example}/`,plugins: example === 'svelte' ? [svelte()] : example === 'solid' ? [solid()] : [],resolve: {alias: [...helpers.map(name => ({find: `@huddle/browser/${name}`,replacement: resolve(`packages/browser/src/adapters/${name}.ts`)})),{find: '@huddle/browser',replacement: resolve('packages/browser/src/index.ts')}]},build: {outDir: resolve(`dist/examples/${example}`),emptyOutDir: true},logLevel: 'warn'});
+ await viteBuild({root: `examples/${example}`,base: `/${example}/`,plugins: example === 'svelte' ? [svelte()] : example === 'solid' ? [solid()] : [],resolve: {alias: [{find: '@huddle/browser/http',replacement: resolve('packages/browser/src/http.ts')},...helpers.map(name => ({find: `@huddle/browser/${name}`,replacement: resolve(`packages/browser/src/adapters/${name}.ts`)})),{find: '@huddle/browser',replacement: resolve('packages/browser/src/index.ts')}]},build: {outDir: resolve(`dist/examples/${example}`),emptyOutDir: true},logLevel: 'warn'});
 }
 // The HTML example uses the same built browser module served by the example host.
 const meta = JSON.parse(await readFile('package.json','utf8'));

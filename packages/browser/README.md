@@ -1,3 +1,5 @@
+> The v0.2 API uses a host collaboration adapter. See [the migration guide](../../docs/migration-v0.2.md). The service-backed instructions below describe v0.1 and are retained temporarily during migration.
+
 # @huddle/browser
 
 Framework-independent embedded Huddle client. Requires a self-hosted Huddle service.
