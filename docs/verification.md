@@ -1,3 +1,5 @@
+> Historical service-backed milestone. The approved frontend-only architecture, current verification and remaining hosted gates are in [the current acceptance audit](acceptance-current.md). Commands, roles and performance results below apply to the recorded older revision.
+
 # Verification evidence
 
 Acceptance work completed locally on 13–14 November 2026 (Asia/Singapore). This file records measured scope and limits, not a hosted deployment or an assertion of browser/production environments that were not tested.

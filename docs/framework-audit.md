@@ -1,3 +1,5 @@
+> Historical service-backed milestone. The approved frontend-only architecture, current verification and remaining hosted gates are in [the current acceptance audit](acceptance-current.md). Commands, roles and performance results below apply to the recorded older revision.
+
 # Framework helper completion audit
 
 Objective: [framework-goal.md](framework-goal.md), preserved in full. Audited 14 November 2026 (Asia/Singapore). Implementation revisions are c0fad34 and 8784dac; the user created 8784dac while work was in progress, and it is preserved unchanged. Subsequent user commits 1196c32 and 408fad5 record verification documentation and cleanup evidence. The final audit/progress record follows separately.

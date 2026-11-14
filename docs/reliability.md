@@ -1,3 +1,5 @@
+> Historical service-backed milestone. The approved frontend-only architecture, current verification and remaining hosted gates are in [the current acceptance audit](acceptance-current.md). Commands, roles and performance results below apply to the recorded older revision.
+
 # Failure handling
 
 Huddle is a single-instance service with durable SQLite transactions. Interrupted review sessions are recoverable; distributed high availability is outside this release.
