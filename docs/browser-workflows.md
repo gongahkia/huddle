@@ -29,3 +29,11 @@ Set variables on the Huddle root or an inherited host ancestor. No host styleshe
 | `--huddle-panel-width`, `--huddle-radius` | Panel geometry |
 
 Automated accessibility checks and short resource measurements cover the tested browser/fixture combinations. They do not establish every screen-reader/device combination or hours-long performance. Actual versions, measurements, limitations and failed/unavailable gates belong in the implementation evidence, not inferred from old server benchmarks.
+
+The real-host resource check performs twenty mount/open/destroy cycles, waits closed for fifteen seconds (longer than a polling period), then samples an authorized large discussion in thirty-second windows. Chromium supplies forced-GC heap/listener/task metrics; unavailable metrics are null in other browsers. After building the maintained browser fixtures, run an optional bounded ten-minute sample:
+
+```sh
+HUDDLE_RESOURCE_SECONDS=600 pnpm exec playwright test tests/browser/resources.spec.ts --project=chromium
+```
+
+The override accepts 30–1,800 seconds in thirty-second increments. Default suite samples remain 120 seconds in Chromium and thirty seconds in Firefox/WebKit. Raw reports under ignored `output/browser/resources` identify actual source/versions, request counts, storage and teardown deltas. This is a disposable loopback host with no inference or production database access.
