@@ -7,12 +7,8 @@ import {tmpdir} from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {setTimeout as delay} from 'node:timers/promises';
 import {Pool} from 'pg';
+import {bounded} from './lifecycle';
 const exec = promisify(execFile);
-async function bounded<T>(promise: Promise<T>,ms: number,onTimeout: () => T | Promise<T>): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {return await Promise.race([promise,new Promise<T>((resolve,reject) => {timer = setTimeout(() => {Promise.resolve().then(onTimeout).then(resolve,reject);},ms);})]);}
-  finally {clearTimeout(timer);}
-}
 export async function postgresCluster() {
   const bin = resolve(process.env.HUDDLE_TEST_PG_BIN || 'output/runtime/postgresql-18.6/usr/bin');
   try {await access(join(bin,'initdb')); await access(join(bin,'postgres'));} catch {throw new Error('PostgreSQL conformance needs server binaries. Set HUDDLE_TEST_PG_BIN to their directory; no existing database URL is accepted.');}
