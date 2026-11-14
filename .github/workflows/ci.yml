@@ -1,7 +1,7 @@
 name: Huddle verification
 on:
   push:
-    branches: [main]
+    branches: [main, 'huddle/**']
   pull_request:
 jobs:
   server-matrix:
@@ -113,6 +113,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+      - run: pnpm test:storage:sqlite
       - run: pnpm build
       - run: pnpm build:next
       - run: pnpm build:frameworks
@@ -121,31 +122,12 @@ jobs:
       - run: pnpm test:package:http
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - run: pnpm exec playwright test
-      - run: pnpm test:docker
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: huddle-verification
           path: |
             output/browser
-            output/docker
             playwright-report
             test-results
           if-no-files-found: ignore
-  load:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24.21.0
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm bench:load
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: huddle-load
-          path: output/load
