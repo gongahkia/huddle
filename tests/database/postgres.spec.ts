@@ -5,14 +5,19 @@ import {CollaborationError} from '../../packages/shared/src/collaboration';
 import {Pool} from 'pg';
 import {postgresCluster} from '../fixtures/postgres-cluster';
 import {storageConformance} from '../conformance/storage';
+import {exportConformance} from '../conformance/exports';
+import {importConformance} from '../conformance/imports';
 
 let cluster: Awaited<ReturnType<typeof postgresCluster>>;
 beforeAll(async () => {cluster = await postgresCluster(); console.log(`Task-owned PostgreSQL fixture: ${cluster.version}`);});
 afterAll(async () => {if(cluster) {await cluster.close(); expect(cluster.idleErrors).toEqual([]);}});
-storageConformance('PostgreSQL',async () => {
+const freshStorage = async () => {
   const schema = cluster.allocateSchema(); await installPostgres(cluster.pool,{schema}); const backend = await PostgresBackend.open(cluster.pool,{schema});
   return {backend,async cleanup() {await backend.close(); await cluster.dropSchema(schema);}};
-});
+};
+storageConformance('PostgreSQL',freshStorage);
+exportConformance('PostgreSQL',freshStorage);
+importConformance('PostgreSQL',freshStorage);
 const scope = {workspace:'host:team',environment:'preview'}, signal = () => new AbortController().signal;
 const auth = async () => ({actor:{id:'host:alex',name:'Alex'},capabilities:{mentions:false,assignment:false,directory:false}});
 const input = () => ({idempotencyKey:crypto.randomUUID(),page:'/',pageUrl:'https://example.test/',anchor:{kind:'page' as const,selector:'body',label:'Page',quote:'',x:0,y:0},body:'Persistent'});

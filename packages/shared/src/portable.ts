@@ -2,7 +2,8 @@ import {z} from 'zod';
 import type {FeedbackSnapshot} from './collaboration';
 
 const id = z.string().min(1).max(512), timestamp = z.string().datetime({offset: true});
-const provenance = z.object({datasetId: id,recordId: id,digest: z.string().regex(/^[a-f0-9]{64}$/)}).strict();
+const provenanceRecord = z.object({datasetId:id,recordId:id,digest:z.string().regex(/^[a-f0-9]{64}$/),scope:z.object({workspace:id,environment:id}).strict().optional(),page:z.string().max(4096).optional(),pageUrl:z.string().url().max(8192).optional(),identity:z.object({id,name:z.string().min(1).max(1000)}).strict().optional()}).strict();
+const provenance = provenanceRecord.extend({previous:z.array(provenanceRecord).max(1000).optional()}).strict();
 const attribution = z.object({id,name: z.string().min(1).max(1000),provenance: provenance.optional()}).strict();
 const scope = z.object({workspace: id,environments: z.array(id).min(1),page: z.string().max(4096).optional(),status: z.enum(['open','resolved']).optional()}).strict();
 const anchor = z.object({
@@ -45,6 +46,10 @@ export function parseFeedbackSnapshot(json: string, limits: Partial<ImportLimits
   const data = feedbackSnapshotSchema.parse(input);
   const total = data.threads.length + data.comments.length + data.history.length;
   if (total > bounds.maxRecords) throw new Error('Import exceeds record limit.');
+  for(const record of [...data.threads,...data.comments,...data.history]) {
+    const pending:unknown[] = [record]; let nodes = 0;
+    while(pending.length) {const value = pending.pop(); if(++nodes > 10000) throw new Error('Import record exceeds complexity limit.'); if(value && typeof value === 'object') pending.push(...Object.values(value));}
+  }
   const threads = new Map(data.threads.map(item => [item.id,item]));
   if (threads.size !== data.threads.length) throw new Error('Duplicate thread ID.');
   for (const kind of ['comments','history'] as const) {
@@ -61,6 +66,8 @@ export function parseFeedbackSnapshot(json: string, limits: Partial<ImportLimits
   }
   const exportScope = data.snapshot.scope;
   if (new Set(exportScope.environments).size !== exportScope.environments.length) throw new Error('Duplicate export environment.');
+  const attributions = [...data.comments.flatMap(item => [item.author,...item.mentions]),...data.history.map(item => item.actor),...data.threads.flatMap(item => [item.createdBy,...(item.assignee ? [item.assignee] : [])])];
+  for (const record of [...data.threads,...data.comments,...data.history,...attributions]) if(record.provenance) for(const source of [record.provenance,...(record.provenance.previous || [])]) if(source.pageUrl) {const url = new URL(source.pageUrl); if(!['http:','https:'].includes(url.protocol) || url.username || url.password) throw new Error('Unsafe provenance URL.');}
   for (const record of data.threads) {
     const url = new URL(record.pageUrl);
     if (!['http:','https:'].includes(url.protocol) || url.username || url.password) throw new Error('Unsafe page URL.');

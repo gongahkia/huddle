@@ -1,11 +1,14 @@
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {CollaborationError,type Capabilities,type ChangePage,type Comment,type Create,type Detail,type DetailQuery,type History,type Identity,type ListQuery,type Page,type Reply,type Scope,type Session,type Thread,type Update} from '../../shared/src/collaboration';
+import {CollaborationError,type Capabilities,type ChangePage,type Comment,type Create,type Detail,type DetailQuery,type History,type Identity,type ImportMapping,type ExportScope,type ListQuery,type Page,type Reply,type Scope,type Session,type Thread,type Update} from '../../shared/src/collaboration';
 import {httpSchemas} from '../../shared/src/protocol';
 import type {Backend,Collection,RecordValue,Transaction} from './backend';
 import {decodeCursor,digest,encodeCursor,identitySchema,listSchema,detailSchema,scopeSchema,validate} from './validation';
 import {abortable} from './cancellation';
-export type {Backend,Collection,RecordValue,Scan,Transaction} from './backend';
+import {exportFeedback} from './export';
+import {FeedbackImports,type TransferOptions} from './import';
+export type {TransferOptions} from './import';
+export type {Backend,Collection,TemporaryCollection,RemovableCollection,RecordValue,Scan,Transaction} from './backend';
 export {CollaborationError,isCollaborationError} from '../../shared/src/collaboration';
 export type {Identity,Scope,Capabilities} from '../../shared/src/collaboration';
 
@@ -17,9 +20,12 @@ type RequestRecord = {hash: string; threadId: string};
 const edgeSchema = z.object({time: z.string().max(100),id: z.string().min(1).max(512)}).strict();
 const sequenceSchema = z.string().regex(/^\d{1,20}$/);
 const timestamp = () => new Date().toISOString();
-const threadRow = (thread: Thread): RecordValue<Thread> => ({...thread,time: thread.updatedAt,data: thread});
+const threadRow = (thread: Thread): RecordValue<Thread> => ({...thread,time: new Date(thread.updatedAt).toISOString(),data: thread});
 export class ReviewStore {
-  constructor(readonly backend: Backend,private authorize: Authorize,private members?: Directory) {}
+  private transfers: FeedbackImports;
+  constructor(readonly backend: Backend,private authorize: Authorize,private members?: Directory,options: TransferOptions = {}) {
+    this.transfers = new FeedbackImports(backend,(scope,signal) => this.access(scope,signal),members ? (scope,ids,signal) => members.lookup(scope,ids,signal) : undefined,(tx,scope,id) => this.event(tx,scope,id,'imported'),options);
+  }
   async access(scope: Scope,signal: AbortSignal): Promise<Access> {
     signal.throwIfAborted(); validate(scopeSchema,scope);
     const result = await abortable(() => this.authorize(scope,signal),signal); signal.throwIfAborted();
@@ -35,6 +41,12 @@ export class ReviewStore {
     if (found.length !== unique.length || new Set(found.map(item => item.id)).size !== unique.length || found.some(item => !unique.includes(item.id))) throw new CollaborationError('validation','Choose existing workspace members.');
     for (const item of found) validate(identitySchema,item); return found;
   }
+  async export(scope: ExportScope,format: 'json'|'markdown',signal: AbortSignal) {return exportFeedback(this.backend,(selected,inner) => this.access(selected,inner),scope,format,signal,this.transfers.timeoutMs);}
+  async stageImport(scope: Scope,chunks: AsyncIterable<Uint8Array>,signal: AbortSignal) {return this.transfers.stage(scope,chunks,signal);}
+  async previewImport(scope: Scope,input: {uploadId: string; digest: string; mapping: ImportMapping},signal: AbortSignal) {return this.transfers.preview(scope,input,signal);}
+  async executeImport(scope: Scope,input: {previewId: string; digest: string; idempotencyKey: string},signal: AbortSignal) {return this.transfers.execute(scope,input,signal);}
+  async importProgress(scope: Scope,id: string,signal: AbortSignal) {return this.transfers.progress(scope,id,signal);}
+  async cleanupImports(scope: Scope,signal: AbortSignal,limit?: number) {return this.transfers.cleanup(scope,signal,limit);}
   async directory(scope: Scope,query: {search?: string; cursor?: string},signal: AbortSignal) {
     const access = await this.access(scope,signal); if (!access.capabilities.directory || !this.members) throw new CollaborationError('not_found','Member directory is unavailable.');
     validate(z.object({search: z.string().max(1000).optional(),cursor: z.string().max(2048).optional()}).strict(),query);
@@ -106,8 +118,8 @@ export class ReviewStore {
     validate(z.string().min(1).max(512),id); this.validateContent(parsed.body,mentions,access); const identities = await this.identities(access,mentions,signal);
     return this.mutate(access,`reply:${id}`,parsed.idempotencyKey,parsed,signal,async tx => {
       const row = await this.getThread(tx,scope,id), now = timestamp(), comment: Comment = {id: randomUUID(),threadId: id,author: access.actor,body: parsed.body,mentions: identities,createdAt: now};
-      const previous = row.data.latestComment, latest = !previous || now > previous.createdAt || (now === previous.createdAt && comment.id > previous.id) ? comment : previous;
-      const thread = {...row.data,version: row.data.version + 1,updatedAt: now,commentCount: row.data.commentCount + 1,latestComment: latest};
+      const previous = row.data.latestComment, latest = !previous || Date.parse(now) > Date.parse(previous.createdAt) || (Date.parse(now) === Date.parse(previous.createdAt) && comment.id > previous.id) ? comment : previous;
+      const thread = {...row.data,version: row.data.version + 1,updatedAt: Date.parse(row.data.updatedAt) > Date.parse(now) ? row.data.updatedAt : now,commentCount: row.data.commentCount + 1,latestComment: latest};
       await tx.put('comments',{...scope,id: comment.id,time: now,threadId: id,data: comment},true); await tx.put('threads',threadRow(thread),false);
       await this.audit(tx,access,id,'replied',{commentId: comment.id}); await this.event(tx,scope,id,'updated'); return thread;
     });
@@ -119,7 +131,7 @@ export class ReviewStore {
     const assignee = parsed.assigneeId ? (await this.identities(access,[parsed.assigneeId],signal))[0] : null;
     return this.mutate(access,`update:${id}`,parsed.idempotencyKey,parsed,signal,async tx => {
       const row = await this.getThread(tx,scope,id); if (row.data.version !== parsed.expectedVersion) throw new CollaborationError('conflict','The feedback thread changed. Refetch before updating it.');
-      const thread: Thread = {...row.data,status: parsed.status ?? row.data.status,anchor: parsed.anchor ?? row.data.anchor,assignee: parsed.assigneeId === undefined ? row.data.assignee : assignee,version: row.data.version + 1,updatedAt: timestamp()};
+      const thread: Thread = {...row.data,status: parsed.status ?? row.data.status,anchor: parsed.anchor ?? row.data.anchor,assignee: parsed.assigneeId === undefined ? row.data.assignee : assignee,version: row.data.version + 1,updatedAt: Date.parse(row.data.updatedAt) > Date.now() ? row.data.updatedAt : timestamp()};
       await tx.put('threads',threadRow(thread),false); await this.audit(tx,access,id,'updated',{before: {status: row.data.status,anchor: row.data.anchor,assignee: row.data.assignee},after: {status: thread.status,anchor: thread.anchor,assignee: thread.assignee}}); await this.event(tx,scope,id,'updated'); return thread;
     });
   }

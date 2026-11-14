@@ -24,6 +24,9 @@ jobs:
             output/runtime/mongodb-fixture-8.0.38
           key: host-databases-pg18.6-555610c24d53-mysql8.4.13-5dfbb764f731-aio-e746fdedefa9-mongo8.0.38-2885d4382bd4-ubuntu-24.04-${{ runner.arch }}
       - run: pnpm fixtures:postgres && pnpm fixtures:mysql && pnpm fixtures:mongodb
+      - run: pnpm test:portability
+        env:
+          HUDDLE_TEST_PG_BIN: ${{ github.workspace }}/output/runtime/postgresql-source-18.6/bin
       - run: pnpm test:matrix
         env:
           HUDDLE_TEST_PG_BIN: ${{ github.workspace }}/output/runtime/postgresql-source-18.6/bin

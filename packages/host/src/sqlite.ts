@@ -3,7 +3,7 @@ import {randomBytes,randomUUID} from 'node:crypto';
 import {chmodSync,existsSync} from 'node:fs';
 import type {Scope} from '../../shared/src/collaboration';
 import {CollaborationError,isCollaborationError} from '../../shared/src/collaboration';
-import {collections,scopedTransaction,type Backend,type Collection,type RecordValue,type Scan,type Transaction} from './backend';
+import {assertRemovable,collections,scopedTransaction,type Backend,type Collection,type RecordValue,type Scan,type Transaction} from './backend';
 import {abortable} from './cancellation';
 
 const schemaVersion = '1';
@@ -12,13 +12,15 @@ const fields = {threadId: 'thread_id',status: 'status',page: 'page',actorId: 'ac
 type Row = {id: string; workspace: string; environment: string; sort_time: string; data: string; thread_id: string | null; status: string | null; page: string | null; actor_id: string | null; expires_at: number | null};
 const decode = <T>(row: Row): RecordValue<T> => ({id: row.id,workspace: row.workspace,environment: row.environment,time: row.sort_time,data: JSON.parse(row.data),threadId: row.thread_id ?? undefined,status: row.status ?? undefined,page: row.page ?? undefined,actorId: row.actor_id ?? undefined,expiresAt: row.expires_at ?? undefined});
 function transactionView(db: DatabaseSync,signal: AbortSignal): Transaction {
-  return {
+  const tx: Transaction = {
+    async remove(collection,scope,id) {signal.throwIfAborted(); await assertRemovable(tx,collection,scope,id); db.prepare(`DELETE FROM ${table(collection)} WHERE workspace=? AND environment=? AND id=?`).run(scope.workspace,scope.environment,id);},
     async get<T>(collection: Collection,scope: Scope,id: string) {signal.throwIfAborted(); const row = db.prepare(`SELECT * FROM ${table(collection)} WHERE workspace=? AND environment=? AND id=?`).get(scope.workspace,scope.environment,id) as Row | undefined; return row ? decode<T>(row) : undefined;},
     async scan<T>(collection: Collection,scope: Scope,query: Scan) {
       signal.throwIfAborted(); if (!Number.isSafeInteger(query.limit) || query.limit < 1 || query.limit > 101) throw new CollaborationError('validation','Invalid feedback page limit.');
       const clauses = ['workspace=?','environment=?'], values: SQLInputValue[] = [scope.workspace,scope.environment];
       for (const [key,column] of Object.entries(fields)) {const value = query[key as keyof typeof fields]; if (value !== undefined) {clauses.push(`${column}=?`); values.push(value);}}
       for (const boundary of ['after','before'] as const) if (query[boundary]) {const edge = query[boundary]!, op = boundary === 'after' ? '>' : '<'; clauses.push(`(sort_time ${op} ? OR (sort_time=? AND id ${op} ?))`); values.push(edge.time,edge.time,edge.id);}
+      if(query.expiresBefore !== undefined) {if(!Number.isSafeInteger(query.expiresBefore) || query.expiresBefore < 0) throw new CollaborationError('validation','Invalid transfer expiry cutoff.'); clauses.push('expires_at<=?'); values.push(query.expiresBefore);}
       const direction = query.direction === 'desc' ? 'DESC' : 'ASC';
       return (db.prepare(`SELECT * FROM ${table(collection)} WHERE ${clauses.join(' AND ')} ORDER BY sort_time ${direction},id ${direction} LIMIT ?`).all(...values,query.limit) as Row[]).map(row => decode<T>(row));
     },
@@ -29,6 +31,7 @@ function transactionView(db: DatabaseSync,signal: AbortSignal): Transaction {
       else {const result = db.prepare(`UPDATE ${table(collection)} SET sort_time=?,thread_id=?,status=?,page=?,actor_id=?,expires_at=?,data=? WHERE workspace=? AND environment=? AND id=?`).run(...values); if (result.changes !== 1) throw new CollaborationError('conflict','Feedback changed during the transaction.');}
     },
   };
+  return tx;
 }
 function configure(db: DatabaseSync) {db.exec('PRAGMA foreign_keys=ON; PRAGMA busy_timeout=1000;');}
 

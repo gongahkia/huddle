@@ -42,7 +42,7 @@ export async function hostMatrixFixture() {
       if(destination.kind === 'sqlite') backend = new SqliteBackend(destination.path); else if(destination.kind === 'postgres') {await pg.verify(); backend = await PostgresBackend.open(pg.pool,{schema:destination.schema});} else if(destination.kind === 'mysql') {await my.verify(); backend = await MysqlBackend.open(my.pool,{prefix:destination.prefix});} else {await mongo.verify(); backend = await MongodbBackend.open(mongo.client,mongo.database,{prefix:destination.prefix});}
       try {return await backend.snapshot(new AbortController().signal,async tx => {
         const output: Record<string,unknown[]> = {};
-        for(const collection of collections) {const all: RecordValue[] = []; let after: {time:string;id:string} | undefined; while(true) {const page = await tx.scan(collection,{workspace:'team',environment:'preview'},{limit:100,after}); all.push(...page); if(page.length < 100) break; const last = page.at(-1)!; after = {time:last.time,id:last.id};} output[collection] = all;}
+        for(const collection of collections) {const all: RecordValue[] = []; for(const environment of ['preview','production']) {let after: {time:string;id:string} | undefined; while(true) {const page = await tx.scan(collection,{workspace:'team',environment},{limit:100,after}); all.push(...page); if(page.length < 100) break; const last = page.at(-1)!; after = {time:last.time,id:last.id};}} output[collection] = all;}
         return {datasetId:backend.datasetId,cursorSecret:backend.cursorSecret,records:output};
       });} finally {await backend.close();}
     }

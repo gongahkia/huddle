@@ -2,7 +2,7 @@ import {randomBytes,randomUUID} from 'node:crypto';
 import {setTimeout as delay} from 'node:timers/promises';
 import type {MongoClient,Db,ClientSession,Document,Filter,IndexDescription} from 'mongodb';
 import {CollaborationError,isCollaborationError,type Scope} from '../../shared/src/collaboration';
-import {collections,scopedTransaction,type Backend,type Collection,type RecordValue,type Scan,type Transaction} from './backend';
+import {assertRemovable,collections,scopedTransaction,type Backend,type Collection,type RecordValue,type Scan,type Transaction} from './backend';
 import {abortable} from './cancellation';
 import {digest} from './validation';
 
@@ -22,18 +22,21 @@ function encode(record: RecordValue): Row {const row = {...record,...where(recor
 const decode = <T>(row: Row): RecordValue<T> => ({id:row.id,workspace:JSON.parse(row.workspace),environment:JSON.parse(row.environment),time:row.time,data:JSON.parse(row.data),threadId:row.threadId,status:row.status,page:row.page === undefined ? undefined : JSON.parse(row.page),actorId:row.actorId === undefined ? undefined : JSON.parse(row.actorId),expiresAt:row.expiresAt});
 function view(db: Db,options: Options,signal: AbortSignal,session: ClientSession,readOnly: boolean,pending: Set<Promise<unknown>>): Transaction {
   const checked = guard(options,signal,pending), mutationOptions = {session,signal,maxTimeMS:options.timeoutMs}, operationOptions = {...mutationOptions,collation};
-  return {
+  const tx: Transaction = {
+    async remove(collection,scope,id) {if(readOnly) throw new CollaborationError('forbidden','A feedback snapshot cannot write records.'); await assertRemovable(tx,collection,scope,id); const target = name(options.prefix,collection); await checked('remove',target,scope,() => db.collection<Row>(target).deleteOne({...where(scope),id},operationOptions));},
     async get<T>(collection: Collection,scope: Scope,id: string) {const target = name(options.prefix,collection), row = await checked('get',target,scope,() => db.collection<Row>(target).findOne({...where(scope),id},operationOptions)); return row ? decode<T>(row) : undefined;},
     async scan<T>(collection: Collection,scope: Scope,input: Scan) {
       if(!Number.isSafeInteger(input.limit) || input.limit < 1 || input.limit > 101) throw new CollaborationError('validation','Invalid feedback page limit.');
       const clauses: Document[] = [where(scope)];
       for(const key of ['threadId','status','page','actorId'] as const) if(input[key] !== undefined) {clauses.push({[key]:key === 'page' || key === 'actorId' ? JSON.stringify(input[key]) : input[key]}); if(key === 'page' || key === 'actorId') clauses.push({[key === 'page' ? 'pageKey' : 'actorKey']:digest(input[key])});}
       for(const boundary of ['after','before'] as const) if(input[boundary]) {const edge = input[boundary]!, op = boundary === 'after' ? '$gt' : '$lt'; clauses.push({$or:[{time:{[op]:edge.time}},{time:edge.time,id:{[op]:edge.id}}]});}
+      if(input.expiresBefore !== undefined) {if(!Number.isSafeInteger(input.expiresBefore) || input.expiresBefore < 0) throw new CollaborationError('validation','Invalid transfer expiry cutoff.'); clauses.push({expiresAt:{$lte:input.expiresBefore}});}
       const target = name(options.prefix,collection), direction = input.direction === 'desc' ? -1 : 1;
       return checked('scan',target,scope,async () => {const cursor = db.collection<Row>(target).find({$and:clauses} as Filter<Row>,{...operationOptions,sort:{time:direction,id:direction},limit:input.limit}); try {return (await cursor.toArray()).map(row => decode<T>(row));} finally {await cursor.close();}});
     },
     async put(collection,record,insert) {if(readOnly) throw new CollaborationError('forbidden','A feedback snapshot cannot write records.'); const target = name(options.prefix,collection), scope = {workspace:record.workspace,environment:record.environment}, row = encode(record); await checked(insert ? 'insert' : 'replace',target,scope,async () => {if(insert) await db.collection<Row>(target).insertOne(row,mutationOptions); else {const result = await db.collection<Row>(target).replaceOne({...where(scope),id:record.id},row,operationOptions); if(result.matchedCount !== 1) throw new CollaborationError('conflict','Feedback changed during the transaction.');}});},
   };
+  return tx;
 }
 const indexes: IndexDescription[] = [
   {name:'scope_id',key:{scopeKey:1,id:1},unique:true}, {name:'scope_order',key:{scopeKey:1,time:1,id:1}},

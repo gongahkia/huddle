@@ -1,6 +1,6 @@
 import {randomBytes,randomUUID} from 'node:crypto';
 import {CollaborationError,isCollaborationError,type Scope} from '../../shared/src/collaboration';
-import {collections,scopedTransaction,type Backend,type Collection,type RecordValue,type Scan,type Transaction} from './backend';
+import {assertRemovable,collections,scopedTransaction,type Backend,type Collection,type RecordValue,type Scan,type Transaction} from './backend';
 import {abortable} from './cancellation';
 import {digest} from './validation';
 
@@ -64,8 +64,9 @@ const optionalText = (value: string | undefined) => value === undefined ? null :
 type Row = {id: Buffer; workspace: string; environment: string; sort_time: string; data: string; thread_id: Buffer | null; status: string | null; page: string | null; actor_id: string | null; expires_at: string | number | null};
 const decode = <T>(row: Row): RecordValue<T> => ({id:JSON.parse(row.id.toString()),workspace:JSON.parse(row.workspace),environment:JSON.parse(row.environment),time:row.sort_time,data:JSON.parse(row.data),threadId:row.thread_id === null ? undefined : JSON.parse(row.thread_id.toString()),status:row.status ?? undefined,page:row.page === null ? undefined : JSON.parse(row.page),actorId:row.actor_id === null ? undefined : JSON.parse(row.actor_id),expiresAt:row.expires_at === null ? undefined : Number(row.expires_at)});
 function view(query: Query,prefix: string): Transaction {
-  const where = (scope: Scope) => ({clauses:['scope_key=?','workspace=?','environment=?'],values:[digest(scope),text(scope.workspace),text(scope.environment)] as MysqlValue[]});
-  return {
+  const where = (scope: Scope) => ({clauses:['scope_key=?','workspace=?','environment=?'],values:[digest({workspace:scope.workspace,environment:scope.environment}),text(scope.workspace),text(scope.environment)] as MysqlValue[]});
+  const tx: Transaction = {
+    async remove(collection,scope,id) {await assertRemovable(tx,collection,scope,id); await query(`DELETE FROM ${table(prefix,collection)} WHERE scope_key=? AND workspace=? AND environment=? AND id=?`,[digest({workspace:scope.workspace,environment:scope.environment}),text(scope.workspace),text(scope.environment),binary(id)],scope);},
     async get<T>(collection: Collection,scope: Scope,id: string) {const {clauses,values} = where(scope); values.push(binary(id)); const result = rows(await query(`SELECT * FROM ${table(prefix,collection)} WHERE ${clauses.join(' AND ')} AND id=?`,values,scope)); return result[0] ? decode<T>(result[0] as Row) : undefined;},
     async scan<T>(collection: Collection,scope: Scope,input: Scan) {
       if (!Number.isSafeInteger(input.limit) || input.limit < 1 || input.limit > 101) throw new CollaborationError('validation','Invalid feedback page limit.');
@@ -73,15 +74,17 @@ function view(query: Query,prefix: string): Transaction {
       for (const [key,column] of [['threadId','thread_id'],['page','page_key'],['actorId','actor_key'],['status','status']] as const) if (input[key] !== undefined) {clauses.push(`${column}=?`); values.push(key === 'status' ? input[key] : key === 'threadId' ? binary(input[key]!) : digest(input[key]));}
       if (input.page !== undefined) {clauses.push('page=?'); values.push(text(input.page));} if (input.actorId !== undefined) {clauses.push('actor_id=?'); values.push(text(input.actorId));}
       for (const boundary of ['after','before'] as const) if (input[boundary]) {const edge = input[boundary]!, op = boundary === 'after' ? '>' : '<'; clauses.push(`(sort_time ${op} ? OR (sort_time=? AND id ${op} ?))`); values.push(edge.time,edge.time,binary(edge.id));}
+      if(input.expiresBefore !== undefined) {if(!Number.isSafeInteger(input.expiresBefore) || input.expiresBefore < 0) throw new CollaborationError('validation','Invalid transfer expiry cutoff.'); clauses.push('expires_at<=?'); values.push(input.expiresBefore);}
       const direction = input.direction === 'desc' ? 'DESC' : 'ASC';
       return rows(await query(`SELECT * FROM ${table(prefix,collection)} WHERE ${clauses.join(' AND ')} ORDER BY sort_time ${direction},id ${direction} LIMIT ${input.limit}`,values,scope)).map(row => decode<T>(row as Row));
     },
     async put(collection,record,insert) {
-      const scope = {workspace:record.workspace,environment:record.environment}, values = [record.time,record.threadId === undefined ? null : binary(record.threadId),record.status ?? null,optionalText(record.page),record.page === undefined ? null : digest(record.page),optionalText(record.actorId),record.actorId === undefined ? null : digest(record.actorId),record.expiresAt ?? null,JSON.stringify(record.data),digest(scope),text(record.workspace),text(record.environment),binary(record.id)];
+      const scope = {workspace:record.workspace,environment:record.environment}, values = [record.time,record.threadId === undefined ? null : binary(record.threadId),record.status ?? null,optionalText(record.page),record.page === undefined ? null : digest(record.page),optionalText(record.actorId),record.actorId === undefined ? null : digest(record.actorId),record.expiresAt ?? null,JSON.stringify(record.data),digest({workspace:scope.workspace,environment:scope.environment}),text(record.workspace),text(record.environment),binary(record.id)];
       if (insert) await query(`INSERT INTO ${table(prefix,collection)}(sort_time,thread_id,status,page,page_key,actor_id,actor_key,expires_at,data,scope_key,workspace,environment,id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`,values,scope);
       else {const result = await query(`UPDATE ${table(prefix,collection)} SET sort_time=?,thread_id=?,status=?,page=?,page_key=?,actor_id=?,actor_key=?,expires_at=?,data=? WHERE scope_key=? AND workspace=? AND environment=? AND id=?`,values,scope) as {affectedRows: number}; if (result.affectedRows !== 1) throw new CollaborationError('conflict','Feedback changed during the transaction.');}
     },
   };
+  return tx;
 }
 async function validateTables(query: Query,prefix: string) {
   const names = ['meta',...collections].map(item => name(prefix,item as Collection | 'meta'));
@@ -117,7 +120,7 @@ export class MysqlBackend implements Backend {
     const combined = AbortSignal.any([signal,this.lifetime.signal,AbortSignal.timeout(readOnly ? this.options.snapshotTimeoutMs : this.options.timeoutMs)]); combined.throwIfAborted();
     const work = withConnection(this.pool,this.options,scope,combined,async query => {
       await query(`SET TRANSACTION ISOLATION LEVEL ${readOnly ? 'REPEATABLE READ' : 'READ COMMITTED'}`); await query(readOnly ? 'START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY' : 'START TRANSACTION READ WRITE');
-      if (scope) await query(`INSERT INTO ${table(this.options.prefix,'scopes')}(scope_key,workspace,environment,id,sort_time,data) VALUES(?,?,?,?,?,?) ON DUPLICATE KEY UPDATE id=id`,[digest(scope),text(scope.workspace),text(scope.environment),binary('clock'),'','{"value":"0"}'],scope);
+      if (scope) await query(`INSERT INTO ${table(this.options.prefix,'scopes')}(scope_key,workspace,environment,id,sort_time,data) VALUES(?,?,?,?,?,?) ON DUPLICATE KEY UPDATE id=id`,[digest({workspace:scope.workspace,environment:scope.environment}),text(scope.workspace),text(scope.environment),binary('clock'),'','{"value":"0"}'],scope);
       const tx = view(query,this.options.prefix), result = await run(scope ? scopedTransaction(tx,scope) : tx); combined.throwIfAborted(); await query('COMMIT'); return result;
     }); this.active.add(work);
     try {return await work;} catch (value) {if (this.lifetime.signal.aborted) throw this.lifetime.signal.reason; if (signal.aborted) throw signal.reason; if (combined.aborted) throw new CollaborationError('timeout','Feedback storage timed out.'); throw value;}

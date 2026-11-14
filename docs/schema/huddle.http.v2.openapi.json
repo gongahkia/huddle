@@ -2459,6 +2459,133 @@
                             "digest": {
                               "type": "string",
                               "pattern": "^[a-f0-9]{64}$"
+                            },
+                            "scope": {
+                              "type": "object",
+                              "properties": {
+                                "workspace": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "environment": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                }
+                              },
+                              "required": [
+                                "workspace",
+                                "environment"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "page": {
+                              "type": "string",
+                              "maxLength": 4096
+                            },
+                            "pageUrl": {
+                              "type": "string",
+                              "maxLength": 8192,
+                              "format": "uri"
+                            },
+                            "identity": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 1000
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "previous": {
+                              "maxItems": 1000,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "datasetId": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "recordId": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "digest": {
+                                    "type": "string",
+                                    "pattern": "^[a-f0-9]{64}$"
+                                  },
+                                  "scope": {
+                                    "type": "object",
+                                    "properties": {
+                                      "workspace": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "environment": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      }
+                                    },
+                                    "required": [
+                                      "workspace",
+                                      "environment"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "page": {
+                                    "type": "string",
+                                    "maxLength": 4096
+                                  },
+                                  "pageUrl": {
+                                    "type": "string",
+                                    "maxLength": 8192,
+                                    "format": "uri"
+                                  },
+                                  "identity": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 1000
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "datasetId",
+                                  "recordId",
+                                  "digest"
+                                ],
+                                "additionalProperties": false
+                              }
                             }
                           },
                           "required": [
@@ -2509,6 +2636,133 @@
                         "digest": {
                           "type": "string",
                           "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "scope": {
+                          "type": "object",
+                          "properties": {
+                            "workspace": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "environment": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            }
+                          },
+                          "required": [
+                            "workspace",
+                            "environment"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "page": {
+                          "type": "string",
+                          "maxLength": 4096
+                        },
+                        "pageUrl": {
+                          "type": "string",
+                          "maxLength": 8192,
+                          "format": "uri"
+                        },
+                        "identity": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1000
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "previous": {
+                          "maxItems": 1000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "datasetId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "recordId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "digest": {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
+                              },
+                              "scope": {
+                                "type": "object",
+                                "properties": {
+                                  "workspace": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "environment": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  }
+                                },
+                                "required": [
+                                  "workspace",
+                                  "environment"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "page": {
+                                "type": "string",
+                                "maxLength": 4096
+                              },
+                              "pageUrl": {
+                                "type": "string",
+                                "maxLength": 8192,
+                                "format": "uri"
+                              },
+                              "identity": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "datasetId",
+                              "recordId",
+                              "digest"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -2589,6 +2843,133 @@
                                 "digest": {
                                   "type": "string",
                                   "pattern": "^[a-f0-9]{64}$"
+                                },
+                                "scope": {
+                                  "type": "object",
+                                  "properties": {
+                                    "workspace": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "environment": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    }
+                                  },
+                                  "required": [
+                                    "workspace",
+                                    "environment"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "page": {
+                                  "type": "string",
+                                  "maxLength": 4096
+                                },
+                                "pageUrl": {
+                                  "type": "string",
+                                  "maxLength": 8192,
+                                  "format": "uri"
+                                },
+                                "identity": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 1000
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "previous": {
+                                  "maxItems": 1000,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "datasetId": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "recordId": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "digest": {
+                                        "type": "string",
+                                        "pattern": "^[a-f0-9]{64}$"
+                                      },
+                                      "scope": {
+                                        "type": "object",
+                                        "properties": {
+                                          "workspace": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 512
+                                          },
+                                          "environment": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 512
+                                          }
+                                        },
+                                        "required": [
+                                          "workspace",
+                                          "environment"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "page": {
+                                        "type": "string",
+                                        "maxLength": 4096
+                                      },
+                                      "pageUrl": {
+                                        "type": "string",
+                                        "maxLength": 8192,
+                                        "format": "uri"
+                                      },
+                                      "identity": {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 512
+                                          },
+                                          "name": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 1000
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "name"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "datasetId",
+                                      "recordId",
+                                      "digest"
+                                    ],
+                                    "additionalProperties": false
+                                  }
                                 }
                               },
                               "required": [
@@ -2642,6 +3023,133 @@
                                   "digest": {
                                     "type": "string",
                                     "pattern": "^[a-f0-9]{64}$"
+                                  },
+                                  "scope": {
+                                    "type": "object",
+                                    "properties": {
+                                      "workspace": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "environment": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      }
+                                    },
+                                    "required": [
+                                      "workspace",
+                                      "environment"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "page": {
+                                    "type": "string",
+                                    "maxLength": 4096
+                                  },
+                                  "pageUrl": {
+                                    "type": "string",
+                                    "maxLength": 8192,
+                                    "format": "uri"
+                                  },
+                                  "identity": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 1000
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "previous": {
+                                    "maxItems": 1000,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "datasetId": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 512
+                                        },
+                                        "recordId": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 512
+                                        },
+                                        "digest": {
+                                          "type": "string",
+                                          "pattern": "^[a-f0-9]{64}$"
+                                        },
+                                        "scope": {
+                                          "type": "object",
+                                          "properties": {
+                                            "workspace": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 512
+                                            },
+                                            "environment": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 512
+                                            }
+                                          },
+                                          "required": [
+                                            "workspace",
+                                            "environment"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        "page": {
+                                          "type": "string",
+                                          "maxLength": 4096
+                                        },
+                                        "pageUrl": {
+                                          "type": "string",
+                                          "maxLength": 8192,
+                                          "format": "uri"
+                                        },
+                                        "identity": {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 512
+                                            },
+                                            "name": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 1000
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "name"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "datasetId",
+                                        "recordId",
+                                        "digest"
+                                      ],
+                                      "additionalProperties": false
+                                    }
                                   }
                                 },
                                 "required": [
@@ -2680,6 +3188,133 @@
                             "digest": {
                               "type": "string",
                               "pattern": "^[a-f0-9]{64}$"
+                            },
+                            "scope": {
+                              "type": "object",
+                              "properties": {
+                                "workspace": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "environment": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                }
+                              },
+                              "required": [
+                                "workspace",
+                                "environment"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "page": {
+                              "type": "string",
+                              "maxLength": 4096
+                            },
+                            "pageUrl": {
+                              "type": "string",
+                              "maxLength": 8192,
+                              "format": "uri"
+                            },
+                            "identity": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 1000
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "previous": {
+                              "maxItems": 1000,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "datasetId": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "recordId": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "digest": {
+                                    "type": "string",
+                                    "pattern": "^[a-f0-9]{64}$"
+                                  },
+                                  "scope": {
+                                    "type": "object",
+                                    "properties": {
+                                      "workspace": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "environment": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      }
+                                    },
+                                    "required": [
+                                      "workspace",
+                                      "environment"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "page": {
+                                    "type": "string",
+                                    "maxLength": 4096
+                                  },
+                                  "pageUrl": {
+                                    "type": "string",
+                                    "maxLength": 8192,
+                                    "format": "uri"
+                                  },
+                                  "identity": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 1000
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "datasetId",
+                                  "recordId",
+                                  "digest"
+                                ],
+                                "additionalProperties": false
+                              }
                             }
                           },
                           "required": [
@@ -2721,6 +3356,133 @@
                     "digest": {
                       "type": "string",
                       "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "scope": {
+                      "type": "object",
+                      "properties": {
+                        "workspace": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "environment": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        }
+                      },
+                      "required": [
+                        "workspace",
+                        "environment"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "page": {
+                      "type": "string",
+                      "maxLength": 4096
+                    },
+                    "pageUrl": {
+                      "type": "string",
+                      "maxLength": 8192,
+                      "format": "uri"
+                    },
+                    "identity": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "previous": {
+                      "maxItems": 1000,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "datasetId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          },
+                          "recordId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          },
+                          "digest": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "workspace": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "environment": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              }
+                            },
+                            "required": [
+                              "workspace",
+                              "environment"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "page": {
+                            "type": "string",
+                            "maxLength": 4096
+                          },
+                          "pageUrl": {
+                            "type": "string",
+                            "maxLength": 8192,
+                            "format": "uri"
+                          },
+                          "identity": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 1000
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "datasetId",
+                          "recordId",
+                          "digest"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -2794,6 +3556,133 @@
                         "digest": {
                           "type": "string",
                           "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "scope": {
+                          "type": "object",
+                          "properties": {
+                            "workspace": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "environment": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            }
+                          },
+                          "required": [
+                            "workspace",
+                            "environment"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "page": {
+                          "type": "string",
+                          "maxLength": 4096
+                        },
+                        "pageUrl": {
+                          "type": "string",
+                          "maxLength": 8192,
+                          "format": "uri"
+                        },
+                        "identity": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1000
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "previous": {
+                          "maxItems": 1000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "datasetId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "recordId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "digest": {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
+                              },
+                              "scope": {
+                                "type": "object",
+                                "properties": {
+                                  "workspace": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "environment": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  }
+                                },
+                                "required": [
+                                  "workspace",
+                                  "environment"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "page": {
+                                "type": "string",
+                                "maxLength": 4096
+                              },
+                              "pageUrl": {
+                                "type": "string",
+                                "maxLength": 8192,
+                                "format": "uri"
+                              },
+                              "identity": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "datasetId",
+                              "recordId",
+                              "digest"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -2847,6 +3736,133 @@
                           "digest": {
                             "type": "string",
                             "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "workspace": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "environment": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              }
+                            },
+                            "required": [
+                              "workspace",
+                              "environment"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "page": {
+                            "type": "string",
+                            "maxLength": 4096
+                          },
+                          "pageUrl": {
+                            "type": "string",
+                            "maxLength": 8192,
+                            "format": "uri"
+                          },
+                          "identity": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 1000
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "previous": {
+                            "maxItems": 1000,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "datasetId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "recordId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "digest": {
+                                  "type": "string",
+                                  "pattern": "^[a-f0-9]{64}$"
+                                },
+                                "scope": {
+                                  "type": "object",
+                                  "properties": {
+                                    "workspace": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "environment": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    }
+                                  },
+                                  "required": [
+                                    "workspace",
+                                    "environment"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "page": {
+                                  "type": "string",
+                                  "maxLength": 4096
+                                },
+                                "pageUrl": {
+                                  "type": "string",
+                                  "maxLength": 8192,
+                                  "format": "uri"
+                                },
+                                "identity": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 1000
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "datasetId",
+                                "recordId",
+                                "digest"
+                              ],
+                              "additionalProperties": false
+                            }
                           }
                         },
                         "required": [
@@ -2885,6 +3901,133 @@
                     "digest": {
                       "type": "string",
                       "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "scope": {
+                      "type": "object",
+                      "properties": {
+                        "workspace": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "environment": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        }
+                      },
+                      "required": [
+                        "workspace",
+                        "environment"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "page": {
+                      "type": "string",
+                      "maxLength": 4096
+                    },
+                    "pageUrl": {
+                      "type": "string",
+                      "maxLength": 8192,
+                      "format": "uri"
+                    },
+                    "identity": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "previous": {
+                      "maxItems": 1000,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "datasetId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          },
+                          "recordId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          },
+                          "digest": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "workspace": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "environment": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              }
+                            },
+                            "required": [
+                              "workspace",
+                              "environment"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "page": {
+                            "type": "string",
+                            "maxLength": 4096
+                          },
+                          "pageUrl": {
+                            "type": "string",
+                            "maxLength": 8192,
+                            "format": "uri"
+                          },
+                          "identity": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 1000
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "datasetId",
+                          "recordId",
+                          "digest"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -2950,6 +4093,133 @@
                         "digest": {
                           "type": "string",
                           "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "scope": {
+                          "type": "object",
+                          "properties": {
+                            "workspace": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "environment": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            }
+                          },
+                          "required": [
+                            "workspace",
+                            "environment"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "page": {
+                          "type": "string",
+                          "maxLength": 4096
+                        },
+                        "pageUrl": {
+                          "type": "string",
+                          "maxLength": 8192,
+                          "format": "uri"
+                        },
+                        "identity": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1000
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "previous": {
+                          "maxItems": 1000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "datasetId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "recordId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "digest": {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
+                              },
+                              "scope": {
+                                "type": "object",
+                                "properties": {
+                                  "workspace": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "environment": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  }
+                                },
+                                "required": [
+                                  "workspace",
+                                  "environment"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "page": {
+                                "type": "string",
+                                "maxLength": 4096
+                              },
+                              "pageUrl": {
+                                "type": "string",
+                                "maxLength": 8192,
+                                "format": "uri"
+                              },
+                              "identity": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "datasetId",
+                              "recordId",
+                              "digest"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -2995,6 +4265,133 @@
                     "digest": {
                       "type": "string",
                       "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "scope": {
+                      "type": "object",
+                      "properties": {
+                        "workspace": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "environment": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        }
+                      },
+                      "required": [
+                        "workspace",
+                        "environment"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "page": {
+                      "type": "string",
+                      "maxLength": 4096
+                    },
+                    "pageUrl": {
+                      "type": "string",
+                      "maxLength": 8192,
+                      "format": "uri"
+                    },
+                    "identity": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "previous": {
+                      "maxItems": 1000,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "datasetId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          },
+                          "recordId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          },
+                          "digest": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "workspace": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "environment": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              }
+                            },
+                            "required": [
+                              "workspace",
+                              "environment"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "page": {
+                            "type": "string",
+                            "maxLength": 4096
+                          },
+                          "pageUrl": {
+                            "type": "string",
+                            "maxLength": 8192,
+                            "format": "uri"
+                          },
+                          "identity": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 1000
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "datasetId",
+                          "recordId",
+                          "digest"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -3319,6 +4716,133 @@
                             "digest": {
                               "type": "string",
                               "pattern": "^[a-f0-9]{64}$"
+                            },
+                            "scope": {
+                              "type": "object",
+                              "properties": {
+                                "workspace": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "environment": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                }
+                              },
+                              "required": [
+                                "workspace",
+                                "environment"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "page": {
+                              "type": "string",
+                              "maxLength": 4096
+                            },
+                            "pageUrl": {
+                              "type": "string",
+                              "maxLength": 8192,
+                              "format": "uri"
+                            },
+                            "identity": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 1000
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "previous": {
+                              "maxItems": 1000,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "datasetId": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "recordId": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "digest": {
+                                    "type": "string",
+                                    "pattern": "^[a-f0-9]{64}$"
+                                  },
+                                  "scope": {
+                                    "type": "object",
+                                    "properties": {
+                                      "workspace": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "environment": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      }
+                                    },
+                                    "required": [
+                                      "workspace",
+                                      "environment"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "page": {
+                                    "type": "string",
+                                    "maxLength": 4096
+                                  },
+                                  "pageUrl": {
+                                    "type": "string",
+                                    "maxLength": 8192,
+                                    "format": "uri"
+                                  },
+                                  "identity": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 1000
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "datasetId",
+                                  "recordId",
+                                  "digest"
+                                ],
+                                "additionalProperties": false
+                              }
                             }
                           },
                           "required": [
@@ -3369,6 +4893,133 @@
                         "digest": {
                           "type": "string",
                           "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "scope": {
+                          "type": "object",
+                          "properties": {
+                            "workspace": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "environment": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            }
+                          },
+                          "required": [
+                            "workspace",
+                            "environment"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "page": {
+                          "type": "string",
+                          "maxLength": 4096
+                        },
+                        "pageUrl": {
+                          "type": "string",
+                          "maxLength": 8192,
+                          "format": "uri"
+                        },
+                        "identity": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1000
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "previous": {
+                          "maxItems": 1000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "datasetId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "recordId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "digest": {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
+                              },
+                              "scope": {
+                                "type": "object",
+                                "properties": {
+                                  "workspace": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "environment": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  }
+                                },
+                                "required": [
+                                  "workspace",
+                                  "environment"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "page": {
+                                "type": "string",
+                                "maxLength": 4096
+                              },
+                              "pageUrl": {
+                                "type": "string",
+                                "maxLength": 8192,
+                                "format": "uri"
+                              },
+                              "identity": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "datasetId",
+                              "recordId",
+                              "digest"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -3449,6 +5100,133 @@
                                 "digest": {
                                   "type": "string",
                                   "pattern": "^[a-f0-9]{64}$"
+                                },
+                                "scope": {
+                                  "type": "object",
+                                  "properties": {
+                                    "workspace": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "environment": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    }
+                                  },
+                                  "required": [
+                                    "workspace",
+                                    "environment"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "page": {
+                                  "type": "string",
+                                  "maxLength": 4096
+                                },
+                                "pageUrl": {
+                                  "type": "string",
+                                  "maxLength": 8192,
+                                  "format": "uri"
+                                },
+                                "identity": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 1000
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "previous": {
+                                  "maxItems": 1000,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "datasetId": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "recordId": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "digest": {
+                                        "type": "string",
+                                        "pattern": "^[a-f0-9]{64}$"
+                                      },
+                                      "scope": {
+                                        "type": "object",
+                                        "properties": {
+                                          "workspace": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 512
+                                          },
+                                          "environment": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 512
+                                          }
+                                        },
+                                        "required": [
+                                          "workspace",
+                                          "environment"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "page": {
+                                        "type": "string",
+                                        "maxLength": 4096
+                                      },
+                                      "pageUrl": {
+                                        "type": "string",
+                                        "maxLength": 8192,
+                                        "format": "uri"
+                                      },
+                                      "identity": {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 512
+                                          },
+                                          "name": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 1000
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "name"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "datasetId",
+                                      "recordId",
+                                      "digest"
+                                    ],
+                                    "additionalProperties": false
+                                  }
                                 }
                               },
                               "required": [
@@ -3502,6 +5280,133 @@
                                   "digest": {
                                     "type": "string",
                                     "pattern": "^[a-f0-9]{64}$"
+                                  },
+                                  "scope": {
+                                    "type": "object",
+                                    "properties": {
+                                      "workspace": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "environment": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      }
+                                    },
+                                    "required": [
+                                      "workspace",
+                                      "environment"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "page": {
+                                    "type": "string",
+                                    "maxLength": 4096
+                                  },
+                                  "pageUrl": {
+                                    "type": "string",
+                                    "maxLength": 8192,
+                                    "format": "uri"
+                                  },
+                                  "identity": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 1000
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "previous": {
+                                    "maxItems": 1000,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "datasetId": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 512
+                                        },
+                                        "recordId": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 512
+                                        },
+                                        "digest": {
+                                          "type": "string",
+                                          "pattern": "^[a-f0-9]{64}$"
+                                        },
+                                        "scope": {
+                                          "type": "object",
+                                          "properties": {
+                                            "workspace": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 512
+                                            },
+                                            "environment": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 512
+                                            }
+                                          },
+                                          "required": [
+                                            "workspace",
+                                            "environment"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        "page": {
+                                          "type": "string",
+                                          "maxLength": 4096
+                                        },
+                                        "pageUrl": {
+                                          "type": "string",
+                                          "maxLength": 8192,
+                                          "format": "uri"
+                                        },
+                                        "identity": {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 512
+                                            },
+                                            "name": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 1000
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "name"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "datasetId",
+                                        "recordId",
+                                        "digest"
+                                      ],
+                                      "additionalProperties": false
+                                    }
                                   }
                                 },
                                 "required": [
@@ -3540,6 +5445,133 @@
                             "digest": {
                               "type": "string",
                               "pattern": "^[a-f0-9]{64}$"
+                            },
+                            "scope": {
+                              "type": "object",
+                              "properties": {
+                                "workspace": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "environment": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                }
+                              },
+                              "required": [
+                                "workspace",
+                                "environment"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "page": {
+                              "type": "string",
+                              "maxLength": 4096
+                            },
+                            "pageUrl": {
+                              "type": "string",
+                              "maxLength": 8192,
+                              "format": "uri"
+                            },
+                            "identity": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 1000
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "previous": {
+                              "maxItems": 1000,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "datasetId": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "recordId": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "digest": {
+                                    "type": "string",
+                                    "pattern": "^[a-f0-9]{64}$"
+                                  },
+                                  "scope": {
+                                    "type": "object",
+                                    "properties": {
+                                      "workspace": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "environment": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      }
+                                    },
+                                    "required": [
+                                      "workspace",
+                                      "environment"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "page": {
+                                    "type": "string",
+                                    "maxLength": 4096
+                                  },
+                                  "pageUrl": {
+                                    "type": "string",
+                                    "maxLength": 8192,
+                                    "format": "uri"
+                                  },
+                                  "identity": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 1000
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "datasetId",
+                                  "recordId",
+                                  "digest"
+                                ],
+                                "additionalProperties": false
+                              }
                             }
                           },
                           "required": [
@@ -3581,6 +5613,133 @@
                     "digest": {
                       "type": "string",
                       "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "scope": {
+                      "type": "object",
+                      "properties": {
+                        "workspace": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "environment": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        }
+                      },
+                      "required": [
+                        "workspace",
+                        "environment"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "page": {
+                      "type": "string",
+                      "maxLength": 4096
+                    },
+                    "pageUrl": {
+                      "type": "string",
+                      "maxLength": 8192,
+                      "format": "uri"
+                    },
+                    "identity": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "previous": {
+                      "maxItems": 1000,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "datasetId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          },
+                          "recordId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          },
+                          "digest": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "workspace": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "environment": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              }
+                            },
+                            "required": [
+                              "workspace",
+                              "environment"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "page": {
+                            "type": "string",
+                            "maxLength": 4096
+                          },
+                          "pageUrl": {
+                            "type": "string",
+                            "maxLength": 8192,
+                            "format": "uri"
+                          },
+                          "identity": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 1000
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "datasetId",
+                          "recordId",
+                          "digest"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -3814,6 +5973,133 @@
                           "digest": {
                             "type": "string",
                             "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "workspace": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "environment": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              }
+                            },
+                            "required": [
+                              "workspace",
+                              "environment"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "page": {
+                            "type": "string",
+                            "maxLength": 4096
+                          },
+                          "pageUrl": {
+                            "type": "string",
+                            "maxLength": 8192,
+                            "format": "uri"
+                          },
+                          "identity": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 1000
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "previous": {
+                            "maxItems": 1000,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "datasetId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "recordId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "digest": {
+                                  "type": "string",
+                                  "pattern": "^[a-f0-9]{64}$"
+                                },
+                                "scope": {
+                                  "type": "object",
+                                  "properties": {
+                                    "workspace": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "environment": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    }
+                                  },
+                                  "required": [
+                                    "workspace",
+                                    "environment"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "page": {
+                                  "type": "string",
+                                  "maxLength": 4096
+                                },
+                                "pageUrl": {
+                                  "type": "string",
+                                  "maxLength": 8192,
+                                  "format": "uri"
+                                },
+                                "identity": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 1000
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "datasetId",
+                                "recordId",
+                                "digest"
+                              ],
+                              "additionalProperties": false
+                            }
                           }
                         },
                         "required": [
@@ -3864,6 +6150,133 @@
                       "digest": {
                         "type": "string",
                         "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "scope": {
+                        "type": "object",
+                        "properties": {
+                          "workspace": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          },
+                          "environment": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          }
+                        },
+                        "required": [
+                          "workspace",
+                          "environment"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "page": {
+                        "type": "string",
+                        "maxLength": 4096
+                      },
+                      "pageUrl": {
+                        "type": "string",
+                        "maxLength": 8192,
+                        "format": "uri"
+                      },
+                      "identity": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1000
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "previous": {
+                        "maxItems": 1000,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "datasetId": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "recordId": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "digest": {
+                              "type": "string",
+                              "pattern": "^[a-f0-9]{64}$"
+                            },
+                            "scope": {
+                              "type": "object",
+                              "properties": {
+                                "workspace": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "environment": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                }
+                              },
+                              "required": [
+                                "workspace",
+                                "environment"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "page": {
+                              "type": "string",
+                              "maxLength": 4096
+                            },
+                            "pageUrl": {
+                              "type": "string",
+                              "maxLength": 8192,
+                              "format": "uri"
+                            },
+                            "identity": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 1000
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "datasetId",
+                            "recordId",
+                            "digest"
+                          ],
+                          "additionalProperties": false
+                        }
                       }
                     },
                     "required": [
@@ -3944,6 +6357,133 @@
                               "digest": {
                                 "type": "string",
                                 "pattern": "^[a-f0-9]{64}$"
+                              },
+                              "scope": {
+                                "type": "object",
+                                "properties": {
+                                  "workspace": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "environment": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  }
+                                },
+                                "required": [
+                                  "workspace",
+                                  "environment"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "page": {
+                                "type": "string",
+                                "maxLength": 4096
+                              },
+                              "pageUrl": {
+                                "type": "string",
+                                "maxLength": 8192,
+                                "format": "uri"
+                              },
+                              "identity": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "previous": {
+                                "maxItems": 1000,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "datasetId": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "recordId": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "digest": {
+                                      "type": "string",
+                                      "pattern": "^[a-f0-9]{64}$"
+                                    },
+                                    "scope": {
+                                      "type": "object",
+                                      "properties": {
+                                        "workspace": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 512
+                                        },
+                                        "environment": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 512
+                                        }
+                                      },
+                                      "required": [
+                                        "workspace",
+                                        "environment"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "page": {
+                                      "type": "string",
+                                      "maxLength": 4096
+                                    },
+                                    "pageUrl": {
+                                      "type": "string",
+                                      "maxLength": 8192,
+                                      "format": "uri"
+                                    },
+                                    "identity": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 512
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 1000
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": [
+                                    "datasetId",
+                                    "recordId",
+                                    "digest"
+                                  ],
+                                  "additionalProperties": false
+                                }
                               }
                             },
                             "required": [
@@ -3997,6 +6537,133 @@
                                 "digest": {
                                   "type": "string",
                                   "pattern": "^[a-f0-9]{64}$"
+                                },
+                                "scope": {
+                                  "type": "object",
+                                  "properties": {
+                                    "workspace": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "environment": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    }
+                                  },
+                                  "required": [
+                                    "workspace",
+                                    "environment"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "page": {
+                                  "type": "string",
+                                  "maxLength": 4096
+                                },
+                                "pageUrl": {
+                                  "type": "string",
+                                  "maxLength": 8192,
+                                  "format": "uri"
+                                },
+                                "identity": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 1000
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "previous": {
+                                  "maxItems": 1000,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "datasetId": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "recordId": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "digest": {
+                                        "type": "string",
+                                        "pattern": "^[a-f0-9]{64}$"
+                                      },
+                                      "scope": {
+                                        "type": "object",
+                                        "properties": {
+                                          "workspace": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 512
+                                          },
+                                          "environment": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 512
+                                          }
+                                        },
+                                        "required": [
+                                          "workspace",
+                                          "environment"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "page": {
+                                        "type": "string",
+                                        "maxLength": 4096
+                                      },
+                                      "pageUrl": {
+                                        "type": "string",
+                                        "maxLength": 8192,
+                                        "format": "uri"
+                                      },
+                                      "identity": {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 512
+                                          },
+                                          "name": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 1000
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "name"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "datasetId",
+                                      "recordId",
+                                      "digest"
+                                    ],
+                                    "additionalProperties": false
+                                  }
                                 }
                               },
                               "required": [
@@ -4035,6 +6702,133 @@
                           "digest": {
                             "type": "string",
                             "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "workspace": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "environment": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              }
+                            },
+                            "required": [
+                              "workspace",
+                              "environment"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "page": {
+                            "type": "string",
+                            "maxLength": 4096
+                          },
+                          "pageUrl": {
+                            "type": "string",
+                            "maxLength": 8192,
+                            "format": "uri"
+                          },
+                          "identity": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 1000
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "previous": {
+                            "maxItems": 1000,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "datasetId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "recordId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "digest": {
+                                  "type": "string",
+                                  "pattern": "^[a-f0-9]{64}$"
+                                },
+                                "scope": {
+                                  "type": "object",
+                                  "properties": {
+                                    "workspace": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "environment": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    }
+                                  },
+                                  "required": [
+                                    "workspace",
+                                    "environment"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "page": {
+                                  "type": "string",
+                                  "maxLength": 4096
+                                },
+                                "pageUrl": {
+                                  "type": "string",
+                                  "maxLength": 8192,
+                                  "format": "uri"
+                                },
+                                "identity": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 1000
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "datasetId",
+                                "recordId",
+                                "digest"
+                              ],
+                              "additionalProperties": false
+                            }
                           }
                         },
                         "required": [
@@ -4076,6 +6870,133 @@
                   "digest": {
                     "type": "string",
                     "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "scope": {
+                    "type": "object",
+                    "properties": {
+                      "workspace": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512
+                      },
+                      "environment": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512
+                      }
+                    },
+                    "required": [
+                      "workspace",
+                      "environment"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "page": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "pageUrl": {
+                    "type": "string",
+                    "maxLength": 8192,
+                    "format": "uri"
+                  },
+                  "identity": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1000
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "previous": {
+                    "maxItems": 1000,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "datasetId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "recordId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "digest": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "scope": {
+                          "type": "object",
+                          "properties": {
+                            "workspace": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "environment": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            }
+                          },
+                          "required": [
+                            "workspace",
+                            "environment"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "page": {
+                          "type": "string",
+                          "maxLength": 4096
+                        },
+                        "pageUrl": {
+                          "type": "string",
+                          "maxLength": 8192,
+                          "format": "uri"
+                        },
+                        "identity": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1000
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "datasetId",
+                        "recordId",
+                        "digest"
+                      ],
+                      "additionalProperties": false
+                    }
                   }
                 },
                 "required": [
@@ -4151,6 +7072,133 @@
                             "digest": {
                               "type": "string",
                               "pattern": "^[a-f0-9]{64}$"
+                            },
+                            "scope": {
+                              "type": "object",
+                              "properties": {
+                                "workspace": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "environment": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                }
+                              },
+                              "required": [
+                                "workspace",
+                                "environment"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "page": {
+                              "type": "string",
+                              "maxLength": 4096
+                            },
+                            "pageUrl": {
+                              "type": "string",
+                              "maxLength": 8192,
+                              "format": "uri"
+                            },
+                            "identity": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 1000
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "previous": {
+                              "maxItems": 1000,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "datasetId": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "recordId": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "digest": {
+                                    "type": "string",
+                                    "pattern": "^[a-f0-9]{64}$"
+                                  },
+                                  "scope": {
+                                    "type": "object",
+                                    "properties": {
+                                      "workspace": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "environment": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      }
+                                    },
+                                    "required": [
+                                      "workspace",
+                                      "environment"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "page": {
+                                    "type": "string",
+                                    "maxLength": 4096
+                                  },
+                                  "pageUrl": {
+                                    "type": "string",
+                                    "maxLength": 8192,
+                                    "format": "uri"
+                                  },
+                                  "identity": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 1000
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "datasetId",
+                                  "recordId",
+                                  "digest"
+                                ],
+                                "additionalProperties": false
+                              }
                             }
                           },
                           "required": [
@@ -4204,6 +7252,133 @@
                               "digest": {
                                 "type": "string",
                                 "pattern": "^[a-f0-9]{64}$"
+                              },
+                              "scope": {
+                                "type": "object",
+                                "properties": {
+                                  "workspace": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "environment": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  }
+                                },
+                                "required": [
+                                  "workspace",
+                                  "environment"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "page": {
+                                "type": "string",
+                                "maxLength": 4096
+                              },
+                              "pageUrl": {
+                                "type": "string",
+                                "maxLength": 8192,
+                                "format": "uri"
+                              },
+                              "identity": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "previous": {
+                                "maxItems": 1000,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "datasetId": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "recordId": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512
+                                    },
+                                    "digest": {
+                                      "type": "string",
+                                      "pattern": "^[a-f0-9]{64}$"
+                                    },
+                                    "scope": {
+                                      "type": "object",
+                                      "properties": {
+                                        "workspace": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 512
+                                        },
+                                        "environment": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 512
+                                        }
+                                      },
+                                      "required": [
+                                        "workspace",
+                                        "environment"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "page": {
+                                      "type": "string",
+                                      "maxLength": 4096
+                                    },
+                                    "pageUrl": {
+                                      "type": "string",
+                                      "maxLength": 8192,
+                                      "format": "uri"
+                                    },
+                                    "identity": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 512
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 1000
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": [
+                                    "datasetId",
+                                    "recordId",
+                                    "digest"
+                                  ],
+                                  "additionalProperties": false
+                                }
                               }
                             },
                             "required": [
@@ -4242,6 +7417,133 @@
                         "digest": {
                           "type": "string",
                           "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "scope": {
+                          "type": "object",
+                          "properties": {
+                            "workspace": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "environment": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            }
+                          },
+                          "required": [
+                            "workspace",
+                            "environment"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "page": {
+                          "type": "string",
+                          "maxLength": 4096
+                        },
+                        "pageUrl": {
+                          "type": "string",
+                          "maxLength": 8192,
+                          "format": "uri"
+                        },
+                        "identity": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1000
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "previous": {
+                          "maxItems": 1000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "datasetId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "recordId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "digest": {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
+                              },
+                              "scope": {
+                                "type": "object",
+                                "properties": {
+                                  "workspace": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "environment": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  }
+                                },
+                                "required": [
+                                  "workspace",
+                                  "environment"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "page": {
+                                "type": "string",
+                                "maxLength": 4096
+                              },
+                              "pageUrl": {
+                                "type": "string",
+                                "maxLength": 8192,
+                                "format": "uri"
+                              },
+                              "identity": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "datasetId",
+                              "recordId",
+                              "digest"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -4329,6 +7631,133 @@
                             "digest": {
                               "type": "string",
                               "pattern": "^[a-f0-9]{64}$"
+                            },
+                            "scope": {
+                              "type": "object",
+                              "properties": {
+                                "workspace": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "environment": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                }
+                              },
+                              "required": [
+                                "workspace",
+                                "environment"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "page": {
+                              "type": "string",
+                              "maxLength": 4096
+                            },
+                            "pageUrl": {
+                              "type": "string",
+                              "maxLength": 8192,
+                              "format": "uri"
+                            },
+                            "identity": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 1000
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "previous": {
+                              "maxItems": 1000,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "datasetId": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "recordId": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "digest": {
+                                    "type": "string",
+                                    "pattern": "^[a-f0-9]{64}$"
+                                  },
+                                  "scope": {
+                                    "type": "object",
+                                    "properties": {
+                                      "workspace": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "environment": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      }
+                                    },
+                                    "required": [
+                                      "workspace",
+                                      "environment"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "page": {
+                                    "type": "string",
+                                    "maxLength": 4096
+                                  },
+                                  "pageUrl": {
+                                    "type": "string",
+                                    "maxLength": 8192,
+                                    "format": "uri"
+                                  },
+                                  "identity": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512
+                                      },
+                                      "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 1000
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "datasetId",
+                                  "recordId",
+                                  "digest"
+                                ],
+                                "additionalProperties": false
+                              }
                             }
                           },
                           "required": [
@@ -4374,6 +7803,133 @@
                         "digest": {
                           "type": "string",
                           "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "scope": {
+                          "type": "object",
+                          "properties": {
+                            "workspace": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "environment": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            }
+                          },
+                          "required": [
+                            "workspace",
+                            "environment"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "page": {
+                          "type": "string",
+                          "maxLength": 4096
+                        },
+                        "pageUrl": {
+                          "type": "string",
+                          "maxLength": 8192,
+                          "format": "uri"
+                        },
+                        "identity": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1000
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "previous": {
+                          "maxItems": 1000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "datasetId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "recordId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "digest": {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
+                              },
+                              "scope": {
+                                "type": "object",
+                                "properties": {
+                                  "workspace": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "environment": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  }
+                                },
+                                "required": [
+                                  "workspace",
+                                  "environment"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "page": {
+                                "type": "string",
+                                "maxLength": 4096
+                              },
+                              "pageUrl": {
+                                "type": "string",
+                                "maxLength": 8192,
+                                "format": "uri"
+                              },
+                              "identity": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "datasetId",
+                              "recordId",
+                              "digest"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -5149,6 +8705,133 @@
                     "digest": {
                       "type": "string",
                       "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "scope": {
+                      "type": "object",
+                      "properties": {
+                        "workspace": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "environment": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        }
+                      },
+                      "required": [
+                        "workspace",
+                        "environment"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "page": {
+                      "type": "string",
+                      "maxLength": 4096
+                    },
+                    "pageUrl": {
+                      "type": "string",
+                      "maxLength": 8192,
+                      "format": "uri"
+                    },
+                    "identity": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "previous": {
+                      "maxItems": 1000,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "datasetId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          },
+                          "recordId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512
+                          },
+                          "digest": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "workspace": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "environment": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              }
+                            },
+                            "required": [
+                              "workspace",
+                              "environment"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "page": {
+                            "type": "string",
+                            "maxLength": 4096
+                          },
+                          "pageUrl": {
+                            "type": "string",
+                            "maxLength": 8192,
+                            "format": "uri"
+                          },
+                          "identity": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 1000
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "datasetId",
+                          "recordId",
+                          "digest"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [

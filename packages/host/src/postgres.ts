@@ -1,6 +1,6 @@
 import {randomBytes,randomUUID} from 'node:crypto';
 import {CollaborationError,isCollaborationError,type Scope} from '../../shared/src/collaboration';
-import {collections,scopedTransaction,type Backend,type Collection,type RecordValue,type Scan,type Transaction} from './backend';
+import {assertRemovable,collections,scopedTransaction,type Backend,type Collection,type RecordValue,type Scan,type Transaction} from './backend';
 import {abortable} from './cancellation';
 import {digest} from './validation';
 
@@ -51,7 +51,7 @@ async function withClient<T>(pool: PostgresPool,options: Options,scope: Scope | 
     return await abortable(async () => {
       await query(readOnly ? 'BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY' : 'BEGIN');
       await query("SELECT set_config('lock_timeout',$1,true),set_config('statement_timeout',$2,true)",[`${options.lockTimeoutMs}ms`,`${options.timeoutMs}ms`]);
-      if (scope) await query('SELECT pg_advisory_xact_lock($1::bigint)',[lockId({schema:options.schema,scope})]);
+      if (scope) await query('SELECT pg_advisory_xact_lock($1::bigint)',[lockId({schema:options.schema,scope:{workspace:scope.workspace,environment:scope.environment}})]);
       const result = await run(query); combined.throwIfAborted(); await query('COMMIT'); return result;
     },combined);
   } catch (value) {
@@ -68,8 +68,9 @@ const text = (value: string) => JSON.stringify(value);
 const optionalText = (value: string | undefined) => value === undefined ? null : text(value);
 const decode = <T>(row: Row): RecordValue<T> => ({id:JSON.parse(row.id),workspace:JSON.parse(row.workspace),environment:JSON.parse(row.environment),time:row.sort_time,data:JSON.parse(row.data),threadId:row.thread_id === null ? undefined : JSON.parse(row.thread_id),status:row.status ?? undefined,page:row.page === null ? undefined : JSON.parse(row.page),actorId:row.actor_id === null ? undefined : JSON.parse(row.actor_id),expiresAt:row.expires_at === null ? undefined : Number(row.expires_at)});
 function view(query: Query,schema: string): Transaction {
-  const where = (scope: Scope) => ({clauses:['scope_key=$1','workspace=$2','environment=$3'],values:[digest(scope),text(scope.workspace),text(scope.environment)] as unknown[]});
-  return {
+  const where = (scope: Scope) => ({clauses:['scope_key=$1','workspace=$2','environment=$3'],values:[digest({workspace:scope.workspace,environment:scope.environment}),text(scope.workspace),text(scope.environment)] as unknown[]});
+  const tx: Transaction = {
+    async remove(collection,scope,id) {await assertRemovable(tx,collection,scope,id); await query(`DELETE FROM ${table(schema,collection)} WHERE scope_key=$1 AND workspace=$2 AND environment=$3 AND id=$4`,[digest({workspace:scope.workspace,environment:scope.environment}),text(scope.workspace),text(scope.environment),text(id)],scope);},
     async get<T>(collection: Collection,scope: Scope,id: string) {const {clauses,values} = where(scope); values.push(text(id)); const result = await query(`SELECT * FROM ${table(schema,collection)} WHERE ${clauses.join(' AND ')} AND id=$4`,values,scope); return result.rows[0] ? decode<T>(result.rows[0] as Row) : undefined;},
     async scan<T>(collection: Collection,scope: Scope,input: Scan) {
       if (!Number.isSafeInteger(input.limit) || input.limit < 1 || input.limit > 101) throw new CollaborationError('validation','Invalid feedback page limit.');
@@ -78,6 +79,7 @@ function view(query: Query,schema: string): Transaction {
       // Hash filters also retain exact values, so a hash collision cannot mix record scopes or filters.
       if (input.page !== undefined) clauses.push(`page=${bind(text(input.page))}`); if (input.actorId !== undefined) clauses.push(`actor_id=${bind(text(input.actorId))}`);
       for (const boundary of ['after','before'] as const) if (input[boundary]) {const edge = input[boundary]!, op = boundary === 'after' ? '>' : '<'; clauses.push(`(sort_time,id) ${op} (${bind(edge.time)},${bind(text(edge.id))})`);}
+      if(input.expiresBefore !== undefined) {if(!Number.isSafeInteger(input.expiresBefore) || input.expiresBefore < 0) throw new CollaborationError('validation','Invalid transfer expiry cutoff.'); clauses.push(`expires_at<=${bind(input.expiresBefore)}`);}
       const direction = input.direction === 'desc' ? 'DESC' : 'ASC';
       const result = await query(`SELECT * FROM ${table(schema,collection)} WHERE ${clauses.join(' AND ')} ORDER BY sort_time ${direction},id ${direction} LIMIT ${bind(input.limit)}`,values,scope); return result.rows.map(row => decode<T>(row as Row));
     },
@@ -87,6 +89,7 @@ function view(query: Query,schema: string): Transaction {
       else {const result = await query(`UPDATE ${table(schema,collection)} SET sort_time=$1,thread_id=$2,status=$3,page=$4,page_key=$5,actor_id=$6,actor_key=$7,expires_at=$8,data=$9 WHERE scope_key=$10 AND workspace=$11 AND environment=$12 AND id=$13`,values,{workspace:record.workspace,environment:record.environment}); if (result.rowCount !== 1) throw new CollaborationError('conflict','Feedback changed during the transaction.');}
     },
   };
+  return tx;
 }
 export async function installPostgres(pool: PostgresPool,input: PostgresOptions = {},signal = new AbortController().signal) {
   const options = settings(input), deadline = AbortSignal.timeout(options.snapshotTimeoutMs);

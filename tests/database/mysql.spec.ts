@@ -4,13 +4,18 @@ import {installMysql,MysqlBackend,type MysqlPool} from '../../packages/host/src/
 import {ReviewStore,CollaborationError} from '../../packages/host/src/store';
 import {mysqlCluster} from '../fixtures/mysql-cluster';
 import {storageConformance} from '../conformance/storage';
+import {exportConformance} from '../conformance/exports';
+import {importConformance} from '../conformance/imports';
 
 let cluster: Awaited<ReturnType<typeof mysqlCluster>>;
 beforeAll(async () => {cluster = await mysqlCluster(); console.log(`Task-owned MySQL fixture: ${cluster.version}`);}); afterAll(async () => {if(cluster) await cluster.close();});
-storageConformance('MySQL',async () => {
+const freshStorage = async () => {
   const prefix = cluster.allocatePrefix(); await installMysql(cluster.pool,{prefix}); const backend = await MysqlBackend.open(cluster.pool,{prefix});
   return {backend,async cleanup() {await backend.close(); await cluster.dropPrefix(prefix);}};
-});
+};
+storageConformance('MySQL',freshStorage);
+exportConformance('MySQL',freshStorage);
+importConformance('MySQL',freshStorage);
 const scope = {workspace:'host:team',environment:'preview'}, signal = () => new AbortController().signal;
 const auth = async () => ({actor:{id:'host:alex',name:'Alex'},capabilities:{mentions:false,assignment:false,directory:false}});
 const input = () => ({idempotencyKey:crypto.randomUUID(),page:'/',pageUrl:'https://example.test/',anchor:{kind:'page' as const,selector:'body',label:'Page',quote:'',x:0,y:0},body:'Persistent'});

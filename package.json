@@ -31,7 +31,7 @@
     "examples": "tsx scripts/examples.ts",
     "test:docker": "tsx scripts/docker-smoke.ts",
     "test:package": "tsx scripts/package-smoke.ts && tsx scripts/host-package-smoke.ts",
-    "test:storage:sqlite": "vitest run tests/sqlite-conformance.test.ts",
+    "test:storage:sqlite": "vitest run tests/sqlite-conformance.test.ts tests/sqlite-exports.test.ts tests/sqlite-imports.test.ts",
     "test:storage:postgres": "vitest run --config vitest.storage.config.ts tests/database/postgres.spec.ts",
     "test:package:postgres": "tsx scripts/host-package-smoke.ts --postgres",
     "fixtures:postgres": "tsx scripts/postgres-runtime.ts",
@@ -46,7 +46,8 @@
     "test:storage": "pnpm test:storage:sqlite && vitest run --config vitest.storage.config.ts",
     "test:http:core": "vitest run tests/host-http.test.ts tests/host-frameworks.test.ts",
     "test:package:http": "tsx scripts/host-http-package-smoke.ts",
-    "test:matrix": "pnpm build && tsx scripts/server-matrix.ts"
+    "test:matrix": "pnpm build && tsx scripts/server-matrix.ts",
+    "test:portability": "vitest run --config vitest.storage.config.ts tests/database/portability.spec.ts --reporter=verbose"
   },
   "dependencies": {
     "@fastify/cors": "11.4.3",

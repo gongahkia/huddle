@@ -111,9 +111,36 @@ export function storageConformance(name: string,fixture: () => Promise<StorageFi
       await expect(f.backend.transaction(scope,signal(),async tx => tx.get('threads',other,'guessed-id'))).rejects.toMatchObject({code:'forbidden'});
       await expect(f.backend.transaction(scope,signal(),async tx => tx.put('threads',{...other,id:'guessed-id',time:'',data:{}},true))).rejects.toMatchObject({code:'forbidden'});
     });
+    it('uses workspace and environment as scope identity when a row carries additional metadata',async () => {
+      const saved = await create(), extended = {...scope,id:'extra-id',time:'extra-time',data:{unrelated:true}};
+      expect((await f.backend.snapshot(signal(),tx => tx.get<Thread>('threads',extended,saved.thread.id)))?.data.id).toBe(saved.thread.id);
+      expect((await f.backend.snapshot(signal(),tx => tx.scan('threads',extended,{limit:10})))).toHaveLength(1);
+    });
+    it('removes only scoped temporary records and rolls cleanup back with a failed transaction',async () => {
+      const saved = await create(), row = {...scope,id:'temporary',time:'',actorId:alex.id,expiresAt:0,data:{private:'fixture'}};
+      await f.backend.transaction(scope,signal(),tx => tx.put('uploads',row,true));
+      await expect(f.backend.transaction(other,signal(),tx => tx.remove('uploads',scope,row.id))).rejects.toMatchObject({code:'forbidden'});
+      await expect(f.backend.transaction(scope,signal(),async tx => {await tx.remove('uploads',scope,row.id); throw new Error('Rollback cleanup');})).rejects.toBeDefined();
+      expect(await f.backend.snapshot(signal(),tx => tx.get('uploads',scope,row.id))).toBeDefined();
+      await f.backend.transaction(scope,signal(),tx => tx.remove('uploads',scope,row.id)); expect(await f.backend.snapshot(signal(),tx => tx.get('uploads',scope,row.id))).toBeUndefined();
+      await expect(f.backend.transaction(scope,signal(),tx => tx.remove('threads' as 'uploads',scope,saved.thread.id))).rejects.toMatchObject({code:'validation'}); expect((await store.detail(scope,saved.thread.id,{},signal())).thread.id).toBe(saved.thread.id);
+    });
     it('cancels a host authorization callback that ignores its abort signal',async () => {
       const blocked = new ReviewStore(f.backend,async () => new Promise(() => {})), controller = new AbortController();
       const rejected = expect(blocked.session(scope,controller.signal)).rejects.toMatchObject({name:'AbortError'}); controller.abort(); await rejected;
+    });
+    it('expires only unpublished import children and filters staging by its deadline',async () => {
+      const saved = await create(), expired = {...scope,id:'orphan',time:'',threadId:'unfinished',status:'importing',expiresAt:0,data:{}};
+      await f.backend.transaction(scope,signal(),async tx => {
+        await tx.put('comments',expired,true);
+        await tx.put('comments',{...expired,id:'published',threadId:saved.thread.id},true);
+        await tx.put('history',{...expired,id:'future',expiresAt:Date.now()+60000},true);
+      });
+      expect((await f.backend.snapshot(signal(),tx => tx.scan('comments',scope,{expiresBefore:Date.now(),limit:10}))).map(row => row.id).sort()).toEqual(['orphan','published']);
+      await expect(f.backend.transaction(scope,signal(),tx => tx.remove('comments',scope,'published'))).rejects.toMatchObject({code:'validation'});
+      await expect(f.backend.transaction(scope,signal(),tx => tx.remove('history',scope,'future'))).rejects.toMatchObject({code:'validation'});
+      await f.backend.transaction(scope,signal(),tx => tx.remove('comments',scope,'orphan'));
+      expect(await f.backend.snapshot(signal(),tx => tx.get('comments',scope,'orphan'))).toBeUndefined();
     });
   });
 }
