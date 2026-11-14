@@ -39,9 +39,9 @@ export class TestAdapter implements CollaborationAdapter {
     if (input.status) record.thread.status = input.status; if (input.anchor) record.thread.anchor = input.anchor; record.thread.version++; this.events++; return this.detail(scope,id,{},signal);
   }
   async changes(scope: Scope,cursor: string | undefined,signal: AbortSignal) {this.check(signal); return {items: cursor !== undefined && cursor !== String(this.events) ? this.records.filter(item => item.thread.workspace === scope.workspace && item.thread.environment === scope.environment).map(item => ({threadId: item.thread.id,kind: 'updated' as const})) : [],cursor: String(this.events),hasMore: false,reset: false};}
-  async export(): ReturnType<CollaborationAdapter['export']> {throw new Error('Transfer fixture not implemented.');}
-  async stageImport(): ReturnType<CollaborationAdapter['stageImport']> {throw new Error('Transfer fixture not implemented.');}
-  async previewImport(): ReturnType<CollaborationAdapter['previewImport']> {throw new Error('Transfer fixture not implemented.');}
-  async executeImport(): ReturnType<CollaborationAdapter['executeImport']> {throw new Error('Transfer fixture not implemented.');}
-  async importProgress(): ReturnType<CollaborationAdapter['importProgress']> {throw new Error('Transfer fixture not implemented.');}
+  async export(..._args:Parameters<CollaborationAdapter['export']>): ReturnType<CollaborationAdapter['export']> {throw new Error('Transfer fixture not implemented.');}
+  async stageImport(..._args:Parameters<CollaborationAdapter['stageImport']>): ReturnType<CollaborationAdapter['stageImport']> {throw new Error('Transfer fixture not implemented.');}
+  async previewImport(..._args:Parameters<CollaborationAdapter['previewImport']>): ReturnType<CollaborationAdapter['previewImport']> {throw new Error('Transfer fixture not implemented.');}
+  async executeImport(..._args:Parameters<CollaborationAdapter['executeImport']>): ReturnType<CollaborationAdapter['executeImport']> {throw new Error('Transfer fixture not implemented.');}
+  async importProgress(..._args:Parameters<CollaborationAdapter['importProgress']>): ReturnType<CollaborationAdapter['importProgress']> {throw new Error('Transfer fixture not implemented.');}
 }

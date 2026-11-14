@@ -103,6 +103,10 @@ export function storageConformance(name: string,fixture: () => Promise<StorageFi
       const assigned = await supported.update(scope,saved.thread.id,{idempotencyKey:'assign',expectedVersion:1,assigneeId:morgan.id},signal()); expect(assigned.thread.assignee).toEqual(morgan);
       await expect(supported.reply(scope,saved.thread.id,{idempotencyKey:'unknown',body:'Bad',mentions:['unknown']},signal())).rejects.toMatchObject({code:'validation'});
     });
+    it('validates live directory pages before exposing extra account fields or stranded results',async () => {
+      let items:Identity[] = [alex]; const memberStore = new ReviewStore(f.backend,async () => ({actor:alex,capabilities:{mentions:true,assignment:true,directory:true}}),{lookup:async () => [alex],list:async () => ({items,nextCursor:'x'.repeat(1024)})});
+      expect((await memberStore.directory(scope,{},signal())).nextCursor).toHaveLength(1024); items = [{...alex,password:'fixture-secret'} as Identity]; await expect(memberStore.directory(scope,{},signal())).rejects.toMatchObject({code:'validation'}); items = [alex,alex]; await expect(memberStore.directory(scope,{},signal())).rejects.toMatchObject({code:'validation'}); items = Array.from({length:101},(_,index) => ({id:`host:${index}`,name:'Member'})); await expect(memberStore.directory(scope,{},signal())).rejects.toMatchObject({code:'validation'});
+    });
     it('aborts pre-cancelled operations without touching feedback storage',async () => {
       const controller = new AbortController(); controller.abort(); await expect(store.create(scope,input(),controller.signal)).rejects.toMatchObject({name:'AbortError'});
       expect((await store.list(scope,{},signal())).items).toHaveLength(0);

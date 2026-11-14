@@ -84,6 +84,10 @@ export function importConformance(name:string,fixture:() => Promise<StorageFixtu
       const controller = new AbortController(); let returned = false; const chunks:AsyncIterable<Uint8Array> = {[Symbol.asyncIterator]:() => ({next:() => new Promise(() => {}),return:async () => {returned = true; return {done:true,value:undefined};}})};
       const result = expect(store.stageImport(scope,chunks,controller.signal)).rejects.toMatchObject({name:'AbortError'}); await new Promise(resolve => setTimeout(resolve,10)); controller.abort(); await result; expect(returned).toBe(true);
     });
+    it('retains validation errors when a custom upload iterator throws during cleanup',async () => {
+      const limited = new ReviewStore(f.backend,authorize,undefined,{limits:{maxBytes:1}}), chunks:AsyncIterable<Uint8Array> = {[Symbol.asyncIterator]:() => ({next:async () => ({done:false,value:new Uint8Array(2)}),return:() => {throw new Error('Private fixture iterator failure');}})};
+      await expect(limited.stageImport(scope,chunks,signal())).rejects.toMatchObject({code:'validation'});
+    });
     it('keeps timestamp offsets and future imported activity ordered during a new live reply',async () => {
       const source = portableFixture(1,2); source.comments[0].createdAt = '2099-01-01T12:00:00+08:00'; source.comments[1].createdAt = '2099-01-01T05:00:00Z'; source.threads[0].latestComment = source.comments[1]; source.threads[0].updatedAt = source.comments[1].createdAt;
       const {input} = await prepare(source); expect((await finishImport(store,scope,input,signal())).state).toBe('complete'); const savedId = (await store.list(scope,{},signal())).items[0].id; const result = await store.reply(scope,savedId,{idempotencyKey:'present-day',body:'Present day'},signal()); expect(result.thread.latestComment?.provenance?.recordId).toBe(source.comments[1].id); expect(result.thread.updatedAt).toBe(source.threads[0].updatedAt); const exported = await snapshot(store,scope.workspace,['preview','production'],signal()); expect(exported.comments.find(item => item.provenance?.recordId === source.comments[0].id)?.createdAt).toBe(source.comments[0].createdAt);

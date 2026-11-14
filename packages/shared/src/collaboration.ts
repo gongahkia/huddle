@@ -50,6 +50,7 @@ export type ImportPreview = {
 };
 export type ImportJob = {id: string; state: 'pending' | 'running' | 'complete' | 'failed'; expected: Counts; processed: Counts; rejected: {recordId: string; reason: string}[]; error?: string};
 export type Download = {filename: string; contentType: string; chunks: AsyncIterable<Uint8Array>};
+export function isByteChunk(value:unknown): value is Uint8Array {return ArrayBuffer.isView(value) && Object.prototype.toString.call(value) === '[object Uint8Array]';}
 
 // Scope is a request, never an authorization grant. The host rechecks it on every operation.
 export interface CollaborationAdapter {

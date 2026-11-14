@@ -23,7 +23,9 @@ for (const [name,entry] of Object.entries(entries)) {
 await build({entryPoints: ['apps/server/src/main.ts'],bundle: true,platform: 'node',target: 'node24',format: 'esm',packages: 'external',outfile: 'dist/server.js'});
 await build({entryPoints: ['scripts/cli.ts'],bundle: true,platform: 'node',target: 'node24',format: 'esm',packages: 'external',outfile: 'dist/cli.js'});
 await viteBuild({root: 'apps/manage',build: {outDir: resolve('dist/public'),emptyOutDir: false},logLevel: 'warn'});
-await mkdir('dist/examples/html',{recursive: true}); await cp('examples/html/index.html','dist/examples/html/index.html'); await cp('examples/style.css','dist/examples/style.css'); await cp('dist/public/huddle.js','dist/examples/huddle.js');
+await cp('examples/html','dist/examples/html',{recursive: true}); await mkdir('dist/examples/html/vendor',{recursive:true});
+await cp('node_modules/jquery/dist/jquery.min.js','dist/examples/html/vendor/jquery.min.js'); await cp('node_modules/htmx.org/dist/htmx.min.js','dist/examples/html/vendor/htmx.min.js');
+await cp('examples/style.css','dist/examples/style.css'); await cp('dist/public/huddle.js','dist/examples/huddle.js');
 await rm('dist/examples/chunks',{recursive: true,force: true}); await cp('dist/public/chunks','dist/examples/chunks',{recursive: true});
 await rm('dist/examples/sdk',{recursive: true,force: true}); await cp('packages/browser/dist','dist/examples/sdk',{recursive: true});
 for (const example of ['react','angular','vue','svelte','preact','solid']) {
@@ -44,4 +46,8 @@ await mkdir('packages/host/dist/docs/schema',{recursive:true});
 for (const document of ['host-http.md','host-transfers.md','server-matrix.md','collaboration-contract.md','frontend-progress.md','implementation-plan.adoc']) await cp('docs/'+document,'packages/host/dist/docs/'+document);
 await writeFile('packages/host/dist/docs/host-http.md',(await readFile('docs/host-http.md','utf8')).replace('../packages/host/README.md','../../README.md'));
 for (const schema of ['huddle.feedback.v2.schema.json','huddle.http.v2.openapi.json']) await cp('docs/schema/'+schema,'packages/host/dist/docs/schema/'+schema);
+await cp('packages/host/dist/docs','packages/browser/dist/docs',{recursive:true});
+await cp('docs/browser-workflows.md','packages/browser/dist/docs/browser-workflows.md');
+await writeFile('packages/browser/dist/docs/host-http.md',(await readFile('packages/browser/dist/docs/host-http.md','utf8')).replace('../../README.md','host-package.md'));
+await writeFile('packages/browser/dist/docs/host-package.md',(await readFile('packages/host/README.md','utf8')).replaceAll('./dist/docs/','./'));
 console.log('Built private host storage reference package and integration contracts.');

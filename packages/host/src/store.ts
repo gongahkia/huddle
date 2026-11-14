@@ -50,7 +50,8 @@ export class ReviewStore {
   async directory(scope: Scope,query: {search?: string; cursor?: string},signal: AbortSignal) {
     const access = await this.access(scope,signal); if (!access.capabilities.directory || !this.members) throw new CollaborationError('not_found','Member directory is unavailable.');
     validate(z.object({search: z.string().max(1000).optional(),cursor: z.string().max(2048).optional()}).strict(),query);
-    return abortable(() => this.members!.list(scope,query,signal),signal);
+    const result = validate(z.object({items:z.array(identitySchema).max(100),nextCursor:z.string().min(1).max(2048).nullable()}).strict(),await abortable(() => this.members!.list(scope,query,signal),signal));
+    if(new Set(result.items.map(item => item.id)).size !== result.items.length) throw new CollaborationError('validation','The host directory returned duplicate member IDs.'); return result;
   }
   private async getThread(tx: Transaction,scope: Scope,id: string) {
     const row = await tx.get<Thread>('threads',scope,id); if (!row) throw new CollaborationError('not_found','Feedback thread is unavailable.'); return row;

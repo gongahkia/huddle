@@ -1,5 +1,6 @@
 import {isCollaborationError,CollaborationError,type CollaborationAdapter,type ErrorCode,type Scope} from '../../shared/src/collaboration';
 import {operation} from './operations';
+import {ByteCollector} from './bytes';
 export type HttpOptions = {
   basePath?: string; fetch?: typeof fetch; timeoutMs?: number; maxUploadBytes?: number;
   headers?: (method: string,path: string,signal: AbortSignal) => HeadersInit | Promise<HeadersInit>;
@@ -18,8 +19,10 @@ export function createHttpAdapter(options: HttpOptions = {}): CollaborationAdapt
   }
   async function response(path: string,method: string,signal: AbortSignal,body?: unknown) {
     const headers = new Headers(await options.headers?.(method,path,signal)); if (body !== undefined && !headers.has('Content-Type')) headers.set('Content-Type','application/json');
+    signal.throwIfAborted();
     try {
       const result = await (options.fetch || globalThis.fetch)(path,{method,credentials: 'same-origin',signal,headers,body: body === undefined ? undefined : body instanceof Blob ? body : JSON.stringify(body)});
+      if(signal.aborted) {void result.body?.cancel().catch(() => {}); signal.throwIfAborted();}
       if (result.ok) return result;
       let message = 'The host could not complete this review request.', retryAfterMs: number | undefined;
       try {const value = await result.json(); if (value?.error?.code === (codes[result.status] || 'unavailable') && typeof value.error.message === 'string' && value.error.message.length <= 1000) message = value.error.message; if (Number.isSafeInteger(value?.error?.retryAfterMs) && value.error.retryAfterMs >= 0) retryAfterMs = value.error.retryAfterMs;} catch { /* do not expose raw proxy or backend errors */ }
@@ -49,19 +52,25 @@ export function createHttpAdapter(options: HttpOptions = {}): CollaborationAdapt
       const timer = setTimeout(() => controller.abort(new CollaborationError('timeout','The host export timed out.')),timeout);
       try {
         const result = await operation(inner => response(url('/exports'),'POST',inner,{scope,format}),combined,timeout); if (!result.body) throw new CollaborationError('unavailable','The export response was empty.');
-        const reader = result.body.getReader();
-        const cancel = () => {clearTimeout(timer); void reader.cancel().catch(() => {});};
+        const reader = result.body.getReader(); let cleaned = false;
+        const cancel = () => {if(cleaned) return; cleaned = true; clearTimeout(timer); combined.removeEventListener('abort',cancel); void reader.cancel().catch(() => {}); reader.releaseLock();};
         combined.addEventListener('abort',cancel,{once: true});
-        return {filename: `huddle-feedback.${format === 'json' ? 'json' : 'md'}`,contentType: format === 'json' ? 'application/json' : 'text/markdown',chunks: (async function*() {
+        if(combined.aborted) {cancel(); combined.throwIfAborted();}
+        const source = (async function*() {
           try {while (true) {combined.throwIfAborted(); const part = await operation(() => reader.read(),combined,timeout); if (part.done) break; yield part.value;} }
-          finally {clearTimeout(timer); combined.removeEventListener('abort',cancel); await reader.cancel().catch(() => {}); reader.releaseLock();}
-        })()};
+          finally {cancel();}
+        })();
+        const chunks:AsyncIterableIterator<Uint8Array> = {[Symbol.asyncIterator]() {return this;},next:() => source.next(),return:async () => {cancel(); return source.return(undefined);},throw:async value => {cancel(); return source.throw(value);}};
+        return {filename: `huddle-feedback.${format === 'json' ? 'json' : 'md'}`,contentType: format === 'json' ? 'application/json' : 'text/markdown',chunks};
       } catch (value) {clearTimeout(timer); if (combined.aborted) throw signal.aborted ? signal.reason : new CollaborationError('timeout','The host export timed out.'); throw value;}
     },
     async stageImport(scope,chunks,signal) {
-      const parts: BlobPart[] = []; let size = 0;
-      for await (const part of chunks) {signal.throwIfAborted(); size += part.byteLength; if (size > maxUpload) throw new CollaborationError('validation','Import exceeds the host upload limit.'); parts.push(Uint8Array.from(part));}
-      return request(url('/imports/uploads',scope),'POST',signal,new Blob(parts,{type: 'application/json'}));
+      const iterator = chunks[Symbol.asyncIterator](); let ended = false;
+      try {return await operation(async inner => {
+        const bytes = new ByteCollector(maxUpload,'upload');
+        while(true) {const next = await operation(() => iterator.next(),inner,timeout); if(next.done) {ended = true; break;} bytes.add(next.value);}
+        return request<Awaited<ReturnType<CollaborationAdapter['stageImport']>>>(url('/imports/uploads',scope),'POST',inner,bytes.blob('application/json'));
+      },signal,timeout);} finally {if(!ended && iterator.return) void Promise.resolve().then(() => iterator.return!()).catch(() => {});}
     },
     previewImport: (scope,input,signal) => request(url('/imports/previews',scope),'POST',signal,input),
     executeImport: (scope,input,signal) => request(url('/imports/jobs',scope),'POST',signal,input),

@@ -1,0 +1,8 @@
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Huddle · jQuery and htmx</title><link rel="stylesheet" href="../style.css"><meta name="htmx-config" content='{"includeIndicatorStyles":false}'></head><body><main><h1>Ordinary HTML interactions</h1><p id="jquery-count" role="status">jQuery updates: 0</p><button id="jquery-update">jQuery update</button><button hx-get="./interaction-fragment.html" hx-target="#htmx-content" hx-swap="innerHTML">Load htmx fragment</button><div id="htmx-content"></div></main><script src="./vendor/jquery.min.js"></script><script src="./vendor/htmx.min.js"></script><script type="module">
+import {mount} from '/sdk/huddle.js';
+import {createHttpAdapter} from '/sdk/http.js';
+let count=0;
+jQuery(document).on('click','#jquery-update,#jquery-dynamic',()=>jQuery('#jquery-count').text(`jQuery updates: ${++count}`));
+const workspace=new URLSearchParams(location.search).get('workspace');
+if(workspace)window.review=mount({adapter:createHttpAdapter(),namespace:'html-interactions',workspace,environment:'staging'});
+</script></body></html>

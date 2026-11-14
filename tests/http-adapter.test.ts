@@ -44,3 +44,29 @@ it('bounds staged imports before sending any upload and preserves exact JSON byt
   await createHttpAdapter({fetch}).stageImport(scope,chunks(),signal());
   expect(await (fetch.mock.calls[0][1]!.body as Blob).text()).toBe('{"历史":true}');
 });
+it('bounds stalled upload iteration and closes its iterator before making a request',async () => {
+  vi.useFakeTimers(); const fetch = vi.fn<typeof globalThis.fetch>(), close = vi.fn(async () => ({done:true as const,value:undefined}));
+  const chunks:AsyncIterable<Uint8Array> = {[Symbol.asyncIterator]:() => ({next:() => new Promise(() => {}),return:close})};
+  let failed:unknown; const pending = createHttpAdapter({fetch,timeoutMs:100}).stageImport(scope,chunks,signal()).catch(value => {failed = value;});
+  await vi.advanceTimersByTimeAsync(101); expect(failed).toMatchObject({code:'timeout'}); await pending; expect(close).toHaveBeenCalledOnce(); expect(fetch).not.toHaveBeenCalled(); expect(vi.getTimerCount()).toBe(0);
+});
+it('releases an export cancelled before iteration even if the underlying cancellation never settles',async () => {
+  vi.useFakeTimers(); const cancelled = vi.fn(() => new Promise<void>(() => {})), body = new ReadableStream<Uint8Array>({cancel:cancelled});
+  const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(new Response(body)), file = await createHttpAdapter({fetch}).export({workspace:scope.workspace,environments:[scope.environment]},'json',signal());
+  const iterator = file.chunks[Symbol.asyncIterator](); let finished = false; const returned = iterator.return!().then(() => {finished = true;}); await vi.advanceTimersByTimeAsync(0);
+  expect(finished).toBe(true); await returned; expect(cancelled).toHaveBeenCalledOnce(); expect(body.locked).toBe(false); expect(vi.getTimerCount()).toBe(0);
+});
+it('does not start a write when an ignored header callback completes after cancellation',async () => {
+  let release:(headers:HeadersInit) => void = () => {}; const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json({})), controller = new AbortController();
+  const adapter = createHttpAdapter({fetch,headers:() => new Promise(resolve => {release = resolve;})}), rejected = expect(adapter.reply(scope,'thread',{body:'Cancelled',idempotencyKey:'cancelled'},controller.signal)).rejects.toMatchObject({name:'AbortError'});
+  await Promise.resolve(); await Promise.resolve(); controller.abort(); await rejected; release({}); await Promise.resolve(); await Promise.resolve(); expect(fetch).not.toHaveBeenCalled();
+});
+it('cancels a late response body when a custom fetch ignores caller cancellation',async () => {
+  let release:(response:Response) => void = () => {}; const cancelled = vi.fn(), body = new ReadableStream<Uint8Array>({cancel:cancelled}), controller = new AbortController();
+  const adapter = createHttpAdapter({fetch:() => new Promise(resolve => {release = resolve;})}), rejected = expect(adapter.session(scope,controller.signal)).rejects.toMatchObject({name:'AbortError'});
+  await Promise.resolve(); await Promise.resolve(); controller.abort(); await rejected; release(new Response(body)); await Promise.resolve(); await Promise.resolve(); expect(cancelled).toHaveBeenCalledOnce();
+});
+it('keeps the typed upload failure when an iterator cleanup throws synchronously',async () => {
+  const chunks:AsyncIterable<Uint8Array> = {[Symbol.asyncIterator]:() => ({next:async () => ({done:false,value:new Uint8Array(3)}),return:() => {throw new Error('Private iterator failure');}})};
+  await expect(createHttpAdapter({maxUploadBytes:2}).stageImport(scope,chunks,signal())).rejects.toMatchObject({code:'validation'});
+});

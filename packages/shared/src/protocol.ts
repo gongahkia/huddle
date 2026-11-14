@@ -4,7 +4,7 @@ import {feedbackSnapshotSchema,portableShapes as s} from './portable';
 const capabilities = z.object({mentions: z.boolean(),assignment: z.boolean(),directory: z.boolean()}).strict();
 const identity = z.object({id: s.id,name: z.string().min(1).max(1000)}).strict();
 const scope = z.object({workspace: s.id,environment: s.id}).strict();
-const page = <T extends z.ZodType>(item: T) => z.object({items: z.array(item),nextCursor: s.id.nullable()}).strict();
+const page = <T extends z.ZodType>(item: T) => z.object({items: z.array(item),nextCursor: z.string().min(1).max(2048).nullable()}).strict();
 const counts = z.object({threads: s.count,comments: s.count,history: s.count}).strict();
 const mapping = z.object({environmentMap: z.record(z.string(),s.id),originMap: z.record(z.string(),z.string().url()),identityMap: z.record(z.string(),s.id)}).strict();
 const rejected = z.array(z.object({recordId: s.id,reason: z.string()}).strict());

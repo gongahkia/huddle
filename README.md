@@ -1,12 +1,33 @@
-> Architecture transition: the approved frontend-only plan is in [docs/implementation-plan.adoc](docs/implementation-plan.adoc). The service-backed setup and results below describe the legacy implementation. See [current progress](docs/frontend-progress.md) for the active work.
-
 # Huddle
 
-A small, self-hosted layer for discussing working websites. Pin an element, leave a page observation, reply, mention a teammate, assign ownership and resolve the discussion. Export complete feedback as JSON or Markdown.
+A framework-independent browser library for reviewing working websites using the host application's existing authentication, backend and database. Pin an element, leave a page observation, reply and resolve discussion in the embedded panel. Directory lookup, mentions and assignment are optional host capabilities. Complete JSON/Markdown export and deliberate preview/import/resume live in the panel; no separately deployed Huddle product service or management app is required.
 
-Huddle's embedded browser client has optional React, Angular, Vue, Svelte, Preact, Solid and Astro helpers, with real HTML and production Next.js/Nuxt/SvelteKit/Astro integration fixtures. A separate management workspace brings project feedback together. No external identity service, email provider, model API, Redis or paid service is required. See the [framework helper cookbook](docs/framework-helpers.md), [coverage matrix](docs/integration.md) and [failure handling contract](docs/reliability.md).
+The private `@huddle/browser` package has optional React/Next.js, Preact, Vue/Nuxt, Svelte/SvelteKit, Solid, Angular and Astro helpers. Its core has no framework dependency. The separate server-only `@huddle/host` reference package supplies thin Next.js/Express/Fastify HTTP bindings and PostgreSQL/MySQL/SQLite/MongoDB storage implementations. The host authorizes every operation and derives authorship; importing historical identities grants no access.
 
-This is an embedded-first release. The browser extension, screenshots, recording, click analytics and external issue-tracker integrations are future work.
+Start with the [browser package guide](packages/browser/README.md), [host integration guide](docs/host-http.md), [storage package](packages/host/README.md), [browser workflows/theme tokens](docs/browser-workflows.md) and [complete transfers](docs/host-transfers.md). The [neutral collaboration contract](docs/collaboration-contract.md), [HTTP specification](docs/schema/huddle.http.v2.openapi.json) and [huddle.feedback.v2 schema](docs/schema/huddle.feedback.v2.schema.json) support custom backends. Existing v0.1 integrations need the [migration guide](docs/migration-v0.2.md).
+
+Use Node **24.21.0** and pnpm **10.33.0**:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+pnpm test:package
+pnpm check:bundle
+pnpm test:browser
+```
+
+Browser checks build every maintained framework fixture from an installed private archive, with SSR/hydration/navigation tests and a separate real host/SQLite collaboration fixture. That fixture owns fresh disposable data and named test sessions; it is not production session middleware. Native browser setup and the optional Linux WebKit compatibility runtime are documented in [browser runtime](docs/browser-runtime.md). Real database conformance, all twelve framework/database combinations, sixteen ordered portability pairs and uninstall retention have separate commands in the [server matrix guide](docs/server-matrix.md). They provision only task-owned disposable fixtures, never existing application databases.
+
+Both packages remain private archives. Install them in the host without a sibling-checkout dependency; keep server drivers out of the browser graph. Detaching the library/routes leaves host data intact. Storage removal is a separate explicit host decision after a verified complete export. There is no uninstall hook that deletes feedback.
+
+The [approved implementation plan](docs/implementation-plan.adoc) supersedes the older service architecture. [Current evidence and outstanding gates](docs/frontend-progress.md) distinguish fixture checks from actual Pronto migration and hosted acceptance. Original feedback, backups, credentials and evaluation data are not disposable fixtures. Legacy components remain until real migration dependencies permit retirement.
+
+## Legacy service reference
+
+The remaining instructions describe v0.1 only. They are retained temporarily for original-data inventory, backup and migration dependencies. They do not install the current host-backed architecture. The browser extension, screenshots, recording and click analytics remain outside the approved scope.
 
 ## Run locally
 

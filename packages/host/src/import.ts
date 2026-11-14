@@ -1,5 +1,5 @@
 import {createHash,randomUUID} from 'node:crypto';
-import {CollaborationError,isCollaborationError,type Counts,type FeedbackSnapshot,type Identity,type ImportJob,type ImportMapping,type ImportPreview,type Scope} from '../../shared/src/collaboration';
+import {CollaborationError,isCollaborationError,isByteChunk,type Counts,type FeedbackSnapshot,type Identity,type ImportJob,type ImportMapping,type ImportPreview,type Scope} from '../../shared/src/collaboration';
 import {defaultImportLimits,parseFeedbackSnapshot,type ImportLimits} from '../../shared/src/portable';
 import {httpSchemas} from '../../shared/src/protocol';
 import type {Backend,RecordValue,Transaction} from './backend';
@@ -44,7 +44,7 @@ export class FeedbackImports {
       const iterator = chunks[Symbol.asyncIterator](); let ended = false;
       try {
         while(true) {
-          const next = await abortable(() => iterator.next(),signal); if(next.done) {ended = true; break;} if(!(next.value instanceof Uint8Array)) throw new CollaborationError('validation','Import uploads must contain bytes.');
+          const next = await abortable(() => iterator.next(),signal); if(next.done) {ended = true; break;} if(!isByteChunk(next.value)) throw new CollaborationError('validation','Import uploads must contain bytes.');
           if(size+next.value.byteLength > this.limits.maxBytes) throw new CollaborationError('validation','Import exceeds the configured byte limit.');
           bytes.set(next.value,size); hash.update(next.value); size += next.value.byteLength;
           while(size-persisted >= 65536) await persist(persisted+65536);
@@ -53,7 +53,7 @@ export class FeedbackImports {
         this.parse(bytes.subarray(0,size)); if(size > persisted) await persist(size); const fileDigest = hash.digest('hex'); await this.authorize([scope],actor,signal);
         await this.backend.transaction(scope,signal,tx => tx.put('uploads',{...scope,id:uploadId,time:'',actorId:actor.id,expiresAt,data:{digest:fileDigest,chunks:count,bytes:size} satisfies Upload},true));
         return {uploadId,digest:fileDigest};
-      } finally {if(!ended && iterator.return) void Promise.resolve(iterator.return()).catch(() => {});}
+      } finally {if(!ended && iterator.return) void Promise.resolve().then(() => iterator.return!()).catch(() => {});}
     });
   }
   private parse(bytes:Buffer): FeedbackSnapshot {
