@@ -41,7 +41,7 @@ for (const [name,entry] of Object.entries(hostEntries)) {
  await declarations.write({file:`packages/host/dist/${name}.d.ts`,format:'es'}); await declarations.close();
 }
 await mkdir('packages/host/dist/docs/schema',{recursive:true});
-for (const document of ['host-http.md','collaboration-contract.md','frontend-progress.md','implementation-plan.adoc']) await cp('docs/'+document,'packages/host/dist/docs/'+document);
+for (const document of ['host-http.md','server-matrix.md','collaboration-contract.md','frontend-progress.md','implementation-plan.adoc']) await cp('docs/'+document,'packages/host/dist/docs/'+document);
 await writeFile('packages/host/dist/docs/host-http.md',(await readFile('docs/host-http.md','utf8')).replace('../packages/host/README.md','../../README.md'));
 for (const schema of ['huddle.feedback.v2.schema.json','huddle.http.v2.openapi.json']) await cp('docs/schema/'+schema,'packages/host/dist/docs/schema/'+schema);
 console.log('Built private host storage reference package and integration contracts.');

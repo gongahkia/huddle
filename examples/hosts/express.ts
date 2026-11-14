@@ -1,0 +1,11 @@
+import express from 'express';
+import {createServer} from 'node:http';
+import {createExpressMiddleware} from '@huddle/host/express';
+import {closeFixtureRuntime,databases,fixtureConfiguration,fixtureOptions,rememberHostSession} from './fixture-runtime';
+const config = await fixtureConfiguration(), origin = new URL(config.origins.express), app = express();
+app.use(async (request,response,next) => {try {await rememberHostSession(request,request.headers.cookie); response.setHeader('X-Host-Framework','express'); next();} catch {response.status(503).json({error:{code:'unavailable',message:'Host fixture session lookup failed.'}});}});
+for(const database of databases) app.use(createExpressMiddleware(await fixtureOptions('express',database)));
+app.use(express.json()); app.get('/',(_request,response) => response.send('Host business page'));
+const server = createServer({maxHeaderSize:131072},app); server.listen(Number(origin.port),'127.0.0.1');
+let closing = false; const stop = () => {if(closing) return; closing = true; server.closeAllConnections(); server.close(() => {void closeFixtureRuntime().then(() => process.exit(0),() => process.exit(1));});};
+process.once('SIGTERM',stop); process.once('SIGINT',stop);

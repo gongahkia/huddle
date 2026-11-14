@@ -1,0 +1,10 @@
+import Fastify from 'fastify';
+import {createFastifyPlugin} from '@huddle/host/fastify';
+import {closeFixtureRuntime,databases,fixtureConfiguration,fixtureOptions,rememberHostSession} from './fixture-runtime';
+const config = await fixtureConfiguration(), origin = new URL(config.origins.fastify), app = Fastify({http:{maxHeaderSize:131072},routerOptions:{maxParamLength:4096}});
+app.addHook('preHandler',async request => {await rememberHostSession(request,request.headers.cookie);});
+app.addHook('onSend',async (_request,reply,payload) => {reply.header('X-Host-Framework','fastify'); return payload;});
+for(const database of databases) await app.register(createFastifyPlugin(await fixtureOptions('fastify',database)));
+app.get('/',async () => 'Host business page'); app.addHook('onClose',async () => {await closeFixtureRuntime();});
+await app.listen({port:Number(origin.port),host:'127.0.0.1'});
+let closing = false; const stop = () => {if(closing) return; closing = true; void app.close().then(() => process.exit(0),() => process.exit(1));}; process.once('SIGTERM',stop); process.once('SIGINT',stop);

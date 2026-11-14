@@ -21,6 +21,8 @@
       "vitest/globals"
     ],
     "paths": {
+      "@huddle/host": ["./packages/host/src/store.ts"],
+      "@huddle/host/*": ["./packages/host/src/*.ts"],
       "@huddle/shared": [
         "./packages/shared/src/index.ts"
       ],
