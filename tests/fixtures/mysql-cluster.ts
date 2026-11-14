@@ -11,7 +11,7 @@ import {collections} from '../../packages/host/src/backend';
 import {bounded} from './lifecycle';
 const exec = promisify(execFile);
 export async function mysqlCluster() {
-  const bin = resolve(process.env.HUDDLE_TEST_MYSQL_BIN || 'output/runtime/mysql-8.4.13/bin'), basedir = resolve(bin,'..');
+  const bin = resolve(process.env.HUDDLE_TEST_MYSQL_BIN || 'output/runtime/mysql-binary-8.4.13/bin'), basedir = resolve(bin,'..');
   try {await access(join(bin,'mysqld'));} catch {throw new Error('MySQL conformance needs mysqld. Set HUDDLE_TEST_MYSQL_BIN to its directory; no existing database URL is accepted.');}
   const directory = await mkdtemp(join(tmpdir(),'huddle-mysql-v2-')), data = join(directory,'data'), socket = join(directory,'mysql.sock'), nonce = randomUUID(), marker = join(directory,'fixture.json');
   await writeFile(marker,JSON.stringify({kind:'huddle-disposable-mysql',nonce,directory}),{mode:0o600});

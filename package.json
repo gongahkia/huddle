@@ -36,7 +36,10 @@
     "test:package:postgres": "tsx scripts/host-package-smoke.ts --postgres",
     "fixtures:postgres": "tsx scripts/postgres-runtime.ts",
     "backup": "tsx scripts/cli.ts backup",
-    "bench:storage": "tsx scripts/storage-benchmark.ts"
+    "bench:storage": "tsx scripts/storage-benchmark.ts",
+    "test:storage:mysql": "vitest run --config vitest.storage.config.ts tests/database/mysql.spec.ts",
+    "test:package:mysql": "tsx scripts/host-package-smoke.ts --mysql",
+    "fixtures:mysql": "tsx scripts/mysql-runtime.ts"
   },
   "dependencies": {
     "@fastify/cors": "11.4.3",

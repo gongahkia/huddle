@@ -8,7 +8,8 @@
   "exports": {
     ".": {"types": "./dist/store.d.ts", "import": "./dist/store.js"},
     "./sqlite": {"types": "./dist/sqlite.d.ts", "import": "./dist/sqlite.js"},
-    "./postgres": {"types": "./dist/postgres.d.ts", "import": "./dist/postgres.js"}
+    "./postgres": {"types": "./dist/postgres.d.ts", "import": "./dist/postgres.js"},
+    "./mysql": {"types": "./dist/mysql.d.ts", "import": "./dist/mysql.js"}
   },
   "files": ["dist", "README.md"]
 }

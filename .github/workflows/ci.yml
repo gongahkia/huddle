@@ -4,6 +4,25 @@ on:
     branches: [main]
   pull_request:
 jobs:
+  mysql:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: output/runtime/mysql-binary-8.4.13
+          key: mysql-binary-8.4.13-5dfbb764f731-aio-e746fdedefa9-ubuntu-24.04-${{ runner.arch }}
+      - run: pnpm fixtures:mysql
+      - run: pnpm test:storage:mysql
+      - run: pnpm build
+      - run: pnpm test:package:mysql
   postgres:
     runs-on: ubuntu-24.04
     timeout-minutes: 25

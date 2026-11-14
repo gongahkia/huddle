@@ -6,6 +6,7 @@ import {digest} from './validation';
 
 type MysqlValue = string | number | Buffer | null;
 export interface MysqlConnection {
+  query(text: string): Promise<[unknown,unknown]>;
   execute(text: string,values?: MysqlValue[]): Promise<[unknown,unknown]>;
   release(): void; destroy(): void;
   on?(event: 'error',listener: (error: Error) => void): unknown;
@@ -39,23 +40,24 @@ async function withConnection<T>(pool: MysqlPool,options: Options,scope: Scope |
   const destroy = () => {if (!released) {released = true; connection.destroy();}};
   const lost = () => disconnected.abort(new CollaborationError('unavailable','The feedback database connection ended.'));
   connection.on?.('error',lost); combined.addEventListener('abort',destroy,{once:true});
-  const query: Query = async (text,values = [],selectedScope = scope) => {combined.throwIfAborted(); await options.beforeQuery?.({text,values,scope:selectedScope}); combined.throwIfAborted(); return (await connection.execute(text,values))[0];};
+  const query: Query = async (text,values = [],selectedScope = scope) => {combined.throwIfAborted(); await options.beforeQuery?.({text,values,scope:selectedScope}); combined.throwIfAborted(); return (await (values.length ? connection.execute(text,values) : connection.query(text)))[0];};
+  let result: T;
   try {
-    return await abortable(async () => {
-      const session = rows(await query('SELECT @@session.innodb_lock_wait_timeout old_lock,@@session.character_set_client charset,@@session.sql_mode modes'))[0];
-      if (session.charset !== 'utf8mb4' || !String(session.modes).split(',').some(item => ['STRICT_TRANS_TABLES','STRICT_ALL_TABLES'].includes(item))) throw new CollaborationError('unavailable','Configure the host MySQL connection for utf8mb4 and strict SQL mode.');
+    result = await abortable(async () => {
+      const session = rows(await query('SELECT @@session.innodb_lock_wait_timeout old_lock,@@session.character_set_client client_charset,@@session.character_set_connection connection_charset,@@session.character_set_results results_charset,@@session.sql_mode modes'))[0];
+      if ([session.client_charset,session.connection_charset,session.results_charset].some(value => value !== 'utf8mb4') || !String(session.modes).split(',').some(item => ['STRICT_TRANS_TABLES','STRICT_ALL_TABLES'].includes(item))) throw new CollaborationError('unavailable','Configure the host MySQL connection for utf8mb4 and strict SQL mode.');
       oldLock = String(session.old_lock); await query('SET SESSION innodb_lock_wait_timeout=CAST(? AS UNSIGNED)',[String(Math.max(1,Math.ceil(options.lockTimeoutMs/1000)))]);
       const result = await run(query); combined.throwIfAborted(); return result;
     },combined);
   } catch (value) {
-    if (!released) {try {await connection.execute('ROLLBACK');} catch {destroy();}}
+    if (!released) {try {await connection.query('ROLLBACK');} catch {destroy();}}
     if (combined.aborted) throw combined.reason; throw failure(value);
   } finally {
     if (!released && oldLock !== undefined) {try {await connection.execute('SET SESSION innodb_lock_wait_timeout=CAST(? AS UNSIGNED)',[oldLock]);} catch {destroy();}}
     combined.removeEventListener('abort',destroy);
     if (!released) {connection.removeListener?.('error',lost); released = true; connection.release();}
-    if (combined.aborted) throw combined.reason;
   }
+  combined.throwIfAborted(); return result;
 }
 const text = (value: string) => JSON.stringify(value), binary = (value: string) => Buffer.from(text(value));
 const optionalText = (value: string | undefined) => value === undefined ? null : text(value);
