@@ -1,6 +1,6 @@
 # Migrating to the host-backed browser API
 
-The approved v0.2 design uses the application's existing identity, authorization, API and database. Implementation progress and pending acceptance gates are recorded in [frontend-progress.md](frontend-progress.md). Reference database and server integrations are still being implemented; the old standalone service does not implement this protocol.
+The approved v0.2 design uses the application's existing identity, authorization, API and database. PostgreSQL, MySQL, SQLite and MongoDB reference storage and Next.js, Express and Fastify bindings are implemented. Fresh local acceptance and pending hosted/retirement gates are recorded in [frontend-progress.md](frontend-progress.md); the old standalone service does not implement this protocol.
 
 The private package remains packable. Existing entry points are preserved: core, React, Preact, Vue, Svelte, Solid, Angular and Astro. The new optional `/http` entry supplies the host HTTP binding. It is not imported by the core, and database drivers never belong in a browser bundle.
 
@@ -34,7 +34,7 @@ Workspace, environment and release updates preserve the owned overlay and cancel
 
 The panel fetches host session access when opened. Polling runs every ten seconds only while open and visible, with one change poll in flight and bounded recovery backoff. Optional subscriptions accelerate updates and fall back to polling. Writes are never replayed automatically. An explicit unchanged retry uses its original request key; an uncertain write may already have committed. Host access loss clears private rendered content and defers sign-in to the application.
 
-Thread, reply and history navigation replaces bounded page windows instead of accumulating unbounded lists or stranding older records behind the retired management UI. Unsupported mentions/assignment controls are hidden. Export/import UI and full directory navigation remain tracked work, not completed acceptance.
+Thread, reply and history navigation replaces bounded page windows instead of accumulating unbounded lists or stranding older records behind the management UI. Unsupported mentions/assignment controls are hidden. Complete JSON/Markdown export, deliberate upload/preview/import/resume and directory paging are available in the embedded panel; see [browser workflows](browser-workflows.md).
 
 Draft storage is scoped by namespace, workspace, actor, environment and page. Choose `persistence: 'memory'` or `'disabled'` for sensitive hosts. Local storage remains bounded and expiring; failed writes fall back to bounded memory. No tokens are stored. Query parameters and hashes remain opt-in. `excludeElement`, `redact` and `viewContext` hooks control captured context; view context is limited to 8 KiB and depth 16. Closed shadow DOM, inaccessible frames and canvas objects remain unsupported anchor targets.
 

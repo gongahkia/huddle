@@ -1,6 +1,6 @@
 # Verified host runtime matrix
 
-The twelve **core HTTP and positive transfer** combinations below passed locally on Node 24.21.0 / pnpm 10.33.0. They use actual private host/browser archives, real server processes and new disposable databases. Sixteen ordered database portability pairs pass separately. Full browser/resource and Pronto hosted acceptance remain later gates; this is not a complete release-support claim.
+The twelve **core HTTP and positive transfer** combinations below passed locally on Node 24.21.0 / pnpm 10.33.0. They use actual private host/browser archives, real server processes and new disposable databases. Sixteen ordered database portability pairs pass separately. Browser/resource and Pronto local results have separate evidence in [the current audit](acceptance-current.md); hosted acceptance remains open.
 
 | Database | Next.js 16.4.6 | Express 5.3.0 | Fastify 5.12.8 |
 | --- | --- | --- | --- |

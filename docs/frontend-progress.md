@@ -1,5 +1,9 @@
 # Frontend-only implementation progress
 
+## Current acceptance
+
+See [the current cross-repository audit](acceptance-current.md) for new browser/host/Pronto results and exact open hosted gates. The entries below are chronological evidence; an earlier “next” paragraph is not the current implementation status.
+
 The active scope is [implementation-plan.adoc](implementation-plan.adoc), authorized by the user's implementation goal. Older self-hosting goals, architecture notes and measurements are historical evidence, not acceptance of this architecture.
 
 ## Starting state

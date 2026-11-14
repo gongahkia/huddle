@@ -2,6 +2,8 @@
 
 A framework-independent browser library for reviewing working websites using the host application's existing authentication, backend and database. Pin an element, leave a page observation, reply and resolve discussion in the embedded panel. Directory lookup, mentions and assignment are optional host capabilities. Complete JSON/Markdown export and deliberate preview/import/resume live in the panel; no separately deployed Huddle product service or management app is required.
 
+The [current acceptance audit](docs/acceptance-current.md) records verified browser/database/framework and Pronto results, performance limits and the remaining hosted migration gates.
+
 The private `@huddle/browser` package has optional React/Next.js, Preact, Vue/Nuxt, Svelte/SvelteKit, Solid, Angular and Astro helpers. Its core has no framework dependency. The separate server-only `@huddle/host` reference package supplies thin Next.js/Express/Fastify HTTP bindings and PostgreSQL/MySQL/SQLite/MongoDB storage implementations. The host authorizes every operation and derives authorship; importing historical identities grants no access.
 
 Start with the [browser package guide](packages/browser/README.md), [host integration guide](docs/host-http.md), [storage package](packages/host/README.md), [browser workflows/theme tokens](docs/browser-workflows.md) and [complete transfers](docs/host-transfers.md). The [neutral collaboration contract](docs/collaboration-contract.md), [HTTP specification](docs/schema/huddle.http.v2.openapi.json) and [huddle.feedback.v2 schema](docs/schema/huddle.feedback.v2.schema.json) support custom backends. Existing v0.1 integrations need the [migration guide](docs/migration-v0.2.md).
