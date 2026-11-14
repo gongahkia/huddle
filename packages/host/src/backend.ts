@@ -21,6 +21,7 @@ export interface Backend {
   // Write transactions serialize the scope clock before reading mutable records.
   transaction<T>(scope: Scope,signal: AbortSignal,run: (tx: Transaction) => Promise<T>): Promise<T>;
   // Snapshot reads must remain consistent for the entire callback, including all pages.
+  // Run the callback once: it may stream output that cannot be replayed after failure.
   snapshot<T>(signal: AbortSignal,run: (tx: Transaction) => Promise<T>): Promise<T>;
   close(): Promise<void>;
 }

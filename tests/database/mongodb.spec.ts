@@ -86,3 +86,8 @@ it('cancels an actual blocked insert without committing its partially written tr
     finally {await check.close();}
   } finally {controller.abort(); await admin.command({configureFailPoint:'failCommand',mode:'off'}); await backend.close(); await cluster.dropPrefix(prefix);}
 });
+it('fails a snapshot once on a real transient read error instead of replaying streamed output',async () => {
+  const prefix = cluster.allocatePrefix(); await installMongodb(cluster.client,cluster.database,{prefix}); const backend = await MongodbBackend.open(cluster.client,cluster.database,{prefix}), admin = cluster.client.db('admin'); let called = 0;
+  try {await cluster.verify(); await admin.command({configureFailPoint:'failCommand',mode:{times:1},data:{failCommands:['find'],errorCode:112,errorLabels:['TransientTransactionError']}}); await expect(backend.snapshot(signal(),async tx => {called++; return tx.scan('threads',scope,{limit:1});})).rejects.toMatchObject({code:'conflict'}); expect(called).toBe(1);}
+  finally {await admin.command({configureFailPoint:'failCommand',mode:'off'}); await backend.close(); await cluster.dropPrefix(prefix);}
+});
