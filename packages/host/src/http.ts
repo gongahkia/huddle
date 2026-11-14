@@ -17,7 +17,8 @@ export function hostHttpError(value: unknown,status?: number): Response {
   const code = error.code === 'network' ? 'unavailable' : error.code;
   return Response.json({error:{code,message:error.message.slice(0,1000),...(error.retryAfterMs === undefined ? {} : {retryAfterMs:error.retryAfterMs})}},{status:status ?? statuses[code],headers:{...headers,...(error.retryAfterMs === undefined ? {} : {'Retry-After':String(Math.ceil(error.retryAfterMs/1000))})}});
 }
-export function hostHttpSettings(input: HostHttpOptions) {
+type HttpConfiguration = Pick<HostHttpOptions,'basePath'|'timeoutMs'|'bodyLimitBytes'|'uploadLimitBytes'> & {api: unknown; verifyMutation: unknown};
+export function hostHttpSettings<T extends HttpConfiguration>(input: T) {
   if(typeof input.api !== 'function' || typeof input.verifyMutation !== 'function') throw new Error('Supply the host API/session resolver and existing mutation/CSRF protection explicitly.');
   const options = {basePath:'/api/huddle/v2',timeoutMs:15000,bodyLimitBytes:1024*1024,uploadLimitBytes:32*1024*1024,...input};
   options.basePath = options.basePath.replace(/\/$/,'');

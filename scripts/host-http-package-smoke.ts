@@ -1,0 +1,28 @@
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+import {mkdtemp,mkdir,readFile,rm,writeFile} from 'node:fs/promises';
+import {join,resolve} from 'node:path';
+import {tmpdir} from 'node:os';
+const exec = promisify(execFile), root = JSON.parse(await readFile('package.json','utf8')), metadata = JSON.parse(await readFile('packages/host/package.json','utf8')), directory = await mkdtemp(join(tmpdir(),'huddle-http-consumers-'));
+try {
+  await readFile('packages/host/dist/http.js'); await exec('pnpm',['--dir','packages/host','pack','--pack-destination',join(directory,'archive')]);
+  for(const framework of ['express','fastify']) {
+    const consumer = join(directory,framework); await mkdir(consumer);
+    await writeFile(join(consumer,'package.json'),JSON.stringify({private:true,type:'module',dependencies:{'@huddle/host':`file:${join(directory,'archive',`huddle-host-${metadata.version}.tgz`)}`,[framework]:root.devDependencies[framework] || root.dependencies[framework]}}));
+    await exec('npm',['install','--ignore-scripts','--no-audit','--no-fund'],{cwd:consumer});
+    await exec('npm',['install','--save-dev',`@types/node@${root.devDependencies['@types/node']}`,...(framework === 'express' ? [`@types/express@${root.devDependencies['@types/express']}`] : []),'--ignore-scripts','--no-audit','--no-fund'],{cwd:consumer});
+    const start = framework === 'express' ? `import express from 'express';import {createServer} from 'node:http';import {once} from 'node:events';import {createExpressMiddleware} from '@huddle/host/express';
+const app=express();app.use(createExpressMiddleware(options));app.get('/business',(_request,response)=>response.send('Business'));const server=createServer(app);server.listen(0,'127.0.0.1');await once(server,'listening');const socket=server.address();assert(socket&&typeof socket!=='string');const address='http://127.0.0.1:'+socket.port;const stop=async()=>{server.closeAllConnections();await new Promise<void>((done,reject)=>server.close(error=>error?reject(error):done()));};` : `import Fastify from 'fastify';import {createFastifyPlugin} from '@huddle/host/fastify';
+const server=Fastify();server.get('/business',async()=>'Business');await server.register(createFastifyPlugin(options));const address=await server.listen({port:0,host:'127.0.0.1'});const stop=()=>server.close();`;
+    await writeFile(join(consumer,'consumer.ts'),`import assert from 'node:assert/strict';import {ReviewStore,CollaborationError} from '@huddle/host';import {installSqlite,SqliteBackend} from '@huddle/host/sqlite';import type {HostHttpOptions} from '@huddle/host/http';
+installSqlite('./disposable.sqlite');const backend=new SqliteBackend('./disposable.sqlite'),origin='http://host.test';
+const options:HostHttpOptions & {origin:string}={origin,api(request){return new ReviewStore(backend,async scope=>{if(request.headers.get('Cookie')!=='session=internal'||scope.workspace!=='team')throw new CollaborationError('forbidden','Internal only');return {actor:{id:'host:actor',name:'Consumer'},capabilities:{mentions:false,assignment:false,directory:false}};});},verifyMutation(request){if(request.headers.get('X-CSRF')!=='fixture'||request.headers.get('Origin')!==origin)throw new CollaborationError('forbidden','Host CSRF check failed');}};
+${start}
+try{const path=address+'/api/huddle/v2/threads?workspace=team&environment=preview',headers={Cookie:'session=internal',Origin:origin,'X-CSRF':'fixture','Content-Type':'application/json'},input={idempotencyKey:'packed-retry',page:'/',pageUrl:origin+'/',anchor:{kind:'page',selector:'body',label:'Page',quote:'',x:0,y:0},body:'Packed HTTP'};const saved=await fetch(path,{method:'POST',headers,body:JSON.stringify(input)});assert.equal(saved.status,201);const detail=await saved.json();assert.equal((await (await fetch(path,{method:'POST',headers,body:JSON.stringify(input)})).json()).thread.id,detail.thread.id);const denied=await fetch(path,{headers:{Cookie:'session=guest'}});assert.equal(denied.status,403);assert.equal((await denied.json()).error.code,'forbidden');const csrf=await fetch(path,{method:'POST',headers:{...headers,'X-CSRF':'wrong'},body:JSON.stringify(input)});assert.equal(csrf.status,403);await csrf.arrayBuffer();assert.equal(await (await fetch(address+'/business')).text(),'Business');assert.equal((await (await fetch(path,{headers})).json()).items.length,1);console.log('Packed ${framework}/SQLite consumer passed install, typecheck, auth, CSRF, retry, persistence and host-route checks.');}finally{await stop();await backend.close();}
+`);
+    await writeFile(join(consumer,'tsconfig.json'),JSON.stringify({compilerOptions:{target:'ES2023',module:'NodeNext',moduleResolution:'NodeNext',strict:true,skipLibCheck:false,types:['node'],lib:['ES2023','DOM'],outDir:'compiled'},files:['consumer.ts']}));
+    await exec(process.execPath,[resolve('node_modules/typescript/bin/tsc'),'-p',join(consumer,'tsconfig.json')],{maxBuffer:2*1024*1024});
+    const result = await exec(process.execPath,[join(consumer,'compiled/consumer.js')],{cwd:consumer}); console.log(result.stdout.trim());
+    await mkdir('output/package',{recursive:true}); await writeFile(`output/package/host-http-${framework}.json`,JSON.stringify({framework,frameworkVersion:root.devDependencies[framework] || root.dependencies[framework],database:'sqlite',version:metadata.version,node:process.version,install:'passed',typecheck:'passed',runtime:'passed',scope:'HTTP core only; transfer, Next.js and twelve-combination acceptance pending'},null,2)+'\n');
+  }
+} finally {await rm(directory,{recursive:true,force:true});}

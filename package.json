@@ -43,7 +43,9 @@
     "test:storage:mongodb": "vitest run --config vitest.storage.config.ts tests/database/mongodb.spec.ts",
     "test:package:mongodb": "tsx scripts/host-package-smoke.ts --mongodb",
     "fixtures:mongodb": "tsx scripts/mongodb-runtime.ts",
-    "test:storage": "pnpm test:storage:sqlite && vitest run --config vitest.storage.config.ts"
+    "test:storage": "pnpm test:storage:sqlite && vitest run --config vitest.storage.config.ts",
+    "test:http:core": "vitest run tests/host-http.test.ts tests/host-frameworks.test.ts",
+    "test:package:http": "tsx scripts/host-http-package-smoke.ts"
   },
   "dependencies": {
     "@fastify/cors": "11.4.3",

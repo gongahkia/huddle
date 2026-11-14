@@ -2,7 +2,7 @@
 
 This private server-side package implements the host-backed design. It does not deploy a Huddle service or create Huddle accounts. Your application supplies authorization, existing identities, CSRF protection and API execution. It is separate from the browser package and must never be imported into client code.
 
-Current implementation: SQLite, PostgreSQL, MySQL and MongoDB core collaboration storage. Transfer jobs and HTTP framework handlers are still pending; do not advertise them as verified from this package yet. Consult the repository implementation plan and progress record before deployment.
+Current implementation: SQLite, PostgreSQL, MySQL and MongoDB core collaboration storage. Core HTTP bridges are available with real Express/Fastify SQLite checks; Next runtime, the twelve-combination matrix and transfer jobs remain pending. See [the HTTP integration foundation](./dist/docs/host-http.md) for the verified subset. Consult the repository implementation plan and progress record before deployment.
 
 Build the repository and pack this package with `pnpm --dir packages/host pack --pack-destination ../../output/packages`. It requires Node 24.21.0 and includes compiled JavaScript and bundled declarations. Nothing is published to a registry.
 

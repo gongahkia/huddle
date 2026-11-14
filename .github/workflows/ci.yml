@@ -86,6 +86,7 @@ jobs:
       - run: pnpm build:frameworks
       - run: pnpm check:bundle
       - run: pnpm test:package
+      - run: pnpm test:package:http
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - run: pnpm exec playwright test
       - run: pnpm test:docker

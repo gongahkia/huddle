@@ -79,3 +79,13 @@ it('authorizes every export environment and closes a transfer seam stream on com
   const cancelled = await handler(request('/exports','POST',{scope:{workspace:'team',environments:['preview']},format:'json'})); await cancelled.body!.cancel(); expect(released).toBe(2);
   expect((await handler(request('/exports','POST',{scope:{workspace:'team',environments:['preview','denied']},format:'json'}))).status).toBe(403);
 });
+it('bounds download prefetch and releases a stream that the caller never reads',async () => {
+  const api = options.api; let produced = 0, released = 0;
+  const handler = createHostHandler({...options,timeoutMs:40,async api(request,signal) {return Object.assign(await api(request,signal),{async export() {return {filename:'review.json',contentType:'application/json',chunks:(async function*() {try {for(let index=0;index<100;index++) {produced++; yield new TextEncoder().encode('x');}} finally {released++;}})()};}});}});
+  const response = await handler(request('/exports','POST',{scope:{workspace:'team',environments:['preview']},format:'json'})); expect(produced).toBe(1); await vi.waitFor(() => expect(released).toBe(1)); expect(produced).toBe(1); await expect(response.text()).rejects.toBeDefined();
+});
+it('fails a partially emitted download instead of appending a successful error document',async () => {
+  const api = options.api; let released = false;
+  const handler = createHostHandler({...options,async api(request,signal) {return Object.assign(await api(request,signal),{async export() {return {filename:'review.json',contentType:'application/json',chunks:(async function*() {try {yield new TextEncoder().encode('{"complete":'); throw new Error('private storage failure');} finally {released = true;}})()};}});}});
+  const response = await handler(request('/exports','POST',{scope:{workspace:'team',environments:['preview']},format:'json'})); await expect(response.text()).rejects.toBeDefined(); expect(released).toBe(true);
+});

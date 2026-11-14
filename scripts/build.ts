@@ -33,11 +33,15 @@ for (const example of ['react','angular','vue','svelte','preact','solid']) {
 const meta = JSON.parse(await readFile('package.json','utf8'));
 await writeFile('dist/build.json',JSON.stringify({version: meta.version,node: process.version}) + '\n');
 console.log('Built service, management UI, widget, declarations and seven framework/HTML examples.');
-const hostEntries = {store:'packages/host/src/store.ts',sqlite:'packages/host/src/sqlite.ts',postgres:'packages/host/src/postgres.ts',mysql:'packages/host/src/mysql.ts',mongodb:'packages/host/src/mongodb.ts'};
+const hostEntries = {store:'packages/host/src/store.ts',sqlite:'packages/host/src/sqlite.ts',postgres:'packages/host/src/postgres.ts',mysql:'packages/host/src/mysql.ts',mongodb:'packages/host/src/mongodb.ts',http:'packages/host/src/http.ts',next:'packages/host/src/next.ts',express:'packages/host/src/express.ts',fastify:'packages/host/src/fastify.ts'};
 await rm('packages/host/dist',{recursive:true,force:true});
 await build({entryPoints:hostEntries,bundle:true,splitting:true,platform:'node',target:'node24',format:'esm',packages:'external',outdir:'packages/host/dist',chunkNames:'chunks/[name]-[hash]'});
 for (const [name,entry] of Object.entries(hostEntries)) {
  const declarations = await rollup({input:entry,plugins:[dts()],external:id => !id.startsWith('.') && !id.startsWith('/')});
  await declarations.write({file:`packages/host/dist/${name}.d.ts`,format:'es'}); await declarations.close();
 }
-console.log('Built private host storage reference package.');
+await mkdir('packages/host/dist/docs/schema',{recursive:true});
+for (const document of ['host-http.md','collaboration-contract.md','frontend-progress.md','implementation-plan.adoc']) await cp('docs/'+document,'packages/host/dist/docs/'+document);
+await writeFile('packages/host/dist/docs/host-http.md',(await readFile('docs/host-http.md','utf8')).replace('../packages/host/README.md','../../README.md'));
+for (const schema of ['huddle.feedback.v2.schema.json','huddle.http.v2.openapi.json']) await cp('docs/schema/'+schema,'packages/host/dist/docs/schema/'+schema);
+console.log('Built private host storage reference package and integration contracts.');
