@@ -4,6 +4,9 @@ import {CollaborationError,type Capabilities,type ChangePage,type Comment,type C
 import {httpSchemas} from '../../shared/src/protocol';
 import type {Backend,Collection,RecordValue,Transaction} from './backend';
 import {decodeCursor,digest,encodeCursor,identitySchema,listSchema,detailSchema,scopeSchema,validate} from './validation';
+export type {Backend,Collection,RecordValue,Scan,Transaction} from './backend';
+export {CollaborationError,isCollaborationError} from '../../shared/src/collaboration';
+export type {Identity,Scope,Capabilities} from '../../shared/src/collaboration';
 
 export type Authorization = {actor: Identity; capabilities: Capabilities};
 export type Authorize = (scope: Scope,signal: AbortSignal) => Promise<Authorization>;

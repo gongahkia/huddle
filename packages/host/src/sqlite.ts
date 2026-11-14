@@ -1,6 +1,6 @@
 import {DatabaseSync,type SQLInputValue} from 'node:sqlite';
 import {randomBytes,randomUUID} from 'node:crypto';
-import {existsSync} from 'node:fs';
+import {chmodSync,existsSync} from 'node:fs';
 import type {Scope} from '../../shared/src/collaboration';
 import {CollaborationError,isCollaborationError} from '../../shared/src/collaboration';
 import {collections,type Backend,type Collection,type RecordValue,type Scan,type Transaction} from './backend';
@@ -35,8 +35,9 @@ function configure(db: DatabaseSync) {db.exec('PRAGMA foreign_keys=ON; PRAGMA bu
 // Installation is explicit and additive. Opening a store never creates its schema.
 export function installSqlite(path: string) {
   if (path === ':memory:') throw new Error('Use an explicit durable SQLite file.');
-  const db = new DatabaseSync(path); configure(db);
+  const existed = existsSync(path), db = new DatabaseSync(path);
   try {
+    if (!existed) chmodSync(path,0o600); configure(db);
     db.exec('PRAGMA journal_mode=WAL; BEGIN IMMEDIATE; CREATE TABLE IF NOT EXISTS huddle_meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);');
     const previous = db.prepare('SELECT value FROM huddle_meta WHERE key=?').get('schema') as {value: string} | undefined;
     if (previous && previous.value !== schemaVersion) throw new Error('Unsupported Huddle schema version; run its documented upgrade explicitly.');

@@ -1,4 +1,4 @@
-import {mkdtemp,rm} from 'node:fs/promises';
+import {mkdtemp,rm,stat} from 'node:fs/promises';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {expect,it} from 'vitest';
@@ -14,7 +14,7 @@ storageConformance('SQLite',async () => {
 it('requires explicit installation and preserves metadata/discussion across reopen and repeated setup',async () => {
   const directory = await mkdtemp(join(tmpdir(),'huddle-sqlite-install-')), path = join(directory,'feedback.sqlite'); let backend: SqliteBackend | undefined;
   try {
-    expect(() => new SqliteBackend(path)).toThrow('explicitly'); installSqlite(path); backend = new SqliteBackend(path); const dataset = backend.datasetId, secret = backend.cursorSecret;
+    expect(() => new SqliteBackend(path)).toThrow('explicitly'); installSqlite(path); expect((await stat(path)).mode & 0o777).toBe(0o600); backend = new SqliteBackend(path); const dataset = backend.datasetId, secret = backend.cursorSecret;
     const store = new ReviewStore(backend,async () => ({actor:{id:'host:user',name:'Alex'},capabilities:{mentions:false,assignment:false,directory:false}}));
     const scope = {workspace:'team',environment:'preview'}, signal = new AbortController().signal;
     const saved = await store.create(scope,{idempotencyKey:'persisted',page:'/',pageUrl:'https://example.test/',anchor:{kind:'page',selector:'body',label:'Page',quote:'',x:0,y:0},body:'Persisted'},signal);

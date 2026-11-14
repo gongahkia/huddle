@@ -30,7 +30,8 @@
     "import:pronto": "tsx scripts/import.ts",
     "examples": "tsx scripts/examples.ts",
     "test:docker": "tsx scripts/docker-smoke.ts",
-    "test:package": "tsx scripts/package-smoke.ts",
+    "test:package": "tsx scripts/package-smoke.ts && tsx scripts/host-package-smoke.ts",
+    "test:storage:sqlite": "vitest run tests/sqlite-conformance.test.ts",
     "backup": "tsx scripts/cli.ts backup",
     "bench:storage": "tsx scripts/storage-benchmark.ts"
   },

@@ -3,9 +3,11 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
+  "engines": {"node": ">=24.21.0 <25"},
   "dependencies": {"zod": "4.6.7"},
   "exports": {
-    ".": "./src/store.ts",
-    "./sqlite": "./src/sqlite.ts"
-  }
+    ".": {"types": "./dist/store.d.ts", "import": "./dist/store.js"},
+    "./sqlite": {"types": "./dist/sqlite.d.ts", "import": "./dist/sqlite.js"}
+  },
+  "files": ["dist", "README.md"]
 }
