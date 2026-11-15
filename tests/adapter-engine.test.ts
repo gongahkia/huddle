@@ -19,7 +19,7 @@ afterEach(() => {widget?.destroy(); widget = undefined; vi.useRealTimers(); vi.u
 it('uses host identity without popup or role UI and restores focus to a host launcher',async () => {
   const adapter = new TestAdapter(), popup = vi.spyOn(window,'open'), launcher = document.createElement('button'); document.body.append(launcher); launcher.focus();
   widget = mount({...options(adapter),launcher: 'hidden'}); expect(popup).not.toHaveBeenCalled(); widget.open(); await settle();
-  click('Page comment'); type('Shared by the host'); submit(); await settle();
+  click('Add page-wide comment'); type('Shared by the host'); submit(); await settle();
   expect(adapter.records[0].thread.createdBy.id).toBe(adapter.actor.id); expect(text()).toContain('Shared by the host');
   expect(text()).not.toContain('Connect Huddle'); expect(text()).not.toContain('Mention members'); expect(root().querySelector('select')).toBeNull();
   widget.close(); expect(document.activeElement).toBe(launcher); expect(text()).not.toContain('Shared by the host');
@@ -38,13 +38,13 @@ it('retries a failed list read even when the host change cursor has not advanced
   await vi.advanceTimersByTimeAsync(2000); expect(text()).toContain('Existing discussion'); expect(text()).toContain('Read me'); expect(text()).not.toContain('Temporary failure.');
 });
 it('clears private content and stops live reads when host access is revoked',async () => {
-  const adapter = new TestAdapter(); widget = mount(options(adapter)); widget.open(); await settle(); click('Page comment'); type('Private draft');
+  const adapter = new TestAdapter(); widget = mount(options(adapter)); widget.open(); await settle(); click('Add page-wide comment'); type('Private draft');
   adapter.allowed = false; await vi.advanceTimersByTimeAsync(10000);
   expect(root().querySelector('textarea')).toBeNull(); expect(text()).toContain('Sign in through this application');
   const session = vi.spyOn(adapter,'session'); await vi.advanceTimersByTimeAsync(30000); expect(session).not.toHaveBeenCalled();
 });
 it('recognizes a typed denial from another adapter bundle without relying on class identity',async () => {
-  const adapter = new TestAdapter(); widget = mount(options(adapter)); widget.open(); await settle(); click('Page comment'); type('Private draft');
+  const adapter = new TestAdapter(); widget = mount(options(adapter)); widget.open(); await settle(); click('Add page-wide comment'); type('Private draft');
   vi.spyOn(adapter,'session').mockRejectedValue(Object.assign(new Error('Host access denied.'),{name:'CollaborationError',code:'forbidden'})); await vi.advanceTimersByTimeAsync(10000);
   expect(root().querySelector('textarea')).toBeNull(); expect(text()).toContain('Host access denied.');
 });
@@ -55,7 +55,7 @@ it('cleans up a synchronous subscription denial and never starts a login retry l
   await vi.advanceTimersByTimeAsync(30000); expect(session).toHaveBeenCalledTimes(count); expect(text()).toContain('Access revoked.');
 });
 it('does not submit an earlier actor’s draft after the host session changes',async () => {
-  const adapter = new TestAdapter(), create = vi.spyOn(adapter,'create'); widget = mount(options(adapter)); widget.open(); await settle(); click('Page comment'); type('Old actor draft');
+  const adapter = new TestAdapter(), create = vi.spyOn(adapter,'create'); widget = mount(options(adapter)); widget.open(); await settle(); click('Add page-wide comment'); type('Old actor draft');
   adapter.actor = {id: 'host:new-user',name: 'New user'}; submit(); await settle();
   expect(create).not.toHaveBeenCalled(); expect(text()).not.toContain('Old actor draft');
   expect(root().querySelector('textarea')).toBeNull(); expect(localStorage.length).toBeGreaterThan(0);
@@ -69,7 +69,7 @@ it('aborts previous scope reads and ignores an adapter that resolves them late',
   expect(text()).not.toContain('STALE PRIVATE RECORD'); click('Review details'); expect(text()).toContain('Workspace: other');
 });
 it('collapses without stopping live reads or losing the draft, and closes review completely',async () => {
-  const adapter = new TestAdapter(), changes = vi.spyOn(adapter,'changes'); widget = mount(options(adapter)); widget.open(); await settle(); click('Page comment'); type('Keep my draft while browsing');
+  const adapter = new TestAdapter(), changes = vi.spyOn(adapter,'changes'); widget = mount(options(adapter)); widget.open(); await settle(); click('Add page-wide comment'); type('Keep my draft while browsing');
   widget.collapse(); expect(root().querySelector('.panel')).toBeNull(); expect(document.querySelector('[data-huddle-open][data-huddle-collapsed]')).not.toBeNull();
   expect(root().activeElement?.getAttribute('aria-label')).toBe('Expand feedback');
   await vi.advanceTimersByTimeAsync(10000); expect(changes).toHaveBeenCalledTimes(2);
@@ -77,7 +77,7 @@ it('collapses without stopping live reads or losing the draft, and closes review
   widget.collapse(); widget.close(); const count = changes.mock.calls.length; await vi.advanceTimersByTimeAsync(30000); expect(changes).toHaveBeenCalledTimes(count); expect(root().querySelector('.review-dock')).not.toBeNull();expect(root().querySelector('[aria-label=Close]')).toBeNull();expect(document.querySelector('[data-huddle-open]')).toBeNull();
 });
 it('keeps picker cancellation available while a background list refresh is pending',async () => {
-  const adapter = new TestAdapter(); widget = mount(options(adapter)); widget.open(); await settle(); click('Pin a comment');
+  const adapter = new TestAdapter(); widget = mount(options(adapter)); widget.open(); await settle(); click('Add pinned comment');
   let release: (value: Awaited<ReturnType<TestAdapter['list']>>) => void = () => {};
   const list = vi.spyOn(adapter,'list').mockImplementationOnce(() => new Promise(resolve => {release = resolve;}));
   vi.spyOn(adapter,'changes').mockResolvedValueOnce({items:[],cursor:'1',hasMore:false,reset:true}); await vi.advanceTimersByTimeAsync(10000);
@@ -85,31 +85,31 @@ it('keeps picker cancellation available while a background list refresh is pendi
   expect(root().querySelector('.pick-note')).toBeNull(); expect(root().querySelector('.panel')).not.toBeNull(); release({items:[],nextCursor:null}); await settle();
 });
 it('clears rendered private data and preview state when access is revoked during collapsed review',async () => {
-  const adapter = new TestAdapter(); widget = mount(options(adapter)); widget.open(); await settle(); click('Page comment'); type('Private draft'); widget.collapse();
+  const adapter = new TestAdapter(); widget = mount(options(adapter)); widget.open(); await settle(); click('Add page-wide comment'); type('Private draft'); widget.collapse();
   adapter.allowed = false; await vi.advanceTimersByTimeAsync(10000); expect(root().querySelector('.pin-preview')!.hasAttribute('hidden')).toBe(true); expect(root().querySelector('.pin')).toBeNull();
   widget.open(); expect(root().querySelector('textarea')).toBeNull(); expect(text()).toContain('Review access is unavailable.'); expect(text()).not.toContain('Private draft');
 });
 it('preserves the request key after a timeout and never automatically replays writes',async () => {
   const adapter = new TestAdapter(), original = adapter.create.bind(adapter); const keys: string[] = [];
   const create = vi.spyOn(adapter,'create').mockImplementationOnce(async (scope,input,signal) => {keys.push(input.idempotencyKey); await original(scope,input,signal); throw new CollaborationError('timeout','Acknowledgement lost.');}).mockImplementation(async (scope,input,signal) => {keys.push(input.idempotencyKey); return adapter.detail(scope,adapter.records[0].thread.id,{},signal);});
-  widget = mount(options(adapter)); widget.open(); await settle(); click('Page comment'); type('Uncertain save'); submit(); await settle();
+  widget = mount(options(adapter)); widget.open(); await settle(); click('Add page-wide comment'); type('Uncertain save'); submit(); await settle();
   await vi.advanceTimersByTimeAsync(10000); expect(create).toHaveBeenCalledTimes(1); expect(root().querySelector('textarea')!.value).toBe('Uncertain save');
   submit(); await settle(); expect(keys[0]).toBe(keys[1]); expect(adapter.records).toHaveLength(1);
 });
 it('retains the original captured view across an uncertain save and explicit retry',async () => {
   const adapter = new TestAdapter(), capture = vi.fn(() => ({record: crypto.randomUUID()})), original = adapter.create.bind(adapter), inputs: unknown[] = [];
   vi.spyOn(adapter,'create').mockImplementationOnce(async (_scope,input) => {inputs.push(input); throw new CollaborationError('timeout','Unknown result.');}).mockImplementation(async (scope,input,signal) => {inputs.push(input); return original(scope,input,signal);});
-  widget = mount({...options(adapter),viewContext: capture}); widget.open(); await settle(); click('Page comment'); type('Review this record'); submit(); await settle(); submit(); await settle();
+  widget = mount({...options(adapter),viewContext: capture}); widget.open(); await settle(); click('Add page-wide comment'); type('Review this record'); submit(); await settle(); submit(); await settle();
   expect(capture).toHaveBeenCalledTimes(1); expect(inputs[0]).toEqual(inputs[1]);
 });
 it('redacts all captured anchor/context strings and excludes sensitive targets before storing',async () => {
   const adapter = new TestAdapter(); document.body.innerHTML = '<section data-huddle-id="secret-section"><button id="target" data-testid="secret-target">secret target</button><button id="private" data-private>Private</button></section>';
   widget = mount({...options(adapter),viewContext: () => ({secretKey: 'secret value'}),redact: value => value.replaceAll('secret','redacted'),excludeElement: element => element.hasAttribute('data-private')});
-  widget.open(); await settle(); click('Pin a comment'); document.getElementById('private')!.click(); expect(root().querySelector('textarea')).toBeNull(); document.getElementById('target')!.click(); type('Review'); submit(); await settle();
+  widget.open(); await settle(); click('Add pinned comment'); document.getElementById('private')!.click(); expect(root().querySelector('textarea')).toBeNull(); document.getElementById('target')!.click(); type('Review'); submit(); await settle();
   expect(JSON.stringify(adapter.records[0].thread.anchor)).not.toContain('secret'); expect(adapter.records[0].thread.viewContext).toEqual({redactedKey: 'redacted value'});
 });
 it('rejects invalid view context without capturing or sending a draft',async () => {
-  const adapter = new TestAdapter(), create = vi.spyOn(adapter,'create'), onError = vi.fn(); widget = mount({...options(adapter),viewContext: () => ({value: Infinity}),onError}); widget.open(); await settle(); click('Page comment');
+  const adapter = new TestAdapter(), create = vi.spyOn(adapter,'create'), onError = vi.fn(); widget = mount({...options(adapter),viewContext: () => ({value: Infinity}),onError}); widget.open(); await settle(); click('Add page-wide comment');
   expect(root().querySelector('textarea')).toBeNull(); expect(create).not.toHaveBeenCalled(); expect(onError).toHaveBeenCalledWith(expect.objectContaining({message: 'View context numbers must be finite.'}));
 });
 it('rejects old service configuration before acquiring or discarding an overlay',() => {
@@ -119,6 +119,14 @@ it('rejects old service configuration before acquiring or discarding an overlay'
 });
 
 it('does not carry a previous actor’s cached mention names into a legacy draft for another actor',async()=>{
- const adapter=new TestAdapter();adapter.capabilities={mentions:true,assignment:false,directory:true};const directory=vi.fn(async()=>({items:[{id:'private:member',name:'Private previous name'}],nextCursor:null}));widget=mount({...options(adapter),adapter:Object.assign(adapter,{directory})});widget.open();await settle();click('Page comment');type('@Private');await vi.advanceTimersByTimeAsync(160);root().querySelector<HTMLElement>('[role=option]')!.click();
+ const adapter=new TestAdapter();adapter.capabilities={mentions:true,assignment:false,directory:true};const directory=vi.fn(async()=>({items:[{id:'private:member',name:'Private previous name'}],nextCursor:null}));widget=mount({...options(adapter),adapter:Object.assign(adapter,{directory})});widget.open();await settle();click('Add page-wide comment');type('@Private');await vi.advanceTimersByTimeAsync(160);root().querySelector<HTMLElement>('[role=option]')!.click();
  const next=new LocalStore(JSON.stringify(['engine-tests','team','host:new-user','preview']),localStorage);next.write('draft:/',{body:'Another actor legacy draft',mentions:['private:member'],anchor:{kind:'page',selector:'body',label:'This page',quote:'',x:.5,y:.5}});adapter.actor={id:'host:new-user',name:'New reviewer'};directory.mockResolvedValue({items:[],nextCursor:null});await vi.advanceTimersByTimeAsync(10000);await settle();expect(root().querySelector('textarea')?.value).toBe('Another actor legacy draft');expect(text()).not.toContain('Private previous name');
+});
+
+it('keeps new comment composition plain while retaining captured context for storage and deliberate inspection',async()=>{
+ const adapter=new TestAdapter();widget=mount({...options(adapter),viewContext:()=>({record:'retained-context'})});widget.open();await settle();click('Add page-wide comment');expect(root().querySelector('.target')).toBeNull();expect(text()).not.toContain('retained-context');expect(root().querySelector('[aria-label="Refresh feedback"]')).toBeNull();click('Review details');const details=root().querySelector('.scope-details')!;expect(details.textContent).toContain('retained-context');click('Review details');type('A plain composer');submit();await settle();expect(adapter.records[0].thread.viewContext).toEqual({record:'retained-context'});expect(root().querySelector('.target')?.textContent).not.toContain('retained-context');
+});
+
+it('groups thread actions above comments and keeps the reply ahead of history without eager directory reads',async()=>{
+ const adapter=new TestAdapter();adapter.capabilities={mentions:false,assignment:true,directory:true};const directory=vi.fn(async()=>({items:[{id:'host:morgan',name:'Morgan'}],nextCursor:null}));widget=mount({...options(adapter),adapter:Object.assign(adapter,{directory})});widget.open();await settle();click('Add page-wide comment');type('Original discussion');submit();await settle();expect(directory).not.toHaveBeenCalled();const actions=root().querySelector('.thread-actions')!;expect([...actions.querySelectorAll('button')].map(node=>node.textContent)).toEqual(['Find on page','Repin comment','Resolve thread','Assign']);const article=root().querySelector('article')!,form=root().querySelector('form')!,history=root().querySelector('#huddle-history')!;expect(article.compareDocumentPosition(form)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();expect(form.compareDocumentPosition(history)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();click('Assign');await settle();expect(directory).toHaveBeenCalledOnce();expect(root().querySelector<HTMLSelectElement>('[aria-label=Assignee]')?.disabled).toBe(false);click('Assign');expect(root().querySelector('#huddle-assignment')).toBeNull();click('Resolve thread');await settle();expect(actions.isConnected).toBe(false);expect(root().querySelector('.thread-actions')?.textContent).toContain('Reopen thread');expect(root().querySelector('textarea')).not.toBeNull();
 });

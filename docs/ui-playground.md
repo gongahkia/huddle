@@ -22,7 +22,7 @@ The Atlas example is a small working product with Overview and Settings pages, f
 - **Host capabilities** offers the complete directory/mentions/assignment UI or basic commenting.
 - **Preview size** changes the actual iframe viewport to available desktop width, 390 × 844 or 320 × 720. It does not scale a desktop screenshot. **Open example full-page** also supports normal browser/device inspection.
 - **Theme** applies coordinated host and widget light/dark tokens.
-- **Service** changes the current review session's backend behavior without reloading its draft: normal, slow responses, failed writes, service unavailable or expired access. It affects subsequent review requests; use Refresh feedback to observe a read failure immediately, or submit a draft to inspect failed-write recovery. These responses are explicitly simulated. For actual networking failure, use browser offline mode separately.
+- **Service** changes the current review session's backend behavior without reloading its draft: normal, slow responses, failed writes, service unavailable or expired access. It affects subsequent review requests; the next automatic update observes read failures, or submit a draft to inspect failed-write recovery. These responses are explicitly simulated. For actual networking failure, use browser offline mode separately.
 
 Changing reviewer, dataset or capabilities reloads the sample application; changing Service or Theme does not. Reload example keeps the process's dataset and uses the same fictional actor, so local draft restoration can be inspected. It does not delete feedback. Browser-local drafts/read markers follow the SDK's normal persistence and can outlive a fixture restart; the SQLite feedback itself does not. Fixed device previews can require scrolling the outer workbench on a short display. The fixture host also serves the existing CSR examples; their framework lifecycle controls remain separate from the canonical widget UI playground. SSR examples retain their individual build/start commands.
 
@@ -32,8 +32,8 @@ Changing reviewer, dataset or capabilities reloads the sample application; chang
 | --- | --- |
 | Initial states | First-visit name onboarding by itself, blank/custom name, returning reviewer, empty, seeded, busy, checking access, loading, basic capabilities and guest denial. |
 | Reading | Cards, authors, counts, wrapping, Unicode, unread state, resolved filters, all pages, full reply/history/member paging. |
-| Pins | Drag and keyboard-move/reset the persistent dock; collapse/expand transitions, reduced motion, speech-bubble shapes, shared color choices, hover and keyboard previews, Escape, shared targets, viewport edges, page scrolling and nested scrolling. |
-| Writing | Page/element comments, multiline drafts, mentions/assignment, reply, resolve/reopen, locate, reattach and cancel. |
+| Pins | Drag and keyboard-move/reset both panel and dock independently; position retention, resizing, collapse/expand transitions, reduced motion, speech-bubble shapes, shared color choices, hover and keyboard previews, Escape, shared targets, viewport edges, page scrolling and nested scrolling. |
+| Writing | Add pinned/page-wide comment, a plain composer without default captured context, long labels, multiline drafts, mentions, top-level Find on page/Repin comment/Resolve thread/Assign controls, reply directly after comments, history and cancel. |
 | Accessibility | Keyboard-only use, focus/return focus, readable Cancel in both picker modes and themes, labels, contrast, narrow layouts and browser zoom. |
 | Navigation | Overview/Settings with active review, unsent drafts and the sidebar collapsed. |
 | DOM changes | Rename, hide, remove and restore Delivery notes; check warnings and deliberate reattachment. |
