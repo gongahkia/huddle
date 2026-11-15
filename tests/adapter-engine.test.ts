@@ -65,7 +65,20 @@ it('aborts previous scope reads and ignores an adapter that resolves them late',
   vi.spyOn(adapter,'list').mockImplementationOnce((_scope,_query,signal) => {oldSignal = signal; return new Promise(resolve => {release = resolve;});}).mockImplementation(original);
   widget = mount(options(adapter)); widget.open(); await settle(); widget.updateContext({workspace: 'other'}); await settle();
   expect(oldSignal?.aborted).toBe(true); release({items: [{id: 'stale',anchor: {label: 'STALE PRIVATE RECORD'}} as Detail['thread']],nextCursor: null}); await settle();
-  expect(text()).not.toContain('STALE PRIVATE RECORD'); expect(text()).toContain('other');
+  expect(text()).not.toContain('STALE PRIVATE RECORD'); click('Review details'); expect(text()).toContain('Workspace: other');
+});
+it('collapses without stopping live reads or losing the draft, and closes review completely',async () => {
+  const adapter = new TestAdapter(), changes = vi.spyOn(adapter,'changes'); widget = mount(options(adapter)); widget.open(); await settle(); click('Page comment'); type('Keep my draft while browsing');
+  widget.collapse(); expect(root().querySelector('.panel')).toBeNull(); expect(document.querySelector('[data-huddle-open][data-huddle-collapsed]')).not.toBeNull();
+  expect(root().activeElement?.getAttribute('aria-label')).toBe('Expand feedback');
+  await vi.advanceTimersByTimeAsync(10000); expect(changes).toHaveBeenCalledTimes(2);
+  widget.open(); expect(root().querySelector('textarea')!.value).toBe('Keep my draft while browsing'); expect(document.querySelector('[data-huddle-collapsed]')).toBeNull();
+  widget.collapse(); widget.close(); const count = changes.mock.calls.length; await vi.advanceTimersByTimeAsync(30000); expect(changes).toHaveBeenCalledTimes(count); expect(root().querySelector('.review-dock')).toBeNull(); expect(document.querySelector('[data-huddle-open]')).toBeNull();
+});
+it('clears rendered private data and preview state when access is revoked during collapsed review',async () => {
+  const adapter = new TestAdapter(); widget = mount(options(adapter)); widget.open(); await settle(); click('Page comment'); type('Private draft'); widget.collapse();
+  adapter.allowed = false; await vi.advanceTimersByTimeAsync(10000); expect(root().querySelector('.pin-preview')!.hasAttribute('hidden')).toBe(true); expect(root().querySelector('.pin')).toBeNull();
+  widget.open(); expect(root().querySelector('textarea')).toBeNull(); expect(text()).toContain('Review access is unavailable.'); expect(text()).not.toContain('Private draft');
 });
 it('preserves the request key after a timeout and never automatically replays writes',async () => {
   const adapter = new TestAdapter(), original = adapter.create.bind(adapter); const keys: string[] = [];

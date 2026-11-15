@@ -6,9 +6,10 @@ import {operation} from './operations';
 import {validateOptions,type HuddleOptions} from './options';
 import {styles} from './styles';
 import {createTransfers} from './transfers';
+import {excerpt,icon,type Icon} from './ui';
 export type {HuddleOptions} from './options';
 export type {Anchor,Context as ReviewContext} from '../../shared/src/collaboration';
-export type Huddle = {open(): void; close(): void; updateContext(context: Partial<Pick<HuddleOptions,'workspace' | 'environment' | 'release'>>): void; destroy(): void};
+export type Huddle = {open(): void; collapse(): void; close(): void; updateContext(context: Partial<Pick<HuddleOptions,'workspace' | 'environment' | 'release'>>): void; destroy(): void};
 const instances = new WeakMap<Document,{controller: Huddle; settings: HuddleOptions; owner?: symbol}>();
 type CapturedContext = Omit<Context,'workspace' | 'environment'>;
 type Draft = {body: string; mentions: string[]; anchor?: Anchor; threadId?: string; context?: CapturedContext};
@@ -29,6 +30,8 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
   let memberCursor:string | undefined, memberNext:string | null = null, memberSearch = '', appliedMemberSearch = '', memberLoading = false, memberLoaded = false, memberSequence = 0;
   let draftContext: CapturedContext | undefined;
   let opened = false, destroyed = false, pinning = false, reattach = false, busy = false, loading = false, detailLoading = false, connecting = false, stale = false;
+  let collapsed = false, scopeExpanded = false, previewId: string | undefined, previewHovered = false, previewTimer: ReturnType<typeof setTimeout> | undefined;
+  const pinNodes = new Map<string,HTMLButtonElement>();
   let threads: Thread[] = [], selected: Detail | undefined, anchor: Anchor | undefined, body = '', mentionIds: string[] = [];
   let error = '', notice = '', allPages = false, resolved = false, nextCursor: string | null = null, cursor: string | undefined;
   let listCursor: string | undefined, commentCursor: string | undefined, historyCursor: string | undefined;
@@ -44,7 +47,9 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
   const shadow = host.attachShadow({mode: 'open'}), style = document.createElement('style'); style.textContent = styles; if (settings.styleNonce) style.nonce = settings.styleNonce;
   const surface = document.createElement('div'); surface.className = 'surface'; surface.setAttribute('popover','manual');
   const ui = document.createElement('div'), pins = document.createElement('div'), highlight = document.createElement('div'); highlight.className = 'highlight'; highlight.hidden = true;
-  surface.append(pins,highlight,ui); shadow.append(style,surface); document.documentElement.append(host);
+  const preview = document.createElement('div'); preview.className = 'pin-preview'; preview.id = 'huddle-pin-preview'; preview.setAttribute('role','tooltip'); preview.hidden = true;
+  preview.addEventListener('pointerenter',() => {previewHovered = true; clearTimeout(previewTimer);}); preview.addEventListener('pointerleave',() => {previewHovered = false; deferHidePreview();});
+  surface.append(pins,highlight,ui,preview); shadow.append(style,surface); document.documentElement.append(host);
   const call = <T>(run: (signal: AbortSignal) => Promise<T>) => operation(run,AbortSignal.any([life.signal,contextLife.signal]),settings.requestTimeoutMs);
   const active = () => opened && !destroyed && document.visibilityState !== 'hidden';
   const capability = (name: 'mentions' | 'assignment' | 'directory') => !!session?.capabilities[name] && settings.capabilities?.[name] !== false;
@@ -79,10 +84,11 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
   function markRead(t: Thread) {if (t.latestComment) {seen[t.id] = t.latestComment.id; seen = Object.fromEntries(Object.entries(seen).slice(-1000)); store?.write('seen',seen);}}
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K,text?: string,cls?: string) => {const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (cls) node.className = cls; return node;};
   function button(text: string,action: () => void,cls = '') {const node = el('button',text,cls); node.type = 'button'; if(text) node.id = 'huddle-action-'+text.toLowerCase().replace(/[^a-z0-9]+/g,'-'); node.disabled = busy || loading || detailLoading || memberLoading; node.addEventListener('click',action); return node;}
+  function action(label: string,name: Icon,run: () => void,compact = true,cls = '') {const node = button(label,run,`action ${compact ? 'icon-button' : ''} ${cls}`); node.replaceChildren(icon(name),el('span',label,compact ? 'sr-only' : undefined)); node.setAttribute('aria-label',label); node.title = label; return node;}
   function link(text: string,href: string) {const node = el('a',text); try {const url = new URL(href); if (['http:','https:'].includes(url.protocol) && !url.username && !url.password) {node.href = url.href; node.target = '_blank'; node.rel = 'noopener noreferrer';}} catch { /* imported URLs remain inert */ } return node;}
   function stopUpdates() {clearTimeout(pollTimer); pollTimer = undefined; subscriptionLife?.abort(); subscriptionLife = undefined; const cleanup = unsubscribe; unsubscribe = undefined; try {cleanup?.();} catch (value) {notify(value);}}
   function invalidate() {stopUpdates(); contextLife.abort(); contextLife = new AbortController(); epoch++; loadSequence++; detailSequence++; memberSequence++; memberLoading = false; polling = false; connecting = false; busy = false; loading = detailLoading = false; transfers.cancel();}
-  function clearPrivate() {requests.forget(); updates.forget(); session = undefined; members = []; memberCursor = undefined; memberNext = null; memberSearch = appliedMemberSearch = ''; memberLoaded = false; transfers.reset(); threads = []; selected = undefined; anchor = undefined; body = ''; mentionIds = []; draftContext = undefined; store = undefined; seen = {}; restoredTarget = ''; resolutions.clear(); pins.replaceChildren(); pinning = false; highlight.hidden = true;}
+  function clearPrivate() {requests.forget(); updates.forget(); session = undefined; members = []; memberCursor = undefined; memberNext = null; memberSearch = appliedMemberSearch = ''; memberLoaded = false; transfers.reset(); threads = []; selected = undefined; anchor = undefined; body = ''; mentionIds = []; draftContext = undefined; store = undefined; seen = {}; restoredTarget = ''; resolutions.clear(); clearPins(); pinning = false; highlight.hidden = true;}
   function setError(value: unknown) {
     if (destroyed || (value instanceof Error && value.name === 'AbortError')) return;
     notify(value); error = isCollaborationError(value) ? value.message : 'Review could not complete this action. Your draft is kept.';
@@ -93,21 +99,34 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
   function render() {
     if (destroyed) return;
     host.toggleAttribute('data-huddle-open',opened || pinning);
+    host.toggleAttribute('data-huddle-collapsed',opened && collapsed && !pinning);
     const focused = shadow.activeElement as HTMLElement | null, focusId = focused?.id || (document.activeElement === document.body || document.activeElement === host ? pendingFocus : undefined);
     const textControl = focused instanceof HTMLTextAreaElement || focused instanceof HTMLInputElement && ['text','search','url','tel'].includes(focused.type), selection = textControl ? {start:focused.selectionStart,end:focused.selectionEnd} : undefined;
     const scroll = shadow.querySelector('.content')?.scrollTop || 0; ui.replaceChildren();
-    if (pinning) {pins.replaceChildren(); const note = el('div',undefined,'pick-note'), message = el('span',notice || (reattach ? 'Click the new target. Escape to cancel.' : 'Click an element to comment. Escape to cancel.')); message.setAttribute('role','status'); note.append(message,button('Cancel',cancelPin)); ui.append(note); return;}
-    if (!opened) {if (settings.launcher !== 'hidden') {const launch = button('Huddle',() => controller.open(),'launcher'); launch.setAttribute('aria-label','Open Huddle'); ui.append(launch);} pins.replaceChildren(); return;}
-    const panel = el('aside',undefined,'panel'); panel.setAttribute('aria-label','Huddle feedback');
-    const header = el('header'), heading = el('div',undefined,'row between'); const close = button('Close',() => controller.close()); close.disabled = false; heading.append(el('h2','Huddle'),close); header.append(heading,el('p',`${currentContext.workspace} · ${currentContext.environment}`,'muted'));
+    if (pinning) {clearPins(); const note = el('div',undefined,'pick-note'), message = el('span',notice || (reattach ? 'Click the new target. Escape to cancel.' : 'Click an element to comment. Escape to cancel.')); message.setAttribute('role','status'); note.append(message,button('Cancel',cancelPin)); ui.append(note); return;}
+    if (!opened) {if (settings.launcher !== 'hidden') {const launch = button('Huddle',() => controller.open(),'launcher'); launch.setAttribute('aria-label','Open Huddle'); ui.append(launch);} clearPins(); return;}
+    const close = action('Close','close',() => controller.close()); close.title = 'Exit feedback and hide pins'; close.disabled = false;
+    if (collapsed) {
+      const dock = el('aside',undefined,'review-dock'); dock.setAttribute('aria-label','Collapsed Huddle feedback');
+      const expand = action('Expand feedback','expand',() => controller.open(),false); expand.disabled = false; expand.setAttribute('aria-expanded','false'); expand.setAttribute('aria-controls','huddle-panel');
+      const status = el('span',error ? 'Feedback unavailable' : stale ? 'Updates paused' : 'Pins visible','muted'); if(error || stale) status.setAttribute('role','status');
+      dock.append(expand,status,close); ui.append(dock); scheduleResolution(); return;
+    }
+    const panel = el('aside',undefined,'panel'); panel.id = 'huddle-panel'; panel.setAttribute('aria-label','Huddle feedback');
+    const header = el('header'), heading = el('div',undefined,'row between'), brand = el('div',undefined,'brand'), tools = el('div',undefined,'row tools'); brand.append(icon('comment'),el('h2','Huddle'));
+    const info = action('Review details','info',() => {scopeExpanded = !scopeExpanded; render();}); info.setAttribute('aria-expanded',String(scopeExpanded)); info.setAttribute('aria-controls','huddle-scope');
+    if(session) tools.append(action('Transfer feedback','transfer',() => {persistDraft(); transfers.open();}),action('Refresh feedback','refresh',() => {void initialize();}));
+    const collapse = action('Collapse feedback','collapse',() => controller.collapse()); collapse.disabled = false; collapse.setAttribute('aria-expanded','true'); collapse.setAttribute('aria-controls','huddle-panel'); tools.append(collapse,close); heading.append(brand,tools); header.append(heading);
     const content = el('div',undefined,'content');
+    if(scopeExpanded) {const details = el('div',undefined,'scope-details'); details.id = 'huddle-scope'; details.append(el('h3','Review details'),el('p',`Workspace: ${currentContext.workspace}`),el('p',`Environment: ${currentContext.environment}`)); if(currentContext.release) details.append(el('p',`Release: ${currentContext.release}`)); content.append(details);}
     content.setAttribute('aria-busy',String(busy || loading || detailLoading || connecting));
     if(stale) {const status = el('p','Feedback may be out of date. Refresh when connected.','notice'); status.setAttribute('role','status'); content.append(status);}
     if (error) {const node = el('p',error,'notice error'); node.setAttribute('role','alert'); content.append(node);}
     if (notice) {const node = el('p',notice,'notice'); node.setAttribute('role','status'); content.append(node);}
     if (!session) content.append(el('p',connecting ? 'Checking review access…' : 'Use your application’s existing sign-in to access team feedback.','muted'),button('Check access again',() => {void initialize();}));
-    else {header.append(button('Transfer feedback',() => {persistDraft(); transfers.open();})); if(transfers.active()) transfers.render(content,currentContext.page); else if (!anchor && !selected) renderList(header,content); else renderThread(content);}
-    panel.append(header,content); ui.append(panel); content.scrollTop = scroll;
+    else {if(transfers.active()) transfers.render(content,currentContext.page); else if (!anchor && !selected) renderList(header,content); else renderThread(content);}
+    const footer = el('footer',undefined,'panel-footer'); footer.append(el('span','Feedback', 'muted'),info);
+    panel.append(header,content,footer); ui.append(panel); content.scrollTop = scroll;
     pendingFocus = undefined;
     if (focusId) {const target = shadow.getElementById(focusId); if(target && 'disabled' in target && target.disabled) pendingFocus = focusId; else {const next = target || shadow.querySelector<HTMLElement>('.content button:not([disabled])'); next?.focus({preventScroll: true}); if(selection && (next instanceof HTMLTextAreaElement || next instanceof HTMLInputElement) && selection.start !== null && selection.end !== null) next.setSelectionRange(selection.start,selection.end);}}
     scheduleResolution();
@@ -125,26 +144,26 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
     finally {if(stamp === epoch && sequence === memberSequence) {memberLoading = false; render();}}
   }
   function renderList(header: HTMLElement,content: HTMLElement) {
-    header.append(button('Refresh feedback',() => {void initialize();}));
-    const actions = el('div',undefined,'row'); actions.append(button('Pin a comment',() => startPin(false),'primary'),button('Page comment',pageComment)); header.append(actions);
-    const filters = el('div',undefined,'row');
+    const actions = el('div',undefined,'row compose-actions'); actions.append(action('Pin a comment','pin',() => startPin(false),false,'primary'),action('Page comment','page',pageComment,false)); header.append(actions);
+    const listHeading = el('div',undefined,'row between list-heading'); listHeading.append(el('h3',allPages ? 'All comments' : 'This page'),el('small',`${threads.length}${nextCursor ? '+' : ''} ${threads.length === 1 ? 'thread' : 'threads'}`)); content.append(listHeading);
+    const filters = el('div',undefined,'row filters');
     for (const [label,value,change] of [['All pages',allPages,() => {allPages = !allPages; listCursor = undefined; void refresh().catch(() => {});}],['Show resolved',resolved,() => {resolved = !resolved; listCursor = undefined; void refresh().catch(() => {});}]] as const) {const labelNode = el('label'), check = el('input'); check.type = 'checkbox'; check.checked = value; check.addEventListener('change',change); labelNode.append(check,document.createTextNode(label)); filters.append(labelNode);} content.append(filters);
     for (const thread of threads) {
       const card = button('',() => {void chooseThread(thread.id);},'thread'), title = el('div',undefined,'row between'); card.id = 'huddle-thread-'+encodeURIComponent(thread.id); title.append(el('strong',thread.anchor.label));
       if (unread(thread)) title.append(el('span','New','badge new'));
       const found = resolutions.get(thread.id); if (found && found.state !== 'ok') title.append(el('span',found.state,'badge'));
-      card.append(title,el('p',thread.latestComment?.body.slice(0,180) || ''),el('small',`${thread.latestComment?.author.name || ''} · ${thread.commentCount} comments · ${thread.status}`));
+      card.append(title,el('p',excerpt(thread.latestComment?.body || '',180),'thread-excerpt'),el('small',`${thread.latestComment?.author.name || ''} · ${thread.commentCount} ${thread.commentCount === 1 ? 'comment' : 'comments'}`)); if(thread.status === 'resolved') title.append(el('span','Resolved','badge'));
       if (thread.page !== currentContext.page) card.append(el('p',thread.page,'muted')); content.append(card);
     }
-    if (!threads.length) content.append(el('p',loading ? 'Loading feedback…' : 'No feedback here yet. Start a discussion.','muted'));
+    if (!threads.length) {const empty = el('div',undefined,'empty-state'); empty.append(icon('comment'),el('h3',loading ? 'Loading feedback…' : 'No comments yet'),el('p','Pin a comment to an element, or leave a note about this page.','muted')); content.append(empty);}
     if (listCursor) content.append(button('First threads',() => {listCursor = undefined; void refresh().catch(() => {});}));
     if (nextCursor !== null) content.append(button('Next threads',() => {listCursor = nextCursor!; void refresh().catch(() => {});}));
   }
   function renderThread(content: HTMLElement) {
-    content.append(button('Back to comments',() => {persistDraft(); selected = undefined; anchor = undefined; body = ''; mentionIds = []; render();}));
+    content.append(action('Back to comments','back',() => {persistDraft(); selected = undefined; anchor = undefined; body = ''; mentionIds = []; render();},false,'quiet'));
     const thread = selected?.thread, target = anchor || thread!.anchor, box = el('div',undefined,'target'); box.append(el('h3',target.label)); if (target.quote) box.append(el('blockquote',target.quote));
     if (thread) {
-      if (thread.page === currentContext.page) {const warning = resolveAnchor(thread.anchor); if (warning.state !== 'ok') box.append(el('p',anchorWarnings[warning.state],'muted')); box.append(button('Locate on page',() => {const found = resolveAnchor(thread.anchor); if (found.element && !excluded(found.element)) found.element.scrollIntoView({block: 'center',behavior: 'instant'}); else {notice = 'Target is unavailable or excluded.'; render();}}),button('Reattach pin',() => startPin(true)));}
+      if (thread.page === currentContext.page) {const warning = resolveAnchor(thread.anchor); if (warning.state !== 'ok') box.append(el('p',anchorWarnings[warning.state],'muted')); const targetActions = el('div',undefined,'row'); targetActions.append(action('Locate on page','locate',() => {const found = resolveAnchor(thread.anchor); if (found.element && !excluded(found.element)) found.element.scrollIntoView({block: 'center',behavior: 'instant'}); else {notice = 'Target is unavailable or excluded.'; render();}},false,'quiet'),action('Reattach pin','pin',() => startPin(true))); box.append(targetActions);}
       else box.append(link('Open original page',thread.pageUrl));
       const context = el('details'), summary = el('summary','Captured context'); summary.id = 'huddle-captured-context'; context.open = contextExpanded; context.addEventListener('toggle',() => {if(context.isConnected) contextExpanded = context.open;}); context.append(summary,el('p',`Page: ${thread.page}`),el('p',`Environment: ${thread.environment}${thread.release ? ' · Release: '+thread.release : ''}`),link('Page URL',thread.pageUrl)); if(thread.viewContext !== undefined) context.append(el('pre',JSON.stringify(thread.viewContext,null,2))); if(thread.provenance) context.append(el('p',`Source: ${thread.provenance.datasetId} · ${thread.provenance.recordId}`)); box.append(context);
     }
@@ -159,7 +178,7 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
       if (historyCursor) history.append(button('First history',() => {historyCursor = undefined; void loadDetail(selected!.thread.id).catch(() => {});}));
       if (selected.history.nextCursor !== null) history.append(button('Next history',() => {historyCursor = selected!.history.nextCursor!; void loadDetail(selected!.thread.id).catch(() => {});}));
       content.append(history);
-      const coordination = el('div',undefined,'row'); coordination.append(button(thread!.status === 'open' ? 'Resolve thread' : 'Reopen thread',() => {void patch({status: thread!.status === 'open' ? 'resolved' : 'open'});}));
+      const coordination = el('div',undefined,'row'); coordination.append(action(thread!.status === 'open' ? 'Resolve thread' : 'Reopen thread',thread!.status === 'open' ? 'check' : 'reopen',() => {void patch({status: thread!.status === 'open' ? 'resolved' : 'open'});},false));
       if (capability('assignment') && capability('directory') && adapter.directory) {const label = el('label','Assignee'), assign = el('select'); assign.setAttribute('aria-label','Assignee'); assign.append(new Option('Unassigned','')); for (const member of members) assign.append(new Option(member.name,member.id)); if (thread!.assignee && !members.some(item => item.id === thread!.assignee!.id)) {const current = new Option(`${thread!.assignee.name} (current attribution)`,thread!.assignee.id); current.disabled = true; assign.append(current);} assign.value = thread!.assignee?.id || ''; assign.addEventListener('change',() => {void patch({assigneeId: assign.value || null});}); label.append(assign); coordination.append(label);}
       content.append(coordination);
     }
@@ -210,7 +229,7 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
     body = ''; mentionIds = []; anchor = undefined; commentCursor = historyCursor = undefined; historyExpanded = contextExpanded = false; historyEntry = undefined;
     selected = {thread,comments: {items: [],nextCursor: null},history: {items: [],nextCursor: null}}; error = '';
     const draft = store?.read<Draft>(draftKey); if (draft?.threadId === id) {body = draft.body; mentionIds = draft.mentions;}
-    render(); try {await loadDetail(id);} catch { /* detail error is rendered */ }
+    collapsed = false; hidePreview(); render(); shadow.getElementById('huddle-action-back-to-comments')?.focus(); try {await loadDetail(id);} catch { /* detail error is rendered */ }
   }
   function capturedContext(): Omit<Context,'workspace' | 'environment'> {
     const {workspace: _workspace,environment: _environment,...context} = currentContext;
@@ -316,15 +335,47 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
       if (update) void patch({anchor: built}); else {draftContext = capturedContext(); selected = undefined; anchor = built; body = ''; mentionIds = []; persistDraft(); render(); shadow.getElementById('huddle-body')?.focus();}
     } catch (value) {cancelPin(); setError(value);}
   }
+  function hidePreview() {clearTimeout(previewTimer); previewTimer = undefined; previewId = undefined; previewHovered = false; preview.hidden = true; preview.replaceChildren(); for(const pin of pinNodes.values()) pin.removeAttribute('aria-describedby');}
+  function clearPins() {hidePreview(); pinNodes.clear(); pins.replaceChildren();}
+  function deferHidePreview() {clearTimeout(previewTimer); previewTimer = setTimeout(() => {if(!previewHovered && !pins.contains(shadow.activeElement)) hidePreview();},120);}
+  function showPreview(id: string) {clearTimeout(previewTimer); previewId = id; renderPreview();}
+  function renderPreview() {
+    if(!previewId) return;
+    const thread = threads.find(item => item.id === previewId), pin = pinNodes.get(previewId);
+    if(!thread || !pin || !opened || pinning) {hidePreview(); return;}
+    for(const node of pinNodes.values()) node.removeAttribute('aria-describedby');
+    pin.setAttribute('aria-describedby',preview.id); preview.replaceChildren(el('strong',thread.anchor.label),el('p',excerpt(thread.latestComment?.body || 'Open this thread to read the discussion.')),el('small',`${thread.latestComment?.author.name || ''} · ${thread.commentCount} ${thread.commentCount === 1 ? 'comment' : 'comments'}`)); preview.hidden = false;
+    preview.style.maxHeight = '';
+    const rect = pin.getBoundingClientRect(), width = preview.offsetWidth; let height = preview.offsetHeight;
+    const rightFits = rect.right + width + 10 <= innerWidth - 12, leftFits = rect.left - width - 10 >= 12;
+    const left = rightFits ? rect.right + 10 : leftFits ? rect.left - width - 10 : (rect.left + rect.right - width) / 2;
+    let top = rect.top;
+    if(!rightFits && !leftFits) {
+      const below = innerHeight - rect.bottom - 22, above = rect.top - 22, useBelow = below >= height || below >= above;
+      preview.style.maxHeight = `${Math.max(24,useBelow ? below : above)}px`; height = preview.offsetHeight;
+      top = useBelow ? rect.bottom + 10 : rect.top - height - 10;
+    }
+    preview.style.left = `${Math.max(12,Math.min(left,innerWidth - width - 12))}px`;
+    preview.style.top = `${Math.max(12,Math.min(top,innerHeight - height - 12))}px`;
+  }
   function geometry() {
-    geometryFrame = 0; pins.replaceChildren(); if (!opened || pinning || document.visibilityState === 'hidden') return;
+    geometryFrame = 0; if (!opened || pinning || document.visibilityState === 'hidden') {clearPins(); return;}
+    const visible = new Set<string>();
     for (const [i,t] of threads.entries()) {
       if (t.page !== currentContext.page || (t.status === 'resolved' && !resolved)) continue;
       const found = resolutions.get(t.id); if (!found?.element?.isConnected || excluded(found.element) || ['missing','hidden','ambiguous'].includes(found.state)) continue;
       const rect = found.element.getBoundingClientRect(); if (!rect.width || !rect.height) continue;
       const x = rect.left + rect.width * t.anchor.x, y = rect.top + rect.height * t.anchor.y; if (y < 0 || y > innerHeight || x < 0 || x > innerWidth) continue;
-      const pin = button(String(i + 1),() => {void chooseThread(t.id);},`pin${found.state !== 'ok' ? ' warning' : ''}`); pin.setAttribute('aria-label',`Open feedback: ${t.anchor.label}`); pin.style.left = `${x}px`; pin.style.top = `${y}px`; pins.append(pin);
+      visible.add(t.id); let pin = pinNodes.get(t.id);
+      if(!pin) {
+        pin = button('',() => {void chooseThread(t.id);},'pin'); pin.id = 'huddle-pin-'+encodeURIComponent(t.id);
+        pin.addEventListener('pointerenter',() => showPreview(t.id)); pin.addEventListener('pointerleave',deferHidePreview); pin.addEventListener('focus',() => showPreview(t.id)); pin.addEventListener('blur',deferHidePreview);
+        pinNodes.set(t.id,pin); pins.append(pin);
+      }
+      pin.textContent = String(i + 1); pin.disabled = busy; pin.classList.toggle('warning',found.state !== 'ok'); pin.classList.toggle('selected',selected?.thread.id === t.id); pin.setAttribute('aria-label',`Open feedback: ${t.anchor.label}`); pin.style.left = `${x}px`; pin.style.top = `${y}px`;
     }
+    for(const [id,pin] of pinNodes) if(!visible.has(id)) {pin.remove(); pinNodes.delete(id);}
+    renderPreview();
   }
   function scheduleGeometry() {if (!geometryFrame && !destroyed && opened) geometryFrame = requestAnimationFrame(geometry);}
   function scheduleResolution() {
@@ -343,11 +394,11 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
     if (destroyed) return;
     const next = getContext(); if (JSON.stringify(next) === JSON.stringify(currentContext)) return;
     const scopeChanged = next.workspace !== currentContext.workspace || next.environment !== currentContext.environment;
-    persistDraft(); invalidate(); transfers.reset(); currentContext = next; draftContext = undefined; selected = undefined; anchor = undefined; body = ''; mentionIds = []; threads = []; resolutions.clear(); notice = ''; error = ''; cursor = undefined; listCursor = commentCursor = historyCursor = undefined; restoredTarget = '';
+    persistDraft(); invalidate(); transfers.reset(); clearPins(); currentContext = next; draftContext = undefined; selected = undefined; anchor = undefined; body = ''; mentionIds = []; threads = []; resolutions.clear(); notice = ''; error = ''; cursor = undefined; listCursor = commentCursor = historyCursor = undefined; restoredTarget = '';
     if (scopeChanged) clearPrivate(); else setupStorage(); render(); if (active()) void initialize();
   }
-  const onVisibility = () => {if (document.visibilityState === 'hidden') {persistDraft(); invalidate(); cancelAnimationFrame(geometryFrame); cancelAnimationFrame(resolveFrame); geometryFrame = resolveFrame = 0;} else {routeChange(); if (active()) void initialize(); scheduleResolution();}};
-  const keydown = (event: KeyboardEvent) => {if (event.key === 'Escape') {if (pinning) {event.preventDefault(); cancelPin();} else if (opened && event.composedPath().includes(host)) {event.preventDefault(); controller.close();}}};
+  const onVisibility = () => {if (document.visibilityState === 'hidden') {persistDraft(); invalidate(); clearPins(); cancelAnimationFrame(geometryFrame); cancelAnimationFrame(resolveFrame); geometryFrame = resolveFrame = 0;} else {routeChange(); if (active()) void initialize(); scheduleResolution();}};
+  const keydown = (event: KeyboardEvent) => {if (event.key === 'Escape') {if (!preview.hidden) {event.preventDefault(); hidePreview();} else if (pinning) {event.preventDefault(); cancelPin();} else if (opened && event.composedPath().includes(host)) {event.preventDefault(); controller.close();}}};
   const originalPush = history.pushState, originalReplace = history.replaceState;
   const push: History['pushState'] = function(this: History,...args) {originalPush.apply(this,args); routeChange();};
   const replace: History['replaceState'] = function(this: History,...args) {originalReplace.apply(this,args); routeChange();};
@@ -359,8 +410,9 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
   window.addEventListener('online',() => {if (active()) void initialize();},{signal: life.signal});
   document.addEventListener('toggle',event => {if (event.composedPath().includes(host) || !(event.target instanceof HTMLElement) || !event.target.matches('[popover]')) return; try {surface.hidePopover(); topLayer();} catch { /* fixed-host fallback */ } scheduleResolution();},{capture: true,signal: life.signal});
   const controller: Huddle = {
-    open() {if (destroyed || opened) return; let focused = document.activeElement; while(focused?.shadowRoot?.activeElement) focused = focused.shadowRoot.activeElement; opener = focused instanceof HTMLElement && focused.getRootNode() !== shadow && !host.contains(focused) ? focused : null; opened = true; topLayer(); render(); shadow.querySelector<HTMLElement>('.panel button')?.focus(); void initialize();},
-    close() {if (destroyed) return; persistDraft(); invalidate(); clearPrivate(); cursor = undefined; listCursor = commentCursor = historyCursor = undefined; opened = false; pinning = false; highlight.hidden = true; render(); if (opener?.isConnected) opener.focus(); else shadow.querySelector<HTMLElement>('.launcher')?.focus();},
+    open() {if (destroyed) return; if(opened) {if(collapsed) {collapsed = false; render(); shadow.getElementById('huddle-action-collapse-feedback')?.focus();} return;} let focused = document.activeElement; while(focused?.shadowRoot?.activeElement) focused = focused.shadowRoot.activeElement; opener = focused instanceof HTMLElement && focused.getRootNode() !== shadow && !host.contains(focused) ? focused : null; opened = true; collapsed = false; topLayer(); render(); shadow.getElementById('huddle-action-collapse-feedback')?.focus(); void initialize();},
+    collapse() {if(destroyed || !opened || pinning || collapsed) return; persistDraft(); hidePreview(); collapsed = true; render(); shadow.getElementById('huddle-action-expand-feedback')?.focus();},
+    close() {if (destroyed) return; persistDraft(); invalidate(); clearPrivate(); cursor = undefined; listCursor = commentCursor = historyCursor = undefined; opened = false; collapsed = false; pinning = false; highlight.hidden = true; render(); if (opener?.isConnected) opener.focus(); else shadow.querySelector<HTMLElement>('.launcher')?.focus();},
     updateContext(context) {if (destroyed) return; validateOptions({...settings,...context}); Object.assign(settings,context); routeChange();},
     destroy() {if (destroyed) return; persistDraft(); destroyed = true; invalidate(); life.abort(); observer.disconnect(); cancelAnimationFrame(geometryFrame); cancelAnimationFrame(resolveFrame); if (history.pushState === push) history.pushState = originalPush; if (history.replaceState === replace) history.replaceState = originalReplace; host.remove(); instances.delete(document); clearPrivate(); ui.replaceChildren(); memory.clear(); if (opened && opener?.isConnected) opener.focus();},
   };

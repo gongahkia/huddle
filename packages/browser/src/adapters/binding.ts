@@ -2,11 +2,11 @@ import {mountForOwner,type Huddle,type HuddleOptions} from '../engine';
 import {validateOptions} from '../options';
 export type {HuddleOptions} from '../engine';
 /** Controls for the helper's own widget. Before mounting, these are safe no-ops. */
-export type HuddleControls = {readonly current: Huddle | null; open(): void; close(): void};
+export type HuddleControls = {readonly current: Huddle | null; open(): void; collapse(): void; close(): void};
 const equal = (a: HuddleOptions,b: HuddleOptions) => (Object.keys({...a,...b}) as (keyof HuddleOptions)[]).every(key => key === 'allowedQueryParameters' ? JSON.stringify(a[key] || []) === JSON.stringify(b[key] || []) : a[key] === b[key]);
 export function createBinding() {
   const owner = Symbol('huddle-helper'); let current: Huddle | null = null, previous: HuddleOptions | null = null;
-  const controls: HuddleControls = {get current() {return current;},open() {current?.open();},close() {current?.close();}};
+  const controls: HuddleControls = {get current() {return current;},open() {current?.open();},collapse() {current?.collapse();},close() {current?.close();}};
   function dispose() {current?.destroy(); current = null; previous = null;}
   function update(options: HuddleOptions | null) {
     if (!options) {dispose(); return;}

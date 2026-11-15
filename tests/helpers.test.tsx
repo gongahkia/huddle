@@ -42,7 +42,8 @@ it('updates context in place, remounts installation changes and validates before
  const binding = createBinding(); dispose.push(binding.dispose); binding.update(options);
  const first = document.querySelector('[data-huddle-root]'); binding.update({...options,release: 'v2',environment: 'production'});
  expect(document.querySelector('[data-huddle-root]')).toBe(first);
- binding.controls.open(); expect(first!.shadowRoot!.textContent).toContain('production');
+ binding.controls.open(); (first!.shadowRoot!.getElementById('huddle-action-review-details') as HTMLButtonElement).click(); expect(first!.shadowRoot!.textContent).toContain('Environment: production');
+ binding.controls.collapse(); expect(first!.hasAttribute('data-huddle-collapsed')).toBe(true); binding.controls.open(); expect(first!.hasAttribute('data-huddle-collapsed')).toBe(false);
  expect(() => binding.update({...options,namespace: ''})).toThrow('namespace');
  expect(document.querySelector('[data-huddle-root]')).toBe(first);
  binding.update({...options,styleNonce: 'replacement'}); expect(document.querySelector('[data-huddle-root]')).not.toBe(first);

@@ -36,7 +36,7 @@ Changes are bounded to 100 records per request. A missing cursor establishes a c
 
 Mutation keys are bound to authenticated scope, actor and operation (including target ID), plus a canonical payload hash. Reusing a key for a different payload fails with conflict. Mutation, idempotency result and audit/change record commit atomically. Updates require expectedVersion and at least one changed field. Independent replies append without an expected version; concurrent replies must both persist. A stale coordination version returns conflict, prompting refetch and explicit user resolution.
 
-Default polling is ten seconds while open and visible, with one operation in flight, bounded backoff/jitter and catch-up on reconnect/open/visibility return. No automatic write replay. Revocation clears private UI, aborts operations and ends subscriptions; the host owns sign-in.
+Default polling is ten seconds while review is active and the tab is visible (including a collapsed sidebar), with one operation in flight, bounded backoff/jitter and catch-up on reconnect/open/visibility return. No automatic write replay. Revocation clears private UI, aborts operations and ends subscriptions; the host owns sign-in.
 
 ## Error binding
 
