@@ -11,6 +11,7 @@ const exec = promisify(execFile), directory = mkdtempSync(join(tmpdir(),'huddle-
 const root = JSON.parse(readFileSync('package.json','utf8')), pkg = JSON.parse(readFileSync('packages/browser/package.json','utf8'));
 const peers = Object.keys(pkg.peerDependencies) as string[];
 const cases = [
+ {entry:'local',peers:[],symbol:'createLocalOptions',call:"helper({namespace:'local-consumer'})"},
  {entry: '',peers: [],symbol: 'mount',call: '(() => {const widget=helper(options);widget.open();widget.close();widget.updateContext({release:"v2"});widget.destroy();return widget;})()'},
  {entry: 'http',peers: [],symbol: 'createHttpAdapter',call: 'helper()'},
  {entry: 'react',peers: ['react'],symbol: 'useHuddle',call: 'helper(options)'},

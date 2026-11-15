@@ -24,9 +24,9 @@ for (const [name,entry] of Object.entries(entries)) {
 }
 await cp('examples/local','dist/examples/local',{recursive:true});
 await cp('examples/html','dist/examples/html',{recursive: true}); await mkdir('dist/examples/html/vendor',{recursive:true});
-await mkdir('dist/examples/playground',{recursive:true});
-for(const file of ['index.html','app.html','playground.css']) await cp('examples/playground/'+file,'dist/examples/playground/'+file);
-await build({entryPoints:['examples/playground/index.ts','examples/playground/app.ts'],bundle:true,format:'esm',target:'es2022',outdir:'dist/examples/playground'});
+await mkdir('dist/examples/testing/playground',{recursive:true});
+for(const file of ['index.html','app.html','playground.css']) await cp('examples/testing/playground/'+file,'dist/examples/testing/playground/'+file);
+await build({entryPoints:['examples/testing/playground/index.ts','examples/testing/playground/app.ts'],bundle:true,format:'esm',target:'es2022',outdir:'dist/examples/testing/playground'});
 await cp('node_modules/jquery/dist/jquery.min.js','dist/examples/html/vendor/jquery.min.js'); await cp('node_modules/htmx.org/dist/htmx.min.js','dist/examples/html/vendor/htmx.min.js');
 await cp('examples/style.css','dist/examples/style.css'); await cp('dist/public/huddle.js','dist/examples/huddle.js');
 await rm('dist/examples/chunks',{recursive: true,force: true}); await cp('dist/public/chunks','dist/examples/chunks',{recursive: true});

@@ -2,8 +2,8 @@ import express,{type Express} from 'express';
 import {randomUUID} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
-import {ReviewStore,createAnonymousIdentity,CollaborationError,type Backend,type Identity,type Scope} from '../packages/host/src/store';
-import {createExpressMiddleware} from '../packages/host/src/express';
+import {ReviewStore,createAnonymousIdentity,CollaborationError,type Backend,type Identity,type Scope} from '../../../packages/host/src/store';
+import {createExpressMiddleware} from '../../../packages/host/src/express';
 
 // this fictional host shares only the browser fixture's explicitly disposable backend.
 export async function addPlayground(app:Express,backend:Backend,origin:string) {
@@ -56,7 +56,7 @@ export async function addPlayground(app:Express,backend:Backend,origin:string) {
     if(record.fault==='expired') throw new CollaborationError('unauthenticated','Playground: this review session has expired. Switch Service back to Normal and check access again.');
     return new ReviewStore(backend,async scope => {if(record.guest) throw new CollaborationError('forbidden','Playground: guests can browse the example but cannot review.');if(scope.workspace!==record.workspace||scope.environment!=='preview') throw new CollaborationError('forbidden','This playground scope is unavailable.');return {actor:record.actor,capabilities:record.capabilities};},directory);
   },async verifyMutation(request) {const record=session(request);if(request.headers.get('Origin')!==origin||request.headers.get('X-Playground-CSRF')!==csrf) throw new CollaborationError('forbidden','Playground mutation protection failed.');if(record.fault==='writes' && new URL(request.url).pathname!=='/api/playground/v2/exports') throw new CollaborationError('unavailable','Playground: this write failed. Your draft is kept. Switch Service back to Normal to retry.');}}));
-  const root = resolve('dist/examples/playground');
+  const root = resolve('dist/examples/testing/playground');
   const html = (file:string) => async (_request:express.Request,response:express.Response) => {
     const nonce=randomUUID();response.setHeader('Content-Security-Policy',`default-src 'none'; script-src 'self'; style-src 'self' 'nonce-${nonce}'; connect-src 'self'; frame-src 'self' blob:; frame-ancestors 'self'; img-src 'self'; base-uri 'none'; form-action 'self'`);response.type('html').send((await readFile(resolve(root,file),'utf8')).replaceAll('__HUDDLE_NONCE__',nonce));
   };

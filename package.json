@@ -24,7 +24,6 @@
     "generate:schemas": "tsx scripts/feedback-schema.ts && tsx scripts/http-schema.ts",
     "bench:browser": "playwright test tests/browser/performance.spec.ts --reporter=line",
     "examples": "tsx scripts/examples.ts",
-    "playground": "pnpm build && tsx scripts/browser-host.ts --playground",
     "test:package": "tsx scripts/package-smoke.ts && tsx scripts/host-package-smoke.ts",
     "test:storage:sqlite": "vitest run tests/sqlite-conformance.test.ts tests/sqlite-exports.test.ts tests/sqlite-imports.test.ts",
     "test:storage:postgres": "vitest run --config vitest.storage.config.ts tests/database/postgres.spec.ts",
@@ -41,7 +40,8 @@
     "test:package:http": "tsx scripts/host-http-package-smoke.ts",
     "test:matrix": "pnpm build && tsx scripts/server-matrix.ts",
     "test:portability": "vitest run --config vitest.storage.config.ts tests/database/portability.spec.ts --reporter=verbose",
-    "fixtures:webkit": "tsx scripts/webkit-runtime.ts"
+    "fixtures:webkit": "tsx scripts/webkit-runtime.ts",
+    "examples:playground": "pnpm build && tsx scripts/browser-host.ts --playground"
   },
   "dependencies": {
     "@fastify/static": "10.1.11",

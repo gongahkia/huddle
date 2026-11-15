@@ -18,6 +18,7 @@ function checkedJob(value:ImportJob,expected:Counts): ImportJob {if(!value || !b
 export function createTransfers(host:TransferHost) {
   const maxUpload = host.uploadBytes ?? 32*1024*1024, maxDownload = host.downloadBytes ?? 64*1024*1024;
   let mode:'export'|'import'='export',exportFormat:'json'|'markdown'='json';
+  let copyText='',clipboardCancel:(()=>void)|undefined;
   let opened = false, busy = false, revision = 0, life = new AbortController(), error = '', message = '';
   let file:File | undefined, upload:{uploadId:string;digest:string} | undefined, preview:ImportPreview | undefined, job:ImportJob | undefined, execution:Execution | undefined;
   let mapping = emptyMapping(), sourceEnvironments:string[] = [], sourceOrigins:string[] = [], authors:Attribution[] = [], environmentPage = 0, originPage = 0, authorPage = 0, rejectedPage = 0, exportPage = 0;
@@ -26,7 +27,7 @@ export function createTransfers(host:TransferHost) {
   const urls = new Set<string>(), timers = new Set<ReturnType<typeof setTimeout>>();
   const call = <T>(run:(signal:AbortSignal) => Promise<T>,signal:AbortSignal) => operation(run,signal,host.timeoutMs);
   const button = (text:string,action:() => void,disabled = busy) => {const value = node('button',text); value.type = 'button'; value.id = 'huddle-transfer-'+text.toLowerCase().replace(/[^a-z0-9]+/g,'-'); value.disabled = disabled; value.addEventListener('click',action); return value;};
-  function cancel() {life.abort(); life = new AbortController(); revision++; busy = false;}
+  function cancel() {clipboardCancel?.();clipboardCancel=undefined;copyText='';life.abort(); life = new AbortController(); revision++; busy = false;}
   function reset() {cancel();mode='export';exportFormat='json';expanded.clear(); opened = false; file = undefined; upload = undefined; preview = undefined; job = undefined; execution = undefined; mapping = emptyMapping(); sourceEnvironments = []; sourceOrigins = []; authors = []; environments = []; choices = []; addedEnvironment = ''; currentPageOnly = false; page = ''; status = ''; environmentPage = originPage = authorPage = rejectedPage = exportPage = 0; error = message = ''; for(const url of urls) URL.revokeObjectURL(url); urls.clear(); for(const timer of timers) clearTimeout(timer); timers.clear();}
   async function run(action:(signal:AbortSignal,stamp:number) => Promise<void>) {
     if(busy) return; busy = true; error = ''; message = ''; const stamp = revision, signal = AbortSignal.any([host.parentSignal(),life.signal]); host.render();
@@ -68,16 +69,28 @@ export function createTransfers(host:TransferHost) {
       }
     });
   }
-  function download(format:'json'|'markdown') {void run(async (signal,stamp) => {
-    const selected = [...environments]; if(!selected.length || selected.some(value => !bounded(value))) throw new CollaborationError('validation','Choose the environments to export.');
-    const result = await call(inner => host.adapter.export({workspace:host.scope().workspace,environments:selected,...(currentPageOnly ? {page} : {}),...(status ? {status} : {})},format,inner),signal), iterator = result.chunks[Symbol.asyncIterator]();
-    const bytes = new ByteCollector(maxDownload,'download');
-    try {while(true) {const next = await call(() => iterator.next(),signal); if(next.done) break; bytes.add(next.value);}} finally {if(iterator.return) void Promise.resolve().then(() => iterator.return!()).catch(() => {});}
-    const blob = bytes.blob(format === 'json' ? 'application/json' : 'text/markdown');
-    if(format === 'json') {const value = JSON.parse(await call(() => blob.text(),signal)); if(value?.schema !== 'huddle.feedback.v2' || value.complete !== true || !['threads','comments','history'].every(kind => Array.isArray(value[kind]) && value.counts?.[kind] === value[kind].length)) throw new CollaborationError('unavailable','The host export is incomplete or inconsistent. No download was created.');}
-    if(stamp !== revision) return; const url = URL.createObjectURL(blob), link = node('a'); urls.add(url); link.href = url; link.download = 'huddle-feedback.'+(format === 'json' ? 'json' : 'md'); link.hidden = true; document.body.append(link); link.click(); link.remove();
-    const timer = setTimeout(() => {URL.revokeObjectURL(url); urls.delete(url); timers.delete(timer);},1000); timers.add(timer); message = `Complete ${format === 'json' ? 'JSON' : 'Markdown'} export downloaded for ${selected.join(', ')}.`;
+  async function exportBlob(format:'json'|'markdown',signal:AbortSignal):Promise<Blob> {
+    const selected=[...environments];if(!selected.length||selected.some(value=>!bounded(value)))throw new CollaborationError('validation','Choose the environments to export.');
+    const result=await call(inner=>host.adapter.export({workspace:host.scope().workspace,environments:selected,...(currentPageOnly?{page}:{}),...(status?{status}:{})},format,inner),signal),iterator=result.chunks[Symbol.asyncIterator](),bytes=new ByteCollector(maxDownload,'download');
+    try{while(true){const next=await call(()=>iterator.next(),signal);if(next.done)break;bytes.add(next.value);}}finally{if(iterator.return)void Promise.resolve().then(()=>iterator.return!()).catch(()=>{});}
+    const blob=bytes.blob(format==='json'?'application/json':'text/markdown');
+    if(format==='json'){const value=JSON.parse(await call(()=>blob.text(),signal));if(value?.schema!=='huddle.feedback.v2'||value.complete!==true||!['threads','comments','history'].every(kind=>Array.isArray(value[kind])&&value.counts?.[kind]===value[kind].length))throw new CollaborationError('unavailable','The host export is incomplete or inconsistent. No download was created.');}return blob;
+  }
+  function download(format:'json'|'markdown'){void run(async(signal,stamp)=>{
+    const blob=await exportBlob(format,signal);if(stamp!==revision)return;const url=URL.createObjectURL(blob),link=node('a');urls.add(url);link.href=url;link.download='huddle-feedback.'+(format==='json'?'json':'md');link.hidden=true;document.body.append(link);link.click();link.remove();
+    const timer=setTimeout(()=>{URL.revokeObjectURL(url);urls.delete(url);timers.delete(timer);},1000);timers.add(timer);message=`Complete ${format==='json'?'JSON':'Markdown'} export downloaded for ${environments.join(', ')}.`;
   });}
+  function copyMarkdown(){
+    if(busy)return;copyText='';let provide:(value:Blob)=>void=()=>{},reject:(reason:unknown)=>void=()=>{},provided=false;
+    const data=new Promise<Blob>((resolve,failed)=>{provide=resolve;reject=failed;});void data.catch(()=>{});
+    clipboardCancel=()=>reject(new DOMException('Copy cancelled.','AbortError'));
+    // request clipboard access during the click; bytes arrive only after authorized complete export.
+    let writing:Promise<void>|undefined;try{if(typeof ClipboardItem!=='undefined'&&navigator.clipboard?.write)writing=navigator.clipboard.write([new ClipboardItem({'text/plain':data})]);}catch{/* offer selectable text below */}void writing?.catch(()=>{});
+    void run(async(signal,stamp)=>{const blob=await exportBlob('markdown',signal),text=await call(()=>blob.text(),signal);if(stamp!==revision||signal.aborted)return;copyText=text;provided=true;provide(new Blob([text],{type:'text/plain'}));
+      if(writing){try{await writing;if(stamp!==revision)return;copyText='';message='Complete Markdown feedback copied. Paste it into your agent or notes.';}catch{if(stamp!==revision)return;message='Clipboard access is unavailable. Select and copy the complete Markdown below.';}}
+      else message='Select and copy the complete Markdown below.';
+    }).finally(()=>{if(!provided)reject(new DOMException('Copy cancelled.','AbortError'));clipboardCancel=undefined;});
+  }
   function input(label:string,value:string,change:(value:string) => void,id:string) {const container = node('label',label), field = node('input'); field.id = id; field.value = value; field.disabled = busy; field.addEventListener('input',() => change(field.value)); container.htmlFor = id; container.append(field); return container;}
   function mapField(parent:HTMLElement,kind:keyof ImportMapping,from:string,label:string) {
     parent.append(input(label,mapping[kind][from] || '',value => {mapping = {...mapping,[kind]:Object.fromEntries([...Object.entries(mapping[kind]).filter(([key]) => key !== from),...(value ? [[from,value]] : [])])}; preview = undefined; execution = undefined; job = undefined; message = 'Mappings changed. Preview again before importing.'; host.render();},`huddle-map-${kind}-${(kind === 'environmentMap' ? sourceEnvironments : sourceOrigins).indexOf(from)}`));
@@ -94,7 +107,7 @@ export function createTransfers(host:TransferHost) {
     for(const value of ['export','import'] as const){const label=value==='export'?'Export':'Import',tab=button(label,()=>{mode=value;host.render();},busy);tab.id='huddle-transfer-tab-'+value;tab.setAttribute('role','tab');tab.setAttribute('aria-selected',String(mode===value));tab.setAttribute('aria-controls','huddle-transfer-panel');tab.tabIndex=mode===value?0:-1;tab.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();mode=event.key==='Home'?'export':event.key==='End'?'import':mode==='export'?'import':'export';const root=parent.getRootNode() as Document|ShadowRoot;host.render();root.getElementById('huddle-transfer-tab-'+mode)?.focus();});tabs.append(tab);}parent.append(tabs);
     if(error){const text=node('p',error);text.className='notice error';text.setAttribute('role','alert');parent.append(text);}if(message){const text=node('p',message);text.className='notice';text.setAttribute('role','status');parent.append(text);}
     const panel=node('section');panel.className='transfer-panel';panel.id='huddle-transfer-panel';panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby','huddle-transfer-tab-'+mode);parent.append(panel);
-    const primary=(text:string,run:()=>void,name:'download'|'upload',disabled=busy)=>{const action=button(text,run,disabled);action.className='primary transfer-primary';action.prepend(icon(name));return action;};
+    const primary=(text:string,run:()=>void,name:'download'|'upload'|'copy',disabled=busy)=>{const action=button(text,run,disabled);action.className='primary transfer-primary';action.prepend(icon(name));return action;};
     const advanced=(title:string)=>{const details=node('details');details.className='transfer-advanced';details.open=expanded.has(title);details.addEventListener('toggle',()=>{if(details.isConnected){if(details.open)expanded.add(title);else expanded.delete(title);}});details.append(node('summary',title));return details;};
     if(mode==='export'){
       panel.append(node('h3','Download a copy'),node('p',`All pages and open/resolved comments in ${environments.join(', ') || 'your selected environments'}.`));
@@ -104,7 +117,7 @@ export function createTransfers(host:TransferHost) {
       paged(envs,choices,exportPage,value=>{exportPage=value;},(value,index)=>{const label=node('label'),check=node('input');check.type='checkbox';check.id='huddle-export-environment-'+index;check.checked=environments.includes(value);check.addEventListener('change',()=>{environments=check.checked?[...new Set([...environments,value])]:environments.filter(item=>item!==value);});label.append(check,document.createTextNode(value));envs.append(label);},'export environments');
       const add=advanced('Add another environment');add.append(input('Add an environment',addedEnvironment,value=>{addedEnvironment=value;},'huddle-add-environment'),button('Add environment',()=>{if(!bounded(addedEnvironment)){error='Enter an environment ID of at most 512 characters.';host.render();return;}choices=[...new Set([...choices,addedEnvironment])];environments=[...new Set([...environments,addedEnvironment])];addedEnvironment='';host.render();}));envs.append(add);filters.append(envs);
       const narrow=node('label'),check=node('input');check.type='checkbox';check.checked=currentPageOnly;check.disabled=busy;check.addEventListener('change',()=>{currentPageOnly=check.checked;});narrow.append(check,document.createTextNode('Current page only'));filters.append(narrow);
-      const statuses=node('label','Thread status'),select=node('select');select.id='huddle-export-status';select.setAttribute('aria-label','Thread status');statuses.htmlFor=select.id;for(const [value,text] of [['','Open and resolved'],['open','Open'],['resolved','Resolved']])select.append(new Option(text,value));select.value=status;select.disabled=busy;select.addEventListener('change',()=>{status=select.value as typeof status;});statuses.append(select);filters.append(statuses);panel.append(filters,primary(exportFormat==='json'?'Download JSON':'Download Markdown',()=>download(exportFormat),'download',busy||!environments.length));
+      const statuses=node('label','Thread status'),select=node('select');select.id='huddle-export-status';select.setAttribute('aria-label','Thread status');statuses.htmlFor=select.id;for(const [value,text] of [['','Open and resolved'],['open','Open'],['resolved','Resolved']])select.append(new Option(text,value));select.value=status;select.disabled=busy;select.addEventListener('change',()=>{status=select.value as typeof status;});statuses.append(select);filters.append(statuses);panel.append(filters,primary(exportFormat==='json'?'Download JSON':'Download Markdown',()=>download(exportFormat),'download',busy||!environments.length),primary('Copy Markdown',copyMarkdown,'copy',busy||!environments.length));if(copyText){const label=node('label','Markdown to copy'),text=node('textarea');text.id='huddle-copy-markdown';text.readOnly=true;text.value=copyText;label.htmlFor=text.id;label.append(text);panel.append(label,button('Select text',()=>{text.focus();text.select();},false));}
     }else{
       const steps=node('ol');steps.className='import-steps';steps.setAttribute('aria-label','Import steps');for(const [index,title] of ['Choose file','Review','Import'].entries()){const step=node('li',title),current=execution?2:upload?1:0;if(index===current)step.setAttribute('aria-current','step');steps.append(step);}panel.append(steps);
       panel.append(node('h3',job?.state==='complete'?'Feedback imported':upload?'Review before importing':'Bring feedback here'),node('p',upload?'Check the destination and preview before adding any records.':'Choose a Huddle JSON export. Your existing discussion stays in place.'));

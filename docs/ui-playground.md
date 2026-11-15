@@ -6,7 +6,7 @@ Use Node 24.21.0 and pnpm 10.33.0:
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm playground
+pnpm examples:playground
 ```
 
 Open **http://localhost:4327/playground/**. The command builds the current SDK/examples and starts an example host bound to loopback. It creates its own marked temporary SQLite fixture, takes no database URL and accepts no Pronto credentials. Stop with Ctrl+C; only that invocation's verified disposable fixture is removed. Restarting gives a fresh dataset. Saved local feedback is fictional and lasts until the host stops; export it first if you want to retain it. A non-default loopback port can be set with `HUDDLE_BROWSER_FIXTURE_PORT`.

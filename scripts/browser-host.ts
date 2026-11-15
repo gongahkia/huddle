@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import {ReviewStore,CollaborationError,type Identity,type Scope} from '../packages/host/src/store';
 import {installSqlite,SqliteBackend} from '../packages/host/src/sqlite';
 import {createExpressMiddleware} from '../packages/host/src/express';
-import {addPlayground} from './playground-host';
+import {addPlayground} from '../examples/testing/playground/host';
 
 // A loopback-only disposable host for browser acceptance, never a deployment/auth example.
 if(process.version !== 'v24.21.0') throw new Error('Run the disposable browser host on Node 24.21.0.');
