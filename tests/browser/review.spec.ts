@@ -15,8 +15,8 @@ test('keeps normal browsing intact and handles deliberate selection, Escape, dia
  const fixture = hostFixture(); await fixture.attach(page.context()); await page.setViewportSize({width:390,height:720}); await page.goto('http://localhost:4321/html/?workspace=team');
  await page.locator('#save-profile').click(); await expect(page.locator('#save-status')).toHaveText('Profile saved'); await openReview(page);
  await page.getByRole('button',{name:'Pin a comment',exact:true}).click(); await page.keyboard.press('Escape'); await expect(page.getByRole('button',{name:'Page comment',exact:true})).toBeVisible();
- await page.getByRole('button',{name:'Close',exact:true}).click(); await page.locator('#open-dialog').click(); await openReview(page); await comment(page,'Inside the host dialog'); await expect(page.locator('dialog')).toBeVisible();
- await page.getByRole('button',{name:'Close',exact:true}).click(); await page.locator('#dialog-close').click(); await expect(page.locator('dialog')).not.toBeVisible();
+ await page.getByRole('button',{name:'Collapse feedback',exact:true}).click(); await page.locator('#open-dialog').click(); await openReview(page); await comment(page,'Inside the host dialog'); await expect(page.locator('dialog')).toBeVisible();
+ await page.getByRole('button',{name:'Collapse feedback',exact:true}).click(); await page.locator('#dialog-close').click(); await expect(page.locator('dialog')).not.toBeVisible();
 });
 test('repeated mount/destroy leaves host history wrappers and widgets clean',async ({page}) => {
  await page.goto('http://localhost:4321/html/');
@@ -39,7 +39,7 @@ test('collapsed review keeps pins, previews, drafts and live updates without cov
  await page.setViewportSize({width:320,height:720}); await page.locator('#target-copy').scrollIntoViewIfNeeded(); await pin.focus(); const bounds = await tooltip.boundingBox(); expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(320); expect(bounds!.y+bounds!.height).toBeLessThanOrEqual(720);
  await pin.click(); await expect(page.getByLabel('Reply',{exact:true})).toHaveValue('Unsent reply'); await expect(page.getByRole('button',{name:'Back to comments',exact:true})).toBeFocused();
  await page.getByRole('button',{name:'Collapse feedback',exact:true}).click(); control.allowed = false; await page.clock.fastForward(11000); await expect(page.locator('button.pin')).toHaveCount(0); await expect(tooltip).not.toBeVisible(); await page.getByRole('button',{name:'Expand feedback',exact:true}).click(); await expect(page.locator('textarea')).toHaveCount(0);
- await page.getByRole('button',{name:'Close',exact:true}).click(); await expect(page.locator('[data-huddle-open]')).toHaveCount(0);
+ await page.getByRole('button',{name:'Collapse feedback',exact:true}).click(); await expect(page.locator('[data-huddle-collapsed]')).toHaveCount(1);await expect(page.getByRole('button',{name:'Expand feedback',exact:true})).toBeVisible();
 });
 test('comments on the same element remain individually reachable after picker cancellation',async ({page}) => {
  const fixture = hostFixture(); await fixture.attach(page.context()); await page.goto('http://localhost:4321/html/?workspace=team'); await openReview(page);

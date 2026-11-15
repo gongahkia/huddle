@@ -22,6 +22,12 @@ export function storageConformance(name: string,fixture: () => Promise<StorageFi
       for (const selected of [other,{...scope,environment:'production'}]) await expect(store.detail(selected,saved.thread.id,{},signal())).rejects.toMatchObject({code:'not_found'});
       await expect(create({author: {id:'forged',name:'Forged'}} as Partial<Create>)).rejects.toMatchObject({code:'validation'});
     });
+    it('persists palette choices across authors and rejects unsupported or arbitrary colors',async()=>{
+      const colored=new ReviewStore(f.backend,async()=>({actor:author,capabilities:{mentions:false,assignment:false,directory:false,commentColors:true}})),request=input({color:'violet'}),saved=await colored.create(scope,request,signal());
+      expect(saved.thread.color).toBe('violet');expect(saved.comments.items[0].color).toBe('violet');author=morgan;await colored.reply(scope,saved.thread.id,{idempotencyKey:'colored-reply',body:'A blue reply',color:'blue'},signal());const fresh=await colored.detail(scope,saved.thread.id,{},signal());expect(fresh.thread.color).toBe('violet');expect(fresh.comments.items.find(item=>item.body==='A blue reply')).toMatchObject({color:'blue',author:morgan});expect(fresh.comments.items.find(item=>item.id===saved.comments.items[0].id)?.color).toBe('violet');
+      await expect(store.create(scope,input({color:'green'}),signal())).rejects.toMatchObject({code:'validation'});await expect(colored.create(scope,input({color:'url(https://foreign.test)' as never}),signal())).rejects.toMatchObject({code:'validation'});
+      author=alex;await expect(colored.create(scope,{...request,color:'rose'},signal())).rejects.toMatchObject({code:'conflict'});
+    });
     it('denies previously authorized reads, mutations and change polling after revocation',async () => {
       const saved = await create(); allowed = false;
       for (const run of [() => store.session(scope,signal()),() => store.list(scope,{},signal()),() => store.detail(scope,saved.thread.id,{},signal()),() => store.reply(scope,saved.thread.id,{idempotencyKey:'reply',body:'Denied'},signal()),() => store.changes(scope,undefined,signal())]) await expect(run()).rejects.toMatchObject({code:'forbidden'});

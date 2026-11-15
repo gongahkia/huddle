@@ -17,7 +17,7 @@ const sessions = {alex:randomUUID(),morgan:randomUUID(),guest:randomUUID()}, own
 const alex = {id:'host:alex',name:'Alex'}, morgan = {id:'host:morgan',name:'Morgan'}, members:Identity[] = [alex,morgan,...Array.from({length:251},(_,index) => ({id:`host:member:${index}`,name:`Fixture member ${index}`}))];
 const users = new Map<string,Identity & {internal:boolean}>([[sessions.alex,{...alex,internal:true}],[sessions.morgan,{...morgan,internal:true}],[sessions.guest,{id:'host:guest',name:'Guest',internal:false}]]);
 const path = join(directory,'disposable.sqlite'); installSqlite(path); const backend = new SqliteBackend(path), app = express(); let server:ReturnType<typeof app.listen> | undefined, closing:Promise<void> | undefined;
-const capabilities = {mentions:true,assignment:true,directory:true};
+const capabilities = {mentions:true,assignment:true,directory:true,commentColors:true};
 const allowedScope = (scope:Scope) => {if(scope.workspace !== 'team' || !['preview','production'].includes(scope.environment)) throw new CollaborationError('forbidden','This scope is not available to the fixture user.');};
 const directoryApi = {async lookup(_scope:Scope,ids:string[]) {return members.filter(item => ids.includes(item.id));},async list(_scope:Scope,query:{search?:string;cursor?:string}) {const offset = Number(query.cursor || 0); if(!Number.isSafeInteger(offset) || offset < 0) throw new CollaborationError('validation','Invalid directory cursor.'); const found = members.filter(item => !query.search || item.name.toLowerCase().includes(query.search.toLowerCase())); return {items:found.slice(offset,offset+50),nextCursor:offset+50 < found.length ? String(offset+50) : null};}};
 function internal(request:{headers:{get(name:string):string | null}}) {

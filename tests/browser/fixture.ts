@@ -44,5 +44,5 @@ export function hostFixture() {
     },
   };
 }
-export async function openReview(page: Page) {await page.getByRole('button',{name: 'Open Huddle',exact: true}).click(); await page.getByRole('button',{name: 'Page comment',exact: true}).waitFor();}
+export async function openReview(page: Page) {await page.getByRole('button',{name: 'Expand feedback',exact: true}).click(); await page.getByRole('button',{name: 'Page comment',exact: true}).waitFor();}
 export async function comment(page: Page,body: string) {await page.getByRole('button',{name: 'Page comment',exact: true}).click(); await page.getByLabel('Your comment',{exact: true}).fill(body); await page.getByRole('button',{name: 'Post comment',exact: true}).click(); await page.getByText('Comment saved.',{exact: true}).waitFor();}

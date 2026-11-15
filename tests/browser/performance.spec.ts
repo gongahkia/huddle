@@ -9,10 +9,10 @@ test('records idle CPU/network and heap behavior separately from server load',as
  await expect(page.locator('[data-huddle-root]')).toHaveCount(0);
  const metrics = async () => {await cdp.send('HeapProfiler.collectGarbage'); const result = await cdp.send('Performance.getMetrics'); return Object.fromEntries(result.metrics.map(m => [m.name,m.value]));};
  const base = await metrics(); let requests = 0; page.on('request',() => requests++);
- await page.evaluate(async () => {const {mount} = await import(new URL('/huddle.js',location.href).href),{createHttpAdapter} = await import(new URL('/sdk/http.js',location.href).href); (window as Window & {review?: import('../../packages/browser/src/index').Huddle}).review = mount({adapter:createHttpAdapter(),namespace:'performance',workspace:'team',environment:'staging'});});
+ await page.evaluate(async () => {const {mount} = await import(new URL('/huddle.js',location.href).href),{createHttpAdapter} = await import(new URL('/sdk/http.js',location.href).href); (window as Window & {review?: import('../../packages/browser/src/index').Huddle}).review = mount({adapter:createHttpAdapter(),namespace:'performance',workspace:'team',environment:'staging'});(window as Window & {review?: import('../../packages/browser/src/index').Huddle}).review?.close();});
  const mounted = await metrics(); const beforeIdle = requests;
  await page.waitForTimeout(3000); const idle = await metrics(); const idleRequests = requests - beforeIdle;
- await page.getByRole('button',{name: 'Open Huddle',exact: true}).click(); await page.screenshot({path: 'output/browser/widget.png'});
+ await page.getByRole('button',{name: 'Expand feedback',exact: true}).click(); await page.screenshot({path: 'output/browser/widget.png'});
  await page.evaluate(() => {const w = window as Window & {review?: import('../../packages/browser/src/index').Huddle}; w.review?.destroy(); delete w.review;});
  await expect(page.locator('[data-huddle-root]')).toHaveCount(0); const cleaned = await metrics();
  expect(idleRequests).toBe(0); expect(cleaned.JSEventListeners - base.JSEventListeners).toBeLessThanOrEqual(2);

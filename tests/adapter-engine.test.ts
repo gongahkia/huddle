@@ -24,7 +24,7 @@ it('uses host identity without popup or role UI and restores focus to a host lau
   widget.close(); expect(document.activeElement).toBe(launcher); expect(text()).not.toContain('Shared by the host');
 });
 it('polls only while open and stops on close/destroy without accumulating requests',async () => {
-  const adapter = new TestAdapter(), changes = vi.spyOn(adapter,'changes'); widget = mount(options(adapter)); await vi.advanceTimersByTimeAsync(30000); expect(changes).not.toHaveBeenCalled();
+  const adapter = new TestAdapter(), changes = vi.spyOn(adapter,'changes'); widget = mount({...options(adapter),launcher:'hidden'}); await vi.advanceTimersByTimeAsync(30000); expect(changes).not.toHaveBeenCalled();
   widget.open(); await settle(); expect(changes).toHaveBeenCalledTimes(1);
   await vi.advanceTimersByTimeAsync(10000); expect(changes).toHaveBeenCalledTimes(2);
   widget.close(); await vi.advanceTimersByTimeAsync(30000); expect(changes).toHaveBeenCalledTimes(2);
@@ -73,7 +73,7 @@ it('collapses without stopping live reads or losing the draft, and closes review
   expect(root().activeElement?.getAttribute('aria-label')).toBe('Expand feedback');
   await vi.advanceTimersByTimeAsync(10000); expect(changes).toHaveBeenCalledTimes(2);
   widget.open(); expect(root().querySelector('textarea')!.value).toBe('Keep my draft while browsing'); expect(document.querySelector('[data-huddle-collapsed]')).toBeNull();
-  widget.collapse(); widget.close(); const count = changes.mock.calls.length; await vi.advanceTimersByTimeAsync(30000); expect(changes).toHaveBeenCalledTimes(count); expect(root().querySelector('.review-dock')).toBeNull(); expect(document.querySelector('[data-huddle-open]')).toBeNull();
+  widget.collapse(); widget.close(); const count = changes.mock.calls.length; await vi.advanceTimersByTimeAsync(30000); expect(changes).toHaveBeenCalledTimes(count); expect(root().querySelector('.review-dock')).not.toBeNull();expect(root().querySelector('[aria-label=Close]')).toBeNull();expect(document.querySelector('[data-huddle-open]')).toBeNull();
 });
 it('keeps picker cancellation available while a background list refresh is pending',async () => {
   const adapter = new TestAdapter(); widget = mount(options(adapter)); widget.open(); await settle(); click('Pin a comment');

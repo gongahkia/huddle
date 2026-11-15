@@ -1,4 +1,4 @@
-import {randomUUID} from 'node:crypto';
+import {randomInt,randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {CollaborationError,type Capabilities,type ChangePage,type Comment,type Create,type Detail,type DetailQuery,type History,type Identity,type ImportMapping,type ExportScope,type ListQuery,type Page,type Reply,type Scope,type Session,type Thread,type Update} from '../../shared/src/collaboration';
 import {httpSchemas} from '../../shared/src/protocol';
@@ -12,6 +12,12 @@ export type {Backend,Collection,TemporaryCollection,RemovableCollection,RecordVa
 export {CollaborationError,isCollaborationError} from '../../shared/src/collaboration';
 export type {Identity,Scope,Capabilities} from '../../shared/src/collaboration';
 
+// issue once per host visitor session; display names are not authorization credentials.
+export function createAnonymousIdentity():Identity {
+  const adjectives=['Curious','Sunny','Kind','Brave','Quiet','Clever','Gentle','Merry','Calm','Bright','Happy','Swift','Witty','Cozy','Lively','Patient'];
+  const animals=['Otter','Panda','Robin','Fox','Koala','Badger','Heron','Dolphin','Finch','Rabbit','Owl','Lynx','Gecko','Penguin','Capybara','Turtle'];
+  return {id:'anonymous:'+randomUUID(),name:adjectives[randomInt(adjectives.length)]+' '+animals[randomInt(animals.length)]};
+}
 export type Authorization = {actor: Identity; capabilities: Capabilities};
 export type Authorize = (scope: Scope,signal: AbortSignal) => Promise<Authorization>;
 export type Directory = {lookup(scope: Scope,ids: string[],signal: AbortSignal): Promise<Identity[]>; list(scope: Scope,query: {search?: string; cursor?: string},signal: AbortSignal): Promise<Page<Identity>>};

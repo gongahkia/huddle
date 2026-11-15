@@ -2,18 +2,19 @@ import express,{type Express} from 'express';
 import {randomUUID} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
-import {ReviewStore,CollaborationError,type Backend,type Identity,type Scope} from '../packages/host/src/store';
+import {ReviewStore,createAnonymousIdentity,CollaborationError,type Backend,type Identity,type Scope} from '../packages/host/src/store';
 import {createExpressMiddleware} from '../packages/host/src/express';
 
 // this fictional host shares only the browser fixture's explicitly disposable backend.
 export async function addPlayground(app:Express,backend:Backend,origin:string) {
-  const csrf = randomUUID(), full = {directory:true,mentions:true,assignment:true}, basic = {directory:false,mentions:false,assignment:false};
+  const csrf = randomUUID(), full = {directory:true,mentions:true,assignment:true,commentColors:true}, basic = {directory:false,mentions:false,assignment:false,commentColors:true};
   const actors = {alex:{id:'playground:alex',name:'Alex Rivera'},morgan:{id:'playground:morgan',name:'Morgan Chen'},guest:{id:'playground:guest',name:'Guest'}};
   const members:Identity[] = [actors.alex,actors.morgan,...Array.from({length:62},(_,n) => ({id:`playground:member:${n}`,name:`Sample teammate ${n+1}`}))];
   type Fault = 'normal'|'slow'|'unavailable'|'writes'|'expired';
-  type Session = {actor:Identity;guest:boolean;workspace:string;capabilities:typeof full;fault:Fault};
+  type Session = {actor:Identity;guest:boolean;workspace:string;capabilities:typeof full;fault:Fault;anonymous?:boolean;placeholderName?:string};
   const sessions = new Map<string,Session>();
-  const directory = {async lookup(_scope:Scope,ids:string[]) {return members.filter(member => ids.includes(member.id));},async list(_scope:Scope,query:{search?:string;cursor?:string}) {const offset = Number(query.cursor || 0); if(!Number.isSafeInteger(offset)||offset<0) throw new CollaborationError('validation','Invalid member cursor.');const found = members.filter(member => !query.search || member.name.toLowerCase().includes(query.search.toLowerCase()));return {items:found.slice(offset,offset+50),nextCursor:offset+50<found.length?String(offset+50):null};}};
+  const directoryMembers=()=>[...new Map([...members,...[...sessions.values()].filter(value=>value.anonymous).map(value=>value.actor)].map(member=>[member.id,member])).values()];
+  const directory = {async lookup(_scope:Scope,ids:string[]) {return directoryMembers().filter(member => ids.includes(member.id));},async list(_scope:Scope,query:{search?:string;cursor?:string}) {const offset = Number(query.cursor || 0); if(!Number.isSafeInteger(offset)||offset<0) throw new CollaborationError('validation','Invalid member cursor.');const found = directoryMembers().filter(member => !query.search || member.name.toLowerCase().includes(query.search.toLowerCase()));return {items:found.slice(offset,offset+50),nextCursor:offset+50<found.length?String(offset+50):null};}};
   const seed = new ReviewStore(backend,async () => ({actor:actors.alex,capabilities:full}),directory), signal = new AbortController().signal;
   for(const workspace of ['playground','playground-busy']) {
     const scope = {workspace,environment:'preview'}, page = '/playground/app/overview';
@@ -35,10 +36,14 @@ export async function addPlayground(app:Express,backend:Backend,origin:string) {
   app.post('/playground/session',express.json({limit:'4kb'}),(request,response) => {
     if(!protect(request)) {response.sendStatus(403);return;}
     const {reviewer,scenario,capabilities} = request.body || {};
-    if(!Object.hasOwn(actors,reviewer) || !['populated','empty','busy'].includes(scenario) || !['full','basic'].includes(capabilities)) {response.sendStatus(400);return;}
-    const token = randomUUID(), actor = actors[reviewer as keyof typeof actors], workspace = scenario==='empty'?'playground-empty':scenario==='busy'?'playground-busy':'playground';
+    if((!Object.hasOwn(actors,reviewer)&&reviewer!=='anonymous') || !['populated','empty','busy'].includes(scenario) || !['full','basic'].includes(capabilities)) {response.sendStatus(400);return;}
+    const prior=sessions.get(request.get('X-Playground-Session')||''),anonymous=reviewer==='anonymous',actor=anonymous?(prior?.anonymous?prior.actor:createAnonymousIdentity()):actors[reviewer as keyof typeof actors],placeholderName=anonymous?(prior?.placeholderName||actor.name):undefined;
+    const token = randomUUID(), workspace = scenario==='empty'?'playground-empty':scenario==='busy'?'playground-busy':'playground';
     if(sessions.size>=256) sessions.delete(sessions.keys().next().value!);
-    sessions.set(token,{actor,workspace,guest:reviewer==='guest',capabilities:capabilities==='full'?full:basic,fault:'normal'});response.json({token,actor,workspace});
+    sessions.set(token,{actor,workspace,guest:reviewer==='guest',capabilities:capabilities==='full'?full:basic,fault:'normal',anonymous,placeholderName});response.json({token,actor,workspace,anonymous});
+  });
+  app.post('/playground/name',express.json({limit:'4kb'}),(request,response)=>{
+    if(!protect(request)){response.sendStatus(403);return;}const record=sessions.get(request.get('X-Playground-Session')||''),name=request.body?.name;if(!record?.anonymous){response.sendStatus(403);return;}if(typeof name!=='string'||name.trim().length>80||[...name].some(character=>character.charCodeAt(0)<32||character.charCodeAt(0)===127)){response.sendStatus(400);return;}record.actor.name=name.trim()||record.placeholderName!;response.json({actor:record.actor});
   });
   app.post('/playground/control',express.json({limit:'4kb'}),(request,response) => {
     if(!protect(request)) {response.sendStatus(403);return;} const record = sessions.get(request.get('X-Playground-Session') || ''), fault = request.body?.fault;
