@@ -1,5 +1,7 @@
 > Historical service-backed milestone. The approved frontend-only architecture, current verification and remaining hosted gates are in [the current acceptance audit](acceptance-current.md). Commands, roles and performance results below apply to the recorded older revision.
 
+Historical v0.1 service reference: that service and its management app are retired. This document does not describe the current browser library. See [current host contracts](collaboration-contract.md) and [acceptance evidence](acceptance-current.md).
+
 # Huddle release completion audit
 
 Audited 14 November 2026 (Asia/Singapore) against the complete objective in GOAL.md. Implementation revision **37afbf6** is the original goal-completion baseline. Subsequent bootstrap and integration hardening are recorded in [verification](verification.md). The original acceptance table below remains historical evidence for that baseline. The source project is preserved.

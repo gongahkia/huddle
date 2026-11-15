@@ -1,6 +1,8 @@
-import type {Anchor} from './index';
-
-export type {Anchor};
+export type Anchor = {
+  kind: 'page' | 'element'; selector: string; label: string; quote: string;
+  x: number; y: number; tag?: string; stableKey?: string; context?: string;
+  viewport?: {width: number; height: number};
+};
 export type Json = null | boolean | number | string | Json[] | {[key: string]: Json};
 export type Identity = {id: string; name: string};
 export type Scope = {workspace: string; environment: string};

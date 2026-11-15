@@ -38,7 +38,6 @@
   "exclude": ["**/.next/**", "**/.nuxt/**", "**/.output/**", "**/.svelte-kit/**", "**/.astro/**", "node_modules"],
   "include": [
     "packages",
-    "apps",
     "scripts",
     "examples",
     "tests",

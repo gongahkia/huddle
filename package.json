@@ -9,9 +9,6 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "dev": "tsx watch apps/server/src/main.ts",
-    "start": "node dist/server.js",
-    "bootstrap": "tsx scripts/bootstrap.ts",
     "build": "tsx scripts/build.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -25,18 +22,13 @@
     "examples:next": "NEXT_TELEMETRY_DISABLED=1 pnpm --dir output/frameworks/next exec next start -H 127.0.0.1 -p 4322",
     "check:bundle": "tsx scripts/bundle-budget.ts",
     "generate:schemas": "tsx scripts/feedback-schema.ts && tsx scripts/http-schema.ts",
-    "bench:load": "tsx scripts/load.ts",
     "bench:browser": "playwright test tests/browser/performance.spec.ts --reporter=line",
-    "import:pronto": "tsx scripts/import.ts",
     "examples": "tsx scripts/examples.ts",
-    "test:docker": "tsx scripts/docker-smoke.ts",
     "test:package": "tsx scripts/package-smoke.ts && tsx scripts/host-package-smoke.ts",
     "test:storage:sqlite": "vitest run tests/sqlite-conformance.test.ts tests/sqlite-exports.test.ts tests/sqlite-imports.test.ts",
     "test:storage:postgres": "vitest run --config vitest.storage.config.ts tests/database/postgres.spec.ts",
     "test:package:postgres": "tsx scripts/host-package-smoke.ts --postgres",
     "fixtures:postgres": "tsx scripts/postgres-runtime.ts",
-    "backup": "tsx scripts/cli.ts backup",
-    "bench:storage": "tsx scripts/storage-benchmark.ts",
     "test:storage:mysql": "vitest run --config vitest.storage.config.ts tests/database/mysql.spec.ts",
     "test:package:mysql": "tsx scripts/host-package-smoke.ts --mysql",
     "fixtures:mysql": "tsx scripts/mysql-runtime.ts",
@@ -51,8 +43,6 @@
     "fixtures:webkit": "tsx scripts/webkit-runtime.ts"
   },
   "dependencies": {
-    "@fastify/cors": "11.4.3",
-    "@fastify/rate-limit": "11.2.2",
     "@fastify/static": "10.1.11",
     "fastify": "5.12.8",
     "react": "19.3.1",

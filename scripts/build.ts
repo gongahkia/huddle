@@ -6,7 +6,7 @@ import {dts} from 'rollup-plugin-dts';
 import {resolve} from 'node:path';
 import {svelte} from '@sveltejs/vite-plugin-svelte';
 import solid from 'vite-plugin-solid';
-await mkdir('dist/public',{recursive: true}); await rm('packages/browser/dist',{recursive: true,force: true}); await mkdir('packages/browser/dist',{recursive: true});
+await rm('dist',{recursive:true,force:true}); await mkdir('dist/public',{recursive: true}); await rm('packages/browser/dist',{recursive: true,force: true}); await mkdir('packages/browser/dist',{recursive: true});
 await build({entryPoints: ['packages/browser/src/embed.ts'],bundle: true,format: 'iife',globalName: 'Huddle',minify: true,target: 'es2022',outfile: 'dist/public/embed.js'});
 const helpers = ['react','preact','vue','svelte','solid','angular','astro'];
 const entries = {huddle: 'packages/browser/src/index.ts',http: 'packages/browser/src/http.ts',...Object.fromEntries(helpers.map(name => [name,`packages/browser/src/adapters/${name}.ts`]))};
@@ -20,9 +20,6 @@ for (const [name,entry] of Object.entries(entries)) {
  const declarations = await rollup({input: entry,plugins: [dts({compilerOptions: {paths: {'@huddle/shared': ['./packages/shared/src/index.ts']}}})],external: id => !id.startsWith('.') && !id.startsWith('/') && id !== '@huddle/shared'});
  await declarations.write({file: `packages/browser/dist/${name === 'huddle' ? 'index' : name}.d.ts`,format: 'es'}); await declarations.close();
 }
-await build({entryPoints: ['apps/server/src/main.ts'],bundle: true,platform: 'node',target: 'node24',format: 'esm',packages: 'external',outfile: 'dist/server.js'});
-await build({entryPoints: ['scripts/cli.ts'],bundle: true,platform: 'node',target: 'node24',format: 'esm',packages: 'external',outfile: 'dist/cli.js'});
-await viteBuild({root: 'apps/manage',build: {outDir: resolve('dist/public'),emptyOutDir: false},logLevel: 'warn'});
 await cp('examples/html','dist/examples/html',{recursive: true}); await mkdir('dist/examples/html/vendor',{recursive:true});
 await cp('node_modules/jquery/dist/jquery.min.js','dist/examples/html/vendor/jquery.min.js'); await cp('node_modules/htmx.org/dist/htmx.min.js','dist/examples/html/vendor/htmx.min.js');
 await cp('examples/style.css','dist/examples/style.css'); await cp('dist/public/huddle.js','dist/examples/huddle.js');
@@ -34,7 +31,7 @@ for (const example of ['react','angular','vue','svelte','preact','solid']) {
 // The HTML example uses the same built browser module served by the example host.
 const meta = JSON.parse(await readFile('package.json','utf8'));
 await writeFile('dist/build.json',JSON.stringify({version: meta.version,node: process.version}) + '\n');
-console.log('Built service, management UI, widget, declarations and seven framework/HTML examples.');
+console.log('Built browser SDK, declarations and seven framework/HTML examples.');
 const hostEntries = {store:'packages/host/src/store.ts',sqlite:'packages/host/src/sqlite.ts',postgres:'packages/host/src/postgres.ts',mysql:'packages/host/src/mysql.ts',mongodb:'packages/host/src/mongodb.ts',http:'packages/host/src/http.ts',next:'packages/host/src/next.ts',express:'packages/host/src/express.ts',fastify:'packages/host/src/fastify.ts'};
 await rm('packages/host/dist',{recursive:true,force:true});
 await build({entryPoints:hostEntries,bundle:true,splitting:true,platform:'node',target:'node24',format:'esm',packages:'external',outdir:'packages/host/dist',chunkNames:'chunks/[name]-[hash]'});

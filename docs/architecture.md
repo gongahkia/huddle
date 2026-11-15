@@ -1,5 +1,7 @@
 > Architecture transition: the approved frontend-only plan is in [implementation-plan.adoc](implementation-plan.adoc). The service-backed setup and results below describe the legacy implementation. See [current progress](frontend-progress.md) for the active work.
 
+Historical v0.1 service reference: that service and its management app are retired. This document does not describe the current browser library. See [current host contracts](collaboration-contract.md) and [acceptance evidence](acceptance-current.md).
+
 # Architecture and interfaces
 
 ## Components
