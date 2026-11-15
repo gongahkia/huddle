@@ -9,8 +9,8 @@ import {exportFeedback} from './export';
 import {FeedbackImports,type TransferOptions} from './import';
 export type {TransferOptions} from './import';
 export type {Backend,Collection,TemporaryCollection,RemovableCollection,RecordValue,Scan,Transaction} from './backend';
-export {CollaborationError,isCollaborationError} from '../../shared/src/collaboration';
-export type {Identity,Scope,Capabilities} from '../../shared/src/collaboration';
+export {COMMENT_COLORS,CollaborationError,isCollaborationError} from '../../shared/src/collaboration';
+export type {CommentColor,Identity,Scope,Capabilities} from '../../shared/src/collaboration';
 
 // issue once per host visitor session; display names are not authorization credentials.
 export function createAnonymousIdentity():Identity {

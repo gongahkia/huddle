@@ -34,7 +34,7 @@ export function attachMentions(options:Options):() => void {
     list.replaceChildren();paging.replaceChildren();active=0;
     status.textContent=selected.length>=30?'Mention limit reached. Remove a mention to choose someone else.':items.length?'Choose a person · ↑ ↓ then Enter':'No matching members';
     for(const [index,member] of items.entries()){const option=document.createElement('div');option.id='huddle-mention-option-'+index;option.setAttribute('role','option');option.className='mention-option';option.textContent=member.name;const disabled=selected.length>=30 && !selected.some(item=>item.id===member.id);option.setAttribute('aria-disabled',String(disabled));option.addEventListener('pointerdown',event=>event.preventDefault(),{signal});option.addEventListener('click',()=>{if(!disabled)choose(member);},{signal});list.append(option);}
-    const more=(label:string,run:()=>void)=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.addEventListener('click',run,{signal});paging.append(button);};
+    const more=(label:string,run:()=>void)=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.addEventListener('click',()=>{textarea.focus({preventScroll:true});run();},{signal});paging.append(button);};
     if(cursor)more('First suggestions',()=>{cursor=undefined;void load();});if(next)more('More suggestions',()=>{cursor=next!;void load();});highlight();
   }
   async function load() {
@@ -50,7 +50,7 @@ export function attachMentions(options:Options):() => void {
   }
   textarea.addEventListener('input',changed,{signal});textarea.addEventListener('click',changed,{signal});
   textarea.addEventListener('compositionstart',()=>{composing=true;close();},{signal});textarea.addEventListener('compositionend',()=>{composing=false;changed();},{signal});
-  textarea.addEventListener('keydown',event=>{if(composing||event.isComposing||popup.hidden)return;if(['ArrowDown','ArrowUp'].includes(event.key)&&items.length){event.preventDefault();active=(active+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;highlight();}else if(event.key==='Enter'&&items[active]){event.preventDefault();choose(items[active]);}else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();}else if(event.key==='Tab')close();},{signal});
+  textarea.addEventListener('keydown',event=>{if(composing||event.isComposing||popup.hidden)return;if(['ArrowDown','ArrowUp'].includes(event.key)&&items.length){event.preventDefault();active=(active+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;highlight();}else if(event.key==='Enter'&&items[active]){event.preventDefault();choose(items[active]);}else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();}},{signal});
   textarea.addEventListener('blur',()=>{clearTimeout(timer);timer=setTimeout(()=>{if(!popup.contains(textarea.getRootNode() instanceof ShadowRoot ? (textarea.getRootNode() as ShadowRoot).activeElement : document.activeElement))close();},120);},{signal});
   signal.addEventListener('abort',()=>{close();popup.remove();chips.remove();help.remove();},{once:true});drawChips();
   return ()=>life.abort();

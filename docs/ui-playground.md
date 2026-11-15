@@ -11,14 +11,14 @@ pnpm playground
 
 Open **http://localhost:4327/playground/**. The command builds the current SDK/examples and starts an example host bound to loopback. It creates its own marked temporary SQLite fixture, takes no database URL and accepts no Pronto credentials. Stop with Ctrl+C; only that invocation's verified disposable fixture is removed. Restarting gives a fresh dataset. Saved local feedback is fictional and lasts until the host stops; export it first if you want to retain it. A non-default loopback port can be set with `HUDDLE_BROWSER_FIXTURE_PORT`.
 
-The Atlas example is a small working product with Overview and Settings pages, forms, a table, changing targets, a scrollable activity panel and a native preferences dialog. Its Feedback launcher mounts the actual built SDK from `/sdk`, through the real HTTP adapter and SQLite reference store. There is no playground-specific implementation of the Huddle panel or pins.
+The Atlas example is a small working product with Overview and Settings pages, forms, a table, changing targets, a scrollable activity panel and a native preferences dialog. The persistent dock and host Feedback launcher use the actual built SDK from `/sdk`, through the real HTTP adapter and SQLite reference store. There is no playground-specific implementation of the Huddle panel or pins.
 
 ## Controls and data
 
 - **Everyday review** includes several threads on one target, two authors, long replies/history, a mention, assignment, a resolved thread and feedback on another page.
 - **Empty workspace** starts without feedback and supports creating your own page and element comments.
 - **Busy workspace** adds enough threads for list paging; the long discussion and member directory also span pages.
-- **Reviewer** switches among Alex, Morgan and a guest who can browse the example but is denied review access. **Open a second reviewer** gives another independent host-issued fixture session, even in the same browser profile. These are fictional local personas, not Huddle accounts or production session middleware.
+- **Reviewer** defaults to an anonymous visitor with a generated display name. Expand the dock, click the reviewer name in the footer, and optionally set your own name; its stable host-issued ID survives Reload example. Alex/Morgan remain useful fixed personas, alongside a guest who can browse the example but is denied review access. **Open a second reviewer** gives another independent host-issued fixture session, even in the same browser profile. These are fictional local personas, not Huddle accounts or production session middleware.
 - **Host capabilities** offers the complete directory/mentions/assignment UI or basic commenting.
 - **Preview size** changes the actual iframe viewport to available desktop width, 390 × 844 or 320 × 720. It does not scale a desktop screenshot. **Open example full-page** also supports normal browser/device inspection.
 - **Theme** applies coordinated host and widget light/dark tokens.
@@ -32,7 +32,7 @@ Changing reviewer, dataset or capabilities reloads the sample application; chang
 | --- | --- |
 | Initial states | Empty, seeded, busy, checking access, loading, basic capabilities and guest denial. |
 | Reading | Cards, authors, counts, wrapping, Unicode, unread state, resolved filters, all pages, full reply/history/member paging. |
-| Pins | Collapse/expand, hover and keyboard previews, Escape, shared targets, viewport edges, page scrolling and nested scrolling. |
+| Pins | Drag and keyboard-move/reset the persistent dock; collapse/expand transitions, reduced motion, speech-bubble shapes, shared color choices, hover and keyboard previews, Escape, shared targets, viewport edges, page scrolling and nested scrolling. |
 | Writing | Page/element comments, multiline drafts, mentions/assignment, reply, resolve/reopen, locate, reattach and cancel. |
 | Accessibility | Keyboard-only use, focus/return focus, readable Cancel in both picker modes and themes, labels, contrast, narrow layouts and browser zoom. |
 | Navigation | Overview/Settings with active review, unsent drafts and the sidebar collapsed. |
@@ -53,7 +53,7 @@ The suite uses its own loopback fixture on port 4326 and leaves a manual playgro
 
 Record the SDK/source revision, browser/device widths, checked states, actual automated results, visual findings and remaining limitations. A sample-host pass is UI evidence; the existing database/framework/portability and real consumer engineering gates retain their own acceptance meaning. Do not update or deploy Pronto merely to preview widget changes.
 
-## Implementation verification — 15 November 2026
+## Initial playground verification — 15 November 2026 (`ce1d5bc`)
 
 Verified with Node 24.21.0, pnpm 10.33.0, Playwright 1.65.0 and the unchanged browser SDK 0.2.4. The working changes extend commit `123fb0b`; the containing commit completes the playground's host/build wiring, documentation and checks.
 

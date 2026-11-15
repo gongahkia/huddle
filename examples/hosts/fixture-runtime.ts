@@ -73,7 +73,7 @@ export async function fixtureOptions(framework: Framework,databaseName: string) 
     origin:config.origins[framework],basePath:'/api/review/'+database,
     async api(request: Request,signal: AbortSignal,native?: object) {
       signal.throwIfAborted(); const user = await actor(request,framework,native); if((await state()).unavailable.includes(key)) throw new Error('Private fixture backend detail must not reach the browser.'); const connection = await backendFor(framework,database);
-      return new ReviewStore(connection.backend,async scope => {allowedScope(scope); if((await state()).revoked.includes(key+':'+user.id)) throw new CollaborationError('forbidden','Internal review access was revoked.'); return {actor:{id:user.id,name:user.name},capabilities:{mentions:false,assignment:false,directory:false}};});
+      return new ReviewStore(connection.backend,async scope => {allowedScope(scope); if((await state()).revoked.includes(key+':'+user.id)) throw new CollaborationError('forbidden','Internal review access was revoked.'); return {actor:{id:user.id,name:user.name},capabilities:{mentions:false,assignment:false,directory:false,commentColors:true}};});
     },
     async verifyMutation(request: Request,signal: AbortSignal,native?: object) {signal.throwIfAborted(); const user = await actor(request,framework,native); if(request.headers.get('Origin') !== config.origins[framework] || request.headers.get('X-Fixture-CSRF') !== user.csrf) throw new CollaborationError('forbidden','The host CSRF check failed.');},
   };
