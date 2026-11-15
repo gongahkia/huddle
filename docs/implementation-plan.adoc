@@ -21,6 +21,10 @@ Hosted positive acceptance for this Pronto policy uses two distinct genuine choo
 
 Shared widget UI is developed and reviewed in Huddle's own example playground before porting a verified SDK to a consumer. Pronto dogfooding validates engineering integration, host policy/storage, CSP/lifecycle, packaging, migration and deployment; retain basic deployed rendering and collaboration smoke checks. Do not use Pronto as the primary widget UI iteration environment or maintain a Pronto-only widget fix. See link:decisions/0001-huddle-ui-dogfooding.md[ADR 0001] and link:ui-playground.md[the local playground guide]. This decision supersedes any older workflow here that treats Pronto as the initial UI review surface. Existing engineering, data-preservation and hosted acceptance gates remain required.
 
+== Local-only and team modes approved 15 November 2026
+
+After the current first-visit onboarding and compact-dock UI refinement, Huddle must support both an explicit local-only browser mode requiring no backend/team database, with formatted copy/export for coding agents, and the existing team mode using host APIs and shared storage. Both use the same widget and framework helpers. Local-only mode is not a separate product service or a fallback for failed team authorization. See link:decisions/0002-local-and-team-modes.md[ADR 0002] for the sequence and acceptance boundaries. This supersedes any blanket requirement below that all installations need an authoritative shared backend; shared collaboration still does.
+
 == Workspace and first actions on a new machine
 
 Assume two independent Git repositories checked out under the same parent directory:

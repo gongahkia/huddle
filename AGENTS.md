@@ -4,6 +4,7 @@ Huddle is a frontend review library using host authentication, APIs and storage;
 Use Node 24.21.0 and pnpm 10.33.0. The approved cross-repository implementation in docs/implementation-plan.adoc includes the sibling pronto-prod integration.
 The legacy product service, management app, account bootstrap and source-specific importer are retired. Huddle delegates public or authenticated review policy to the host.
 UI development and dogfooding belong in Huddle's local example playground, before updating a consumer. Pronto dogfooding validates engineering integration, existing host identity/policy, storage, CSP, lifecycle, packaging and deployment. Reproduce and fix shared UI issues in Huddle; do not patch a Pronto-only widget. Follow docs/decisions/0001-huddle-ui-dogfooding.md and docs/ui-playground.md. Updating examples does not authorize a Pronto SDK refresh or deployment.
+The approved next operating-mode work supports explicit backend-free local review plus host-backed team review through one UI; follow docs/decisions/0002-local-and-team-modes.md after finishing the current onboarding/dock refinement. Do not silently fall back from a failed team connection to local feedback.
 Keep credentials, databases, build output and benchmark raw data out of Git.
 Use isolated disposable Huddle test data. Make coherent atomic commits.
 Before completion run typecheck, lint, test, build, browser tests and bundle checks.

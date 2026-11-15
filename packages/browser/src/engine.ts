@@ -121,7 +121,7 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
       const dock=el('aside',undefined,'review-dock');dock.setAttribute('aria-label','Collapsed Huddle feedback');
       const handle=action('Move feedback toolbar','grip',()=>{});handle.disabled=false;handle.classList.add('drag-handle');
       const expand=action('Expand feedback','expand',()=>controller.open(),false);expand.disabled=false;expand.setAttribute('aria-expanded','false');expand.setAttribute('aria-controls','huddle-panel');
-      dock.append(handle,expand);if(opened){const status=el('span',error?'Feedback unavailable':connecting?'Loading feedback…':needsOnboarding()?'Choose your name':stale?'Updates paused':'Pins visible','muted');if(error||stale)status.setAttribute('role','status');dock.append(status);}
+      expand.querySelector('span')!.textContent='Huddle';dock.append(handle,expand);if(opened&&(error||stale)){const status=el('span',error?'Feedback unavailable':'Updates paused','sr-only');status.setAttribute('role','status');dock.append(status);}
       ui.append(dock);presentation.attach(dock,handle);presentation.finish(ui);if(opened)scheduleResolution();else clearPins();return;
     }
     const panel = el('aside',undefined,'panel'); panel.id = 'huddle-panel'; panel.setAttribute('aria-label','Huddle feedback');
@@ -134,7 +134,7 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
     if(nameScreen){
       panel.classList.add('onboarding');content.setAttribute('aria-busy',String(busy||connecting));renderReviewerName(content,needsOnboarding());panel.append(header,content);ui.append(panel);presentation.finish(ui);
       if(focusId){const target=shadow.getElementById(focusId);if(target instanceof HTMLElement){target.focus({preventScroll:true});if(selection&&target instanceof HTMLInputElement&&selection.start!==null&&selection.end!==null)target.setSelectionRange(selection.start,selection.end);}}
-      if(session&&needsOnboarding()&&!nameFieldSeen){shadow.getElementById('huddle-display-name')?.focus({preventScroll:true});nameFieldSeen=true;}return;
+      if(session&&needsOnboarding()&&!nameFieldSeen){const field=shadow.getElementById('huddle-display-name');if(field instanceof HTMLInputElement&&!field.disabled){field.focus({preventScroll:true});nameFieldSeen=true;}}return;
     }
     if(scopeExpanded) {const details = el('div',undefined,'scope-details'); details.id = 'huddle-scope'; details.append(el('h3','Review details'));if(session)details.append(el('p','Reviewing as '+session.actor.name));details.append(el('p',`Workspace: ${currentContext.workspace}`),el('p',`Environment: ${currentContext.environment}`)); if(currentContext.release) details.append(el('p',`Release: ${currentContext.release}`)); content.append(details);}
     content.setAttribute('aria-busy',String(busy || loading || detailLoading || connecting));
