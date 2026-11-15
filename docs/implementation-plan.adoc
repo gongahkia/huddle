@@ -9,6 +9,14 @@ This document is a self-contained handoff for implementing Huddle on another mac
 
 *Preparing this document does not authorize its author to begin implementation.* A subsequent task should explicitly ask the implementing engineer or agent to execute it. During that implementation, work through the stages below, make coherent atomic commits, and continue until the acceptance criteria are met or a concrete external prerequisite prevents further progress.
 
+== Access policy revision approved 15 November 2026
+
+This revision supersedes the internal-only access and named-browser-session requirements elsewhere in this original plan. Huddle delegates access policy to the host and supports both authenticated internal review and explicitly open review, without a Huddle account system or required interactive login. The host still issues a stable reviewer identity, derives authorship, validates allowed scopes, protects mutations and rechecks access. Public review does not make every host scope public or trust browser-supplied identities.
+
+For Pronto, the user explicitly approved showing *existing feedback to every demo visitor*, as well as accepting new discussion through the existing public view chooser. Preserve stored user records and historical authors; removing interactive sign-in does not authorize deleting accounts. Use an explicit server-owned public-demo policy, while retaining internal mode for private deployments and named authorization for migration administration. Public mode does not expose the internal member directory or enable assignment/mentions.
+
+Hosted positive acceptance for this Pronto policy uses two distinct genuine chooser sessions, imported history, shared pin/reply/status/export and persistence from a fresh visitor. Verify missing/forged/revoked sessions, foreign scopes and cross-origin writes are denied. Guest denial remains required in internal mode. A successful public-mode test is not evidence of internal authenticated-mode acceptance. All backup, migration parity, deployment-revision, rollback, privacy and spending boundaries below remain in force.
+
 == Workspace and first actions on a new machine
 
 Assume two independent Git repositories checked out under the same parent directory:

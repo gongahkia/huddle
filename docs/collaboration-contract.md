@@ -14,7 +14,7 @@ Success responses are direct JSON DTOs, without a wrapping envelope, except expo
 
 | Method and relative path | Request | Success |
 | --- | --- | --- |
-| GET `/session` | Scope query | 200 Session; denied access is an error, never a guest identity |
+| GET `/session` | Scope query | 200 Session with a host-approved reviewer; denied access is an error |
 | GET `/threads` | Scope + ListQuery | 200 Page<Thread> |
 | GET `/threads/{id}` | Scope + DetailQuery | 200 Detail |
 | POST `/threads` | Create JSON | 201 Detail |
@@ -28,7 +28,7 @@ Success responses are direct JSON DTOs, without a wrapping envelope, except expo
 | POST `/imports/jobs` | `{previewId,digest,idempotencyKey}` | 202 ImportJob |
 | GET `/imports/jobs/{id}` | Scope | 200 ImportJob |
 
-`session` capabilities are host features, not roles. Unsupported mentions/assignment values produce a validation error rather than being dropped. Directory is available only when declared. All authenticated internal reviewers have the same review permissions. The host derives mutation author and timestamps; create/reply bodies cannot provide them.
+`session` capabilities are host features, not roles. Unsupported mentions/assignment values produce a validation error rather than being dropped. Directory is available only when declared. The host selects internal authenticated review or explicitly open review. An approved anonymous identity is a reviewer, not an authentication bypass. Within a permitted integration scope, reviewers have the same declared capabilities; Huddle adds no account roles. The host derives mutation author and timestamps; create/reply bodies cannot provide them.
 
 Default list/detail page size is 50, maximum 100. Lists order by update instant descending then ID descending using binary string ordering. Comments/history order by creation instant ascending then ID ascending. Cursors must preserve a continuation boundary even when records are concurrently updated. Hosts must document that active threads can move to a newer list position; clients deduplicate refreshed records. Detail independently pages comments and history, with null indicating exhaustion. Every record remains reachable, without display caps or a separate management UI.
 

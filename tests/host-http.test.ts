@@ -18,6 +18,22 @@ beforeEach(async () => {
 afterEach(async () => {vi.restoreAllMocks(); await backend.close(); if(await readFile(join(directory,'fixture'),'utf8') !== nonce) throw new Error('Refusing to remove an unowned HTTP fixture.'); await rm(directory,{recursive:true,force:true});});
 function request(path: string,method = 'GET',body?: unknown,session: string | null = 'alex',extra: HeadersInit = {}) {return new Request(base+path,{method,headers:{...(session === null ? {} : {Cookie:'session='+session}),Origin:'http://host.test','X-Fixture-CSRF':'fixture',...(body === undefined ? {} : {'Content-Type':'application/json'}),...extra},body:body === undefined ? undefined : JSON.stringify(body)});}
 it('requires explicit host API and mutation protection configuration',() => {expect(() => createHostHandler({api:options.api} as HostHttpOptions)).toThrow('protection'); expect(() => createHostHandler({...options,basePath:'//other.test/api'})).toThrow('same-origin');});
+it('supports open review with host-issued anonymous identities, no account login and the same scope and write protections',async () => {
+  const visitors = new Map(['First visitor','Second visitor'].map(name => [crypto.randomUUID(),{id:crypto.randomUUID(),name}])), [a,b] = [...visitors.keys()];
+  const handler = createHostHandler({...options,api(request) {return new ReviewStore(backend,async selected => {
+    const actor = visitors.get(request.headers.get('Cookie')?.slice('session='.length) ?? '');
+    if(!actor) throw new CollaborationError('unauthenticated','Start an anonymous host review session.');
+    if(selected.workspace !== scope.workspace || selected.environment !== scope.environment) throw new CollaborationError('forbidden','Unknown public review scope.');
+    return {actor,capabilities:{mentions:false,assignment:false,directory:false}};
+  });}});
+  expect((await (await handler(request('/session'+query,'GET',undefined,a))).json()).actor).toEqual(visitors.get(a));
+  const saved = await (await handler(request('/threads'+query,'POST',input(),a))).json();
+  const reply = await handler(request(`/threads/${saved.thread.id}/replies`+query,'POST',{idempotencyKey:crypto.randomUUID(),body:'Anonymous collaboration'},b));expect(reply.status).toBe(200);expect((await reply.json()).comments.items.map((comment:{author:{id:string}}) => comment.author.id)).toEqual([visitors.get(a)!.id,visitors.get(b)!.id]);
+  expect((await handler(request('/threads?workspace=private&environment=preview','GET',undefined,a))).status).toBe(403);
+  expect((await handler(request('/threads'+query,'POST',{...input(),author:{id:'forged',name:'Forged'}},a))).status).toBe(400);
+  expect((await handler(request('/threads'+query,'POST',input(),a,{'X-Fixture-CSRF':'wrong'}))).status).toBe(403);
+  visitors.delete(a);expect((await handler(request('/threads'+query,'GET',undefined,a))).status).toBe(401);
+});
 it('uses the host session and denies guests, customers, unknown scopes and revoked access',async () => {
   const handler = createHostHandler(options);
   for(const [actor,status] of [[null,401],['guest',403],['customer',403]] as const) expect((await handler(request('/session'+query,'GET',undefined,actor))).status).toBe(status);

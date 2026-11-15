@@ -1,5 +1,7 @@
 # Frontend-only acceptance and remaining rollout gates
 
+Access-policy update, 15 November 2026: the user approved open review as a host policy and **Pronto's existing feedback being visible to every chooser visitor**. This supersedes the original internal-only hosted gate below; internal mode remains supported and tested. See the revision in [the implementation plan](implementation-plan.adoc) and the new [progress entry](frontend-progress.md#optional-open-review-policy--15-november-2026). Fresh policy follow-up checks pass 145 ordinary tests, nine review/lifecycle browser cases, packed consumers, types/lint/build and unchanged bundle budgets. Pronto's six public browser cases pass on a migrated disposable fixture. The historical full matrix/resource/CI results below remain scoped to their recorded revisions; this follow-up does not claim new hosted migration or deployment acceptance.
+
 This records the new architecture, separately from the historical service release. Runtime milestones are browser workflows `e645e7f`, host stream correction `00426a5`, Pronto integration `8c830d5` and Pronto migration rehearsal `de38210`. Both use Node 24.21.0 / pnpm 10.33.0. Full chronological evidence, exact archive/run hashes and limitations are in [frontend progress](frontend-progress.md) and Pronto's `docs/integrations/huddle-v2-progress.md`.
 
 | Gate | Fresh local result |

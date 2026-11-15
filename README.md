@@ -1,6 +1,6 @@
 # Huddle
 
-A framework-independent browser library for reviewing working websites using the host application's existing authentication, backend and database. Pin an element, leave a page observation, reply and resolve discussion in the embedded panel. Directory lookup, mentions and assignment are optional host capabilities. Complete JSON/Markdown export and deliberate preview/import/resume live in the panel; no separately deployed Huddle product service or management app is required.
+A framework-independent browser library for reviewing working websites using the host application's access policy, backend and database. Hosts can allow open review without interactive login or require their existing authentication; Huddle creates no accounts. Pin an element, leave a page observation, reply and resolve discussion in the embedded panel. Directory lookup, mentions and assignment are optional host capabilities. Complete JSON/Markdown export and deliberate preview/import/resume live in the panel; no separately deployed Huddle product service or management app is required.
 
 The [current acceptance audit](docs/acceptance-current.md) records verified browser/database/framework and Pronto results, performance limits and the remaining hosted migration gates.
 
