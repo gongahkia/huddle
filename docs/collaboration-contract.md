@@ -72,3 +72,7 @@ Imports use bounded host-backed batches, durable job progress and per-record pro
 The reference implementation advances one bounded batch per acknowledged POST with the same execute key; GET progress never writes. See [host transfers](host-transfers.md) for limits, expiry, cleanup and identity/URL mapping behavior.
 
 Uninstall detaches browser imports and host routes while preserving data. Storage removal is a separate explicit host decision after a verified complete export. Migration-specific Pronto conversion belongs in Pronto, not the permanent SDK.
+
+## Shared comment colors
+
+Hosts may opt in with the optional `session.capabilities.commentColors` flag. Create/reply then accept an optional `color` chosen from `green`, `blue`, `violet`, `amber`, `rose` or `slate`. The server validates this capability and palette; arbitrary CSS is rejected. A new thread retains its initial color for its pin, and each reply retains its own color. JSON/Markdown transfers preserve these fields. Existing records without a color use the theme default. The v2 DTO/schema additions are optional for new readers; old strict readers cannot read colored exports. Upgrade the host and browser together before enabling the flag; older hosts without it receive ordinary uncolored writes. Display names and stable reviewer IDs are issued by the host, including for anonymous public review. A generated or self-chosen display name grants no access.

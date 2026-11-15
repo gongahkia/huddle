@@ -30,7 +30,7 @@ export class ReviewStore {
     signal.throwIfAborted(); validate(scopeSchema,scope);
     const result = await abortable(() => this.authorize(scope,signal),signal); signal.throwIfAborted();
     validate(identitySchema,result.actor);
-    validate(z.object({mentions: z.boolean(),assignment: z.boolean(),directory: z.boolean()}).strict(),result.capabilities);
+    validate(httpSchemas.Session.shape.capabilities,result.capabilities);
     if ((result.capabilities.mentions || result.capabilities.assignment || result.capabilities.directory) && !this.members) throw new CollaborationError('unavailable','The host directory is not configured.');
     return {...result,scope};
   }
@@ -105,20 +105,22 @@ export class ReviewStore {
   async create(scope: Scope,input: Create,signal: AbortSignal): Promise<Detail> {
     const access = await this.access(scope,signal), parsed = validate(httpSchemas.Create,input), mentions = parsed.mentions ?? [];
     if (parsed.viewContext !== undefined) {validate(z.json(),parsed.viewContext,16); if (Buffer.byteLength(JSON.stringify(parsed.viewContext)) > 8192) throw new CollaborationError('validation','View context exceeds 8 KiB.');}
+    if(parsed.color !== undefined && !access.capabilities.commentColors) throw new CollaborationError('validation','Comment colors are not supported by this host.');
     this.validateContent(parsed.body,mentions,access); const identities = await this.identities(access,mentions,signal);
     const url = new URL(parsed.pageUrl); if (!['http:','https:'].includes(url.protocol) || url.username || url.password) throw new CollaborationError('validation','Choose a safe HTTP(S) page URL.');
     return this.mutate(access,'create',parsed.idempotencyKey,parsed,signal,async tx => {
-      const now = timestamp(), id = randomUUID(), comment: Comment = {id: randomUUID(),threadId: id,author: access.actor,body: parsed.body,mentions: identities,createdAt: now};
-      const thread: Thread = {...scope,id,page: parsed.page,pageUrl: url.href,release: parsed.release,viewContext: parsed.viewContext,anchor: parsed.anchor,status: 'open',assignee: null,createdBy: access.actor,createdAt: now,updatedAt: now,version: 1,commentCount: 1,latestComment: comment};
+      const now = timestamp(), id = randomUUID(), comment: Comment = {id: randomUUID(),threadId: id,author: access.actor,body: parsed.body,...(parsed.color ? {color:parsed.color} : {}),mentions: identities,createdAt: now};
+      const thread: Thread = {...scope,id,page: parsed.page,pageUrl: url.href,release: parsed.release,viewContext: parsed.viewContext,anchor: parsed.anchor,...(parsed.color ? {color:parsed.color} : {}),status: 'open',assignee: null,createdBy: access.actor,createdAt: now,updatedAt: now,version: 1,commentCount: 1,latestComment: comment};
       await tx.put('threads',threadRow(thread),true); await tx.put('comments',{...scope,id: comment.id,time: now,threadId: id,data: comment},true);
       await this.audit(tx,access,id,'created',{}); await this.event(tx,scope,id,'created'); return thread;
     });
   }
   async reply(scope: Scope,id: string,input: Reply,signal: AbortSignal): Promise<Detail> {
     const access = await this.access(scope,signal), parsed = validate(httpSchemas.Reply,input), mentions = parsed.mentions ?? [];
-    validate(z.string().min(1).max(512),id); this.validateContent(parsed.body,mentions,access); const identities = await this.identities(access,mentions,signal);
+    validate(z.string().min(1).max(512),id); if(parsed.color !== undefined && !access.capabilities.commentColors) throw new CollaborationError('validation','Comment colors are not supported by this host.');
+    this.validateContent(parsed.body,mentions,access); const identities = await this.identities(access,mentions,signal);
     return this.mutate(access,`reply:${id}`,parsed.idempotencyKey,parsed,signal,async tx => {
-      const row = await this.getThread(tx,scope,id), now = timestamp(), comment: Comment = {id: randomUUID(),threadId: id,author: access.actor,body: parsed.body,mentions: identities,createdAt: now};
+      const row = await this.getThread(tx,scope,id), now = timestamp(), comment: Comment = {id: randomUUID(),threadId: id,author: access.actor,body: parsed.body,...(parsed.color ? {color:parsed.color} : {}),mentions: identities,createdAt: now};
       const previous = row.data.latestComment, latest = !previous || Date.parse(now) > Date.parse(previous.createdAt) || (Date.parse(now) === Date.parse(previous.createdAt) && comment.id > previous.id) ? comment : previous;
       const thread = {...row.data,version: row.data.version + 1,updatedAt: Date.parse(row.data.updatedAt) > Date.parse(now) ? row.data.updatedAt : now,commentCount: row.data.commentCount + 1,latestComment: latest};
       await tx.put('comments',{...scope,id: comment.id,time: now,threadId: id,data: comment},true); await tx.put('threads',threadRow(thread),false);

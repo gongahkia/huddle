@@ -214,6 +214,17 @@
             ],
             "additionalProperties": false
           },
+          "color": {
+            "type": "string",
+            "enum": [
+              "green",
+              "blue",
+              "violet",
+              "amber",
+              "rose",
+              "slate"
+            ]
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -960,6 +971,17 @@
                       "additionalProperties": false
                     }
                   },
+                  "color": {
+                    "type": "string",
+                    "enum": [
+                      "green",
+                      "blue",
+                      "violet",
+                      "amber",
+                      "rose",
+                      "slate"
+                    ]
+                  },
                   "createdAt": {
                     "type": "string",
                     "format": "date-time",
@@ -1672,6 +1694,17 @@
               ],
               "additionalProperties": false
             }
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "green",
+              "blue",
+              "violet",
+              "amber",
+              "rose",
+              "slate"
+            ]
           },
           "createdAt": {
             "type": "string",

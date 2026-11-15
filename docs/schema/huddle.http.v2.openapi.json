@@ -2421,6 +2421,17 @@
                   ],
                   "additionalProperties": false
                 },
+                "color": {
+                  "type": "string",
+                  "enum": [
+                    "green",
+                    "blue",
+                    "violet",
+                    "amber",
+                    "rose",
+                    "slate"
+                  ]
+                },
                 "status": {
                   "type": "string",
                   "enum": [
@@ -3166,6 +3177,17 @@
                             ],
                             "additionalProperties": false
                           }
+                        },
+                        "color": {
+                          "type": "string",
+                          "enum": [
+                            "green",
+                            "blue",
+                            "violet",
+                            "amber",
+                            "rose",
+                            "slate"
+                          ]
                         },
                         "createdAt": {
                           "type": "string",
@@ -3880,6 +3902,17 @@
                     "additionalProperties": false
                   }
                 },
+                "color": {
+                  "type": "string",
+                  "enum": [
+                    "green",
+                    "blue",
+                    "violet",
+                    "amber",
+                    "rose",
+                    "slate"
+                  ]
+                },
                 "createdAt": {
                   "type": "string",
                   "format": "date-time",
@@ -4545,6 +4578,9 @@
               },
               "directory": {
                 "type": "boolean"
+              },
+              "commentColors": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -4677,6 +4713,17 @@
                     "y"
                   ],
                   "additionalProperties": false
+                },
+                "color": {
+                  "type": "string",
+                  "enum": [
+                    "green",
+                    "blue",
+                    "violet",
+                    "amber",
+                    "rose",
+                    "slate"
+                  ]
                 },
                 "status": {
                   "type": "string",
@@ -5424,6 +5471,17 @@
                             "additionalProperties": false
                           }
                         },
+                        "color": {
+                          "type": "string",
+                          "enum": [
+                            "green",
+                            "blue",
+                            "violet",
+                            "amber",
+                            "rose",
+                            "slate"
+                          ]
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -5934,6 +5992,17 @@
                   "y"
                 ],
                 "additionalProperties": false
+              },
+              "color": {
+                "type": "string",
+                "enum": [
+                  "green",
+                  "blue",
+                  "violet",
+                  "amber",
+                  "rose",
+                  "slate"
+                ]
               },
               "status": {
                 "type": "string",
@@ -6681,6 +6750,17 @@
                           "additionalProperties": false
                         }
                       },
+                      "color": {
+                        "type": "string",
+                        "enum": [
+                          "green",
+                          "blue",
+                          "violet",
+                          "amber",
+                          "rose",
+                          "slate"
+                        ]
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time",
@@ -7395,6 +7475,17 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "color": {
+                      "type": "string",
+                      "enum": [
+                        "green",
+                        "blue",
+                        "violet",
+                        "amber",
+                        "rose",
+                        "slate"
+                      ]
                     },
                     "createdAt": {
                       "type": "string",
@@ -8148,6 +8239,17 @@
             "minLength": 1,
             "maxLength": 100000
           },
+          "color": {
+            "type": "string",
+            "enum": [
+              "green",
+              "blue",
+              "violet",
+              "amber",
+              "rose",
+              "slate"
+            ]
+          },
           "mentions": {
             "maxItems": 1000,
             "type": "array",
@@ -8212,6 +8314,17 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 100000
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "green",
+              "blue",
+              "violet",
+              "amber",
+              "rose",
+              "slate"
+            ]
           },
           "mentions": {
             "maxItems": 1000,

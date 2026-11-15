@@ -1,7 +1,7 @@
 import {z} from 'zod';
 import {feedbackSnapshotSchema,portableShapes as s} from './portable';
 
-const capabilities = z.object({mentions: z.boolean(),assignment: z.boolean(),directory: z.boolean()}).strict();
+const capabilities = z.object({mentions: z.boolean(),assignment: z.boolean(),directory: z.boolean(),commentColors:z.boolean().optional()}).strict();
 const identity = z.object({id: s.id,name: z.string().min(1).max(1000)}).strict();
 const scope = z.object({workspace: s.id,environment: s.id}).strict();
 const page = <T extends z.ZodType>(item: T) => z.object({items: z.array(item),nextCursor: z.string().min(1).max(2048).nullable()}).strict();
@@ -15,8 +15,8 @@ export const httpSchemas = {
   Session: z.object({actor: identity,scope,capabilities}).strict(),
   ThreadPage: page(s.thread),
   Detail: z.object({thread: s.thread,comments: page(s.comment),history: page(s.history)}).strict(),
-  Create: z.object({...mutation,page: z.string().min(1).max(4096),pageUrl: z.string().url().max(8192),release: z.string().max(1000).optional(),viewContext: z.json().optional(),anchor: s.anchor,body: z.string().min(1).max(100000),mentions: z.array(s.id).max(1000).optional()}).strict(),
-  Reply: z.object({...mutation,body: z.string().min(1).max(100000),mentions: z.array(s.id).max(1000).optional()}).strict(),
+  Create: z.object({...mutation,page: z.string().min(1).max(4096),pageUrl: z.string().url().max(8192),release: z.string().max(1000).optional(),viewContext: z.json().optional(),anchor: s.anchor,body: z.string().min(1).max(100000),color:s.color.optional(),mentions: z.array(s.id).max(1000).optional()}).strict(),
+  Reply: z.object({...mutation,body: z.string().min(1).max(100000),color:s.color.optional(),mentions: z.array(s.id).max(1000).optional()}).strict(),
   Update: z.object({...mutation,expectedVersion: z.number().int().positive(),status: z.enum(['open','resolved']).optional(),anchor: s.anchor.optional(),assigneeId: s.id.nullable().optional()}).strict(),
   ChangePage: z.object({items: z.array(z.object({threadId: s.id,kind: z.enum(['created','updated','imported'])}).strict()).max(100),cursor: s.id,hasMore: z.boolean(),reset: z.boolean()}).strict(),
   Directory: page(identity),

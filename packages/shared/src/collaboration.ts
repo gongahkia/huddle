@@ -4,17 +4,19 @@ export type Anchor = {
   viewport?: {width: number; height: number};
 };
 export type Json = null | boolean | number | string | Json[] | {[key: string]: Json};
+export const COMMENT_COLORS = ['green','blue','violet','amber','rose','slate'] as const;
+export type CommentColor = typeof COMMENT_COLORS[number];
 export type Identity = {id: string; name: string};
 export type Scope = {workspace: string; environment: string};
 export type Context = Scope & {page: string; pageUrl: string; release?: string; viewContext?: Json};
-export type Capabilities = {mentions: boolean; assignment: boolean; directory: boolean};
+export type Capabilities = {mentions: boolean; assignment: boolean; directory: boolean; commentColors?: boolean};
 export type Session = {actor: Identity; scope: Scope; capabilities: Capabilities};
 export type ProvenanceRecord = {datasetId: string; recordId: string; digest: string; scope?: Scope; page?: string; pageUrl?: string; identity?: Identity};
 export type Provenance = ProvenanceRecord & {previous?: ProvenanceRecord[]};
 export type Attribution = Identity & {provenance?: Provenance};
-export type Comment = {id: string; threadId: string; author: Attribution; body: string; mentions: Attribution[]; createdAt: string; provenance?: Provenance};
+export type Comment = {id: string; threadId: string; author: Attribution; body: string; color?: CommentColor; mentions: Attribution[]; createdAt: string; provenance?: Provenance};
 export type Thread = Context & {
-  id: string; anchor: Anchor; status: 'open' | 'resolved'; assignee: Attribution | null;
+  id: string; anchor: Anchor; color?: CommentColor; status: 'open' | 'resolved'; assignee: Attribution | null;
   createdBy: Attribution; createdAt: string; updatedAt: string; version: number;
   commentCount: number; latestComment: Comment | null; provenance?: Provenance;
 };
@@ -34,8 +36,8 @@ export function isCollaborationError(value: unknown): value is CollaborationErro
   return item.name === 'CollaborationError' && typeof item.message === 'string' && ['unauthenticated','forbidden','validation','not_found','conflict','rate_limited','timeout','network','unavailable'].includes(item.code || '') && (item.retryAfterMs === undefined || (Number.isSafeInteger(item.retryAfterMs) && item.retryAfterMs >= 0));
 }
 export type Mutation = {idempotencyKey: string};
-export type Create = Mutation & Omit<Context,'workspace' | 'environment'> & {anchor: Anchor; body: string; mentions?: string[]};
-export type Reply = Mutation & {body: string; mentions?: string[]};
+export type Create = Mutation & Omit<Context,'workspace' | 'environment'> & {anchor: Anchor; body: string; color?: CommentColor; mentions?: string[]};
+export type Reply = Mutation & {body: string; color?: CommentColor; mentions?: string[]};
 export type Update = Mutation & {expectedVersion: number; status?: 'open' | 'resolved'; anchor?: Anchor; assigneeId?: string | null};
 export type ExportScope = {workspace: string; environments: string[]; page?: string; status?: 'open' | 'resolved'};
 export type Counts = {threads: number; comments: number; history: number};

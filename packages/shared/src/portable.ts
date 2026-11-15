@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import type {FeedbackSnapshot} from './collaboration';
+import {COMMENT_COLORS,type FeedbackSnapshot} from './collaboration';
 
 const id = z.string().min(1).max(512), timestamp = z.string().datetime({offset: true});
 const provenanceRecord = z.object({datasetId:id,recordId:id,digest:z.string().regex(/^[a-f0-9]{64}$/),scope:z.object({workspace:id,environment:id}).strict().optional(),page:z.string().max(4096).optional(),pageUrl:z.string().url().max(8192).optional(),identity:z.object({id,name:z.string().min(1).max(1000)}).strict().optional()}).strict();
@@ -11,15 +11,16 @@ const anchor = z.object({
   x: z.number().min(0).max(1),y: z.number().min(0).max(1),tag: z.string().max(100).optional(),stableKey: z.string().max(16384).optional(),context: z.string().max(16384).optional(),
   viewport: z.object({width: z.number().nonnegative().max(100000),height: z.number().nonnegative().max(100000)}).strict().optional(),
 }).strict();
-const comment = z.object({id,threadId: id,author: attribution,body: z.string().min(1).max(100000),mentions: z.array(attribution).max(1000),createdAt: timestamp,provenance: provenance.optional()}).strict();
+const color = z.enum(COMMENT_COLORS);
+const comment = z.object({id,threadId: id,author: attribution,body: z.string().min(1).max(100000),mentions: z.array(attribution).max(1000),color:color.optional(),createdAt: timestamp,provenance: provenance.optional()}).strict();
 const thread = z.object({
   id,workspace: id,environment: id,page: z.string().min(1).max(4096),pageUrl: z.string().url().max(8192),release: z.string().max(1000).optional(),viewContext: z.json().optional(),
-  anchor,status: z.enum(['open','resolved']),assignee: attribution.nullable(),createdBy: attribution,createdAt: timestamp,updatedAt: timestamp,
+  anchor,color:color.optional(),status: z.enum(['open','resolved']),assignee: attribution.nullable(),createdBy: attribution,createdAt: timestamp,updatedAt: timestamp,
   version: z.number().int().positive(),commentCount: z.number().int().nonnegative(),latestComment: comment.nullable(),provenance: provenance.optional(),
 }).strict();
 const history = z.object({id,threadId: id,actor: attribution,action: z.string().min(1).max(100),data: z.json(),createdAt: timestamp,provenance: provenance.optional()}).strict();
 const count = z.number().int().nonnegative();
-export const portableShapes = {id,timestamp,attribution,scope,anchor,comment,thread,history,count};
+export const portableShapes = {id,timestamp,attribution,scope,anchor,color,comment,thread,history,count};
 
 // Structural schema is also published as JSON Schema; cross-record checks run below.
 export const feedbackSnapshotSchema = z.object({
