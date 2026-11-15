@@ -1,6 +1,6 @@
 {
   "name": "@huddle/browser",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -23,6 +23,7 @@
   "files": [
     "dist",
     "NOTICE",
+    "LICENSE-LUCIDE",
     "README.md"
   ]
 }

@@ -31,3 +31,5 @@ The embedded panel offers replaceable thread/reply/history pages, host-approved 
 `persistence: 'memory'` or `'disabled'` avoids local draft storage; the default local store is bounded and actor/scope/page isolated, with expiry and memory fallback. It stores drafts and retry descriptors, never tokens or uploaded files. `requestTimeoutMs` defaults to 15 seconds; `onError` can report failures to host diagnostics. See [browser workflows and theme tokens](./dist/docs/browser-workflows.md) for limits, privacy, focus and transfer details.
 
 This package is private and not published. See NOTICE for provenance and licensing status.
+
+UI icons use named imports from [Lucide](https://lucide.dev/guide/lucide) 1.73.0. Selected icons and their SVG renderer are bundled into the SDK, so core consumers need no additional icon package or framework runtime. See [LICENSE-LUCIDE](./LICENSE-LUCIDE) for the included notices.

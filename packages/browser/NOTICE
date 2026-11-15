@@ -5,3 +5,7 @@ and discussion/export behavior. Existing source contains no LICENSE/COPYING/NOTI
 Adaptation is performed at the repository owner's instruction. No public redistribution
 or open-source relicensing permission is asserted by this repository.
 Third-party dependencies retain their respective licenses.
+
+The browser library bundles selected icons and SVG rendering code from Lucide
+1.73.0 (https://lucide.dev). Its ISC and Feather-derived MIT notices are included
+in the browser package as LICENSE-LUCIDE.

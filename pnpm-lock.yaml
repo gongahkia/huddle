@@ -99,6 +99,9 @@ importers:
       jsdom:
         specifier: 31.0.1
         version: 31.0.1
+      lucide:
+        specifier: 1.73.0
+        version: 1.73.0
       mongodb:
         specifier: 7.9.0
         version: 7.9.0
@@ -3415,6 +3418,9 @@ packages:
   lru.min@1.1.5:
     resolution: {integrity: sha512-5J9ysMYUpYIg9RF2vJpy9SinEmSviFSe0GyPpCQ4L5QSkLAgeLXlTAOu2ZwWUU5m+0SBl6gUU1R1ZQB3aKypfA==}
     engines: {bun: '>=1.0.0', deno: '>=1.30.0', node: '>=8.0.0'}
+
+  lucide@1.73.0:
+    resolution: {integrity: sha512-qiNin5j7qEflnAdLG/9Yb4d5N9qnnP8TOMdn6e66399fgX25Y0eYEPS3PUPWGIPLloOj4X+xLTdF2lk9gSgWpA==}
 
   magic-string-ast@1.0.3:
     resolution: {integrity: sha512-CvkkH1i81zl7mmb94DsRiFeG9V2fR2JeuK8yDgS8oiZSFa++wWLEgZ5ufEOyLHbvSbD1gTRKv9NdX69Rnvr9JA==}
@@ -8618,6 +8624,8 @@ snapshots:
       yallist: 3.1.1
 
   lru.min@1.1.5: {}
+
+  lucide@1.73.0: {}
 
   magic-string-ast@1.0.3:
     dependencies:

@@ -10,7 +10,8 @@ await rm('dist',{recursive:true,force:true}); await mkdir('dist/public',{recursi
 await build({entryPoints: ['packages/browser/src/embed.ts'],bundle: true,format: 'iife',globalName: 'Huddle',minify: true,target: 'es2022',outfile: 'dist/public/embed.js'});
 const helpers = ['react','preact','vue','svelte','solid','angular','astro'];
 const entries = {huddle: 'packages/browser/src/index.ts',http: 'packages/browser/src/http.ts',...Object.fromEntries(helpers.map(name => [name,`packages/browser/src/adapters/${name}.ts`]))};
-const browser = await build({entryPoints: entries,bundle: true,splitting: true,format: 'esm',packages: 'external',minify: true,target: 'es2022',outdir: 'packages/browser/dist',chunkNames: 'chunks/[name]-[hash]',metafile: true});
+const frameworkPeers = Object.keys(JSON.parse(await readFile('packages/browser/package.json','utf8')).peerDependencies);
+const browser = await build({entryPoints: entries,bundle: true,splitting: true,format: 'esm',external: frameworkPeers,minify: true,target: 'es2022',outdir: 'packages/browser/dist',chunkNames: 'chunks/[name]-[hash]',metafile: true});
 await writeFile('packages/browser/dist/react.js',"'use client';\n" + await readFile('packages/browser/dist/react.js','utf8'));
 await mkdir('output/build',{recursive: true}); await writeFile('output/build/browser-meta.json',JSON.stringify(browser.metafile));
 await cp('packages/browser/dist/huddle.js','dist/public/huddle.js');
