@@ -1,22 +1,74 @@
 {
   "name": "@huddle/host",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
-  "engines": {"node": ">=24.21.0 <25"},
-  "dependencies": {"zod": "4.6.7"},
-  "exports": {
-    ".": {"types": "./dist/store.d.ts", "import": "./dist/store.js"},
-    "./sqlite": {"types": "./dist/sqlite.d.ts", "import": "./dist/sqlite.js"},
-    "./postgres": {"types": "./dist/postgres.d.ts", "import": "./dist/postgres.js"},
-    "./mysql": {"types": "./dist/mysql.d.ts", "import": "./dist/mysql.js"},
-    "./mongodb": {"types": "./dist/mongodb.d.ts", "import": "./dist/mongodb.js"},
-    "./http": {"types": "./dist/http.d.ts", "import": "./dist/http.js"},
-    "./next": {"types": "./dist/next.d.ts", "import": "./dist/next.js"},
-    "./express": {"types": "./dist/express.d.ts", "import": "./dist/express.js"},
-    "./fastify": {"types": "./dist/fastify.d.ts", "import": "./dist/fastify.js"}
+  "engines": {
+    "node": ">=24.21.0 <25"
   },
-  "peerDependencies": {"mongodb": "7.9.0", "express": "5.3.0", "@types/express": "5.0.6", "fastify": "5.12.8"},
-  "peerDependenciesMeta": {"mongodb": {"optional": true}, "express": {"optional": true}, "@types/express": {"optional": true}, "fastify": {"optional": true}},
-  "files": ["dist", "README.md"]
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/store.d.ts",
+      "import": "./dist/store.js"
+    },
+    "./sqlite": {
+      "types": "./dist/sqlite.d.ts",
+      "import": "./dist/sqlite.js"
+    },
+    "./postgres": {
+      "types": "./dist/postgres.d.ts",
+      "import": "./dist/postgres.js"
+    },
+    "./mysql": {
+      "types": "./dist/mysql.d.ts",
+      "import": "./dist/mysql.js"
+    },
+    "./mongodb": {
+      "types": "./dist/mongodb.d.ts",
+      "import": "./dist/mongodb.js"
+    },
+    "./http": {
+      "types": "./dist/http.d.ts",
+      "import": "./dist/http.js"
+    },
+    "./next": {
+      "types": "./dist/next.d.ts",
+      "import": "./dist/next.js"
+    },
+    "./express": {
+      "types": "./dist/express.d.ts",
+      "import": "./dist/express.js"
+    },
+    "./fastify": {
+      "types": "./dist/fastify.d.ts",
+      "import": "./dist/fastify.js"
+    }
+  },
+  "peerDependencies": {
+    "mongodb": "7.9.0",
+    "express": "5.3.0",
+    "@types/express": "5.0.6",
+    "fastify": "5.12.8"
+  },
+  "peerDependenciesMeta": {
+    "mongodb": {
+      "optional": true
+    },
+    "express": {
+      "optional": true
+    },
+    "@types/express": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
 }

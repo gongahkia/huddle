@@ -1,6 +1,7 @@
 import type {Capabilities,CollaborationAdapter,Json} from '../../shared/src/collaboration';
 export type HuddleOptions = {
   adapter: CollaborationAdapter; namespace: string; workspace: string; environment: string; release?: string;
+  reviewMode?: 'team'|'local';
   allowedQueryParameters?: string[]; includeHash?: boolean; pageIdentity?: (sanitizedUrl: URL) => string;
   excludeElement?: (element: Element) => boolean; redact?: (text: string, field: string) => string; viewContext?: () => Json;
   capabilities?: Partial<Capabilities>; persistence?: 'local' | 'memory' | 'disabled'; styleNonce?: string;
@@ -14,6 +15,7 @@ export function validateOptions(options: HuddleOptions): void {
   if (!options.adapter || ['session','list','detail','create','reply','update','changes','export','stageImport','previewImport','executeImport','importProgress'].some(key => typeof Reflect.get(options.adapter,key) !== 'function')) throw new Error('Provide a complete host collaboration adapter.');
   for (const field of ['namespace','workspace','environment'] as const) if (typeof options[field] !== 'string' || !options[field].trim() || options[field].length > 512) throw new Error(`Provide a nonempty ${field} of at most 512 characters.`);
   if(options.onDisplayNameChange !== undefined && typeof options.onDisplayNameChange !== 'function')throw new Error('onDisplayNameChange must be a host callback.');
+  if(options.reviewMode!==undefined&&!['team','local'].includes(options.reviewMode))throw new Error('reviewMode must be team or local.');
   if (options.launcher !== undefined && !['floating','hidden'].includes(options.launcher)) throw new Error('launcher must be floating or hidden.');
   if (options.persistence !== undefined && !['local','memory','disabled'].includes(options.persistence)) throw new Error('persistence must be local, memory or disabled.');
   if (options.requestTimeoutMs !== undefined && (!Number.isFinite(options.requestTimeoutMs) || options.requestTimeoutMs < 100 || options.requestTimeoutMs > 120000)) throw new Error('requestTimeoutMs must be between 100 and 120000.');

@@ -21,21 +21,37 @@
       "vitest/globals"
     ],
     "paths": {
-      "@huddle/host": ["./packages/host/src/store.ts"],
-      "@huddle/host/*": ["./packages/host/src/*.ts"],
+      "@huddle/host": [
+        "./packages/host/src/store.ts"
+      ],
+      "@huddle/host/*": [
+        "./packages/host/src/*.ts"
+      ],
       "@huddle/shared": [
         "./packages/shared/src/index.ts"
       ],
       "@huddle/browser": [
         "./packages/browser/src/index.ts"
       ],
-      "@huddle/browser/http": ["./packages/browser/src/http.ts"],
+      "@huddle/browser/http": [
+        "./packages/browser/src/http.ts"
+      ],
       "@huddle/browser/*": [
         "./packages/browser/src/adapters/*.ts"
+      ],
+      "@huddle/browser/local": [
+        "./packages/browser/src/local.ts"
       ]
     }
   },
-  "exclude": ["**/.next/**", "**/.nuxt/**", "**/.output/**", "**/.svelte-kit/**", "**/.astro/**", "node_modules"],
+  "exclude": [
+    "**/.next/**",
+    "**/.nuxt/**",
+    "**/.output/**",
+    "**/.svelte-kit/**",
+    "**/.astro/**",
+    "node_modules"
+  ],
   "include": [
     "packages",
     "scripts",
