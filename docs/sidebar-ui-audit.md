@@ -18,3 +18,5 @@ On Node 24.21.0 / pnpm 10.33.0, typecheck, lint and all 122 unit tests passed. F
 The earlier Pronto panel informed the compact hierarchy, simple cards and labeled primary actions. The library retains its independent styles, complete transfers/history, host policy and lifecycle ownership.
 
 SDK 0.2.3 replaces the initial custom SVGs with Lucide icons. It also gives the pin-picker Cancel button its surface foreground color and a contrasting keyboard focus indicator, and keeps cancellation enabled during background reads. Browser regression checks cover new pins and reattachment in both light and dark themes.
+
+SDK 0.2.4 offsets colliding pin badges within the viewport without changing stored anchors. This keeps discussions on a shared element reachable after picker cancellation or refresh. A completely crowded viewport can still exhaust available badge space.

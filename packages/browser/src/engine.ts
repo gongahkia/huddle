@@ -7,6 +7,7 @@ import {validateOptions,type HuddleOptions} from './options';
 import {styles} from './styles';
 import {createTransfers} from './transfers';
 import {excerpt,icon,type Icon} from './ui';
+import {placePin} from './pin-layout';
 export type {HuddleOptions} from './options';
 export type {Anchor,Context as ReviewContext} from '../../shared/src/collaboration';
 export type Huddle = {open(): void; collapse(): void; close(): void; updateContext(context: Partial<Pick<HuddleOptions,'workspace' | 'environment' | 'release'>>): void; destroy(): void};
@@ -360,19 +361,20 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
   }
   function geometry() {
     geometryFrame = 0; if (!opened || pinning || document.visibilityState === 'hidden') {clearPins(); return;}
-    const visible = new Set<string>();
+    const visible = new Set<string>(), placed: {x:number;y:number}[] = [];
     for (const [i,t] of threads.entries()) {
       if (t.page !== currentContext.page || (t.status === 'resolved' && !resolved)) continue;
       const found = resolutions.get(t.id); if (!found?.element?.isConnected || excluded(found.element) || ['missing','hidden','ambiguous'].includes(found.state)) continue;
       const rect = found.element.getBoundingClientRect(); if (!rect.width || !rect.height) continue;
       const x = rect.left + rect.width * t.anchor.x, y = rect.top + rect.height * t.anchor.y; if (y < 0 || y > innerHeight || x < 0 || x > innerWidth) continue;
+      const position = placePin({x,y},placed,{width:innerWidth,height:innerHeight}); placed.push(position);
       visible.add(t.id); let pin = pinNodes.get(t.id);
       if(!pin) {
         pin = button('',() => {void chooseThread(t.id);},'pin'); pin.id = 'huddle-pin-'+encodeURIComponent(t.id);
         pin.addEventListener('pointerenter',() => showPreview(t.id)); pin.addEventListener('pointerleave',deferHidePreview); pin.addEventListener('focus',() => showPreview(t.id)); pin.addEventListener('blur',deferHidePreview);
         pinNodes.set(t.id,pin); pins.append(pin);
       }
-      pin.textContent = String(i + 1); pin.disabled = busy; pin.classList.toggle('warning',found.state !== 'ok'); pin.classList.toggle('selected',selected?.thread.id === t.id); pin.setAttribute('aria-label',`Open feedback: ${t.anchor.label}`); pin.style.left = `${x}px`; pin.style.top = `${y}px`;
+      pin.textContent = String(i + 1); pin.disabled = busy; pin.classList.toggle('warning',found.state !== 'ok'); pin.classList.toggle('selected',selected?.thread.id === t.id); pin.setAttribute('aria-label',`Open feedback: ${t.anchor.label}`); pin.style.left = `${position.x}px`; pin.style.top = `${position.y}px`;
     }
     for(const [id,pin] of pinNodes) if(!visible.has(id)) {pin.remove(); pinNodes.delete(id);}
     renderPreview();
