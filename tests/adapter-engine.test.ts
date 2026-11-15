@@ -2,6 +2,7 @@
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {mount,type Huddle} from '../packages/browser/src/index';
 import {CollaborationError,type Detail} from '../packages/shared/src/collaboration';
+import {LocalStore} from '../packages/browser/src/storage';
 import {TestAdapter} from './fixtures/adapter';
 
 let widget: Huddle | undefined;
@@ -115,4 +116,9 @@ it('rejects old service configuration before acquiring or discarding an overlay'
   const adapter = new TestAdapter(); widget = mount(options(adapter));
   expect(() => mount({...options(adapter),serverUrl: 'https://old.test'} as Parameters<typeof mount>[0])).toThrow('host collaboration adapter');
   expect(document.querySelectorAll('[data-huddle-root]')).toHaveLength(1);
+});
+
+it('does not carry a previous actor’s cached mention names into a legacy draft for another actor',async()=>{
+ const adapter=new TestAdapter();adapter.capabilities={mentions:true,assignment:false,directory:true};const directory=vi.fn(async()=>({items:[{id:'private:member',name:'Private previous name'}],nextCursor:null}));widget=mount({...options(adapter),adapter:Object.assign(adapter,{directory})});widget.open();await settle();click('Page comment');type('@Private');await vi.advanceTimersByTimeAsync(160);root().querySelector<HTMLElement>('[role=option]')!.click();
+ const next=new LocalStore(JSON.stringify(['engine-tests','team','host:new-user','preview']),localStorage);next.write('draft:/',{body:'Another actor legacy draft',mentions:['private:member'],anchor:{kind:'page',selector:'body',label:'This page',quote:'',x:.5,y:.5}});adapter.actor={id:'host:new-user',name:'New reviewer'};directory.mockResolvedValue({items:[],nextCursor:null});await vi.advanceTimersByTimeAsync(10000);await settle();expect(root().querySelector('textarea')?.value).toBe('Another actor legacy draft');expect(text()).not.toContain('Private previous name');
 });

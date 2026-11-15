@@ -58,7 +58,7 @@ export async function addPlayground(app:Express,backend:Backend,origin:string) {
   },async verifyMutation(request) {const record=session(request);if(request.headers.get('Origin')!==origin||request.headers.get('X-Playground-CSRF')!==csrf) throw new CollaborationError('forbidden','Playground mutation protection failed.');if(record.fault==='writes' && new URL(request.url).pathname!=='/api/playground/v2/exports') throw new CollaborationError('unavailable','Playground: this write failed. Your draft is kept. Switch Service back to Normal to retry.');}}));
   const root = resolve('dist/examples/playground');
   const html = (file:string) => async (_request:express.Request,response:express.Response) => {
-    const nonce=randomUUID();response.setHeader('Content-Security-Policy',`default-src 'none'; script-src 'self'; style-src 'self' 'nonce-${nonce}'; connect-src 'self'; frame-src 'self'; frame-ancestors 'self'; img-src 'self'; base-uri 'none'; form-action 'self'`);response.type('html').send((await readFile(resolve(root,file),'utf8')).replaceAll('__HUDDLE_NONCE__',nonce));
+    const nonce=randomUUID();response.setHeader('Content-Security-Policy',`default-src 'none'; script-src 'self'; style-src 'self' 'nonce-${nonce}'; connect-src 'self'; frame-src 'self' blob:; frame-ancestors 'self'; img-src 'self'; base-uri 'none'; form-action 'self'`);response.type('html').send((await readFile(resolve(root,file),'utf8')).replaceAll('__HUDDLE_NONCE__',nonce));
   };
   app.get(['/playground','/playground/'],html('index.html'));
   app.get(['/playground/app/overview','/playground/app/settings'],html('app.html'));

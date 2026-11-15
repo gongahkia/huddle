@@ -48,7 +48,7 @@ test('comments on the same element remain individually reachable after picker ca
  }
  const anchors = structuredClone(fixture.records.map(item => item.thread.anchor)); await page.locator('button.thread').first().click(); await page.getByRole('button',{name:'Reattach pin',exact:true}).click(); await page.getByRole('button',{name:'Cancel',exact:true}).click(); await page.getByRole('button',{name:'Collapse feedback',exact:true}).click();
  for(const record of fixture.records) {
-  const pin = page.locator('#huddle-pin-'+record.thread.id); await pin.hover(); await expect(page.getByRole('tooltip')).toContainText(record.thread.latestComment!.body); await pin.click(); await expect(page.locator('article')).toContainText(record.thread.latestComment!.body); await page.getByRole('button',{name:'Collapse feedback',exact:true}).click();
+  const pin = page.locator('#huddle-pin-'+record.thread.id); await pin.hover(); await expect(page.getByRole('tooltip')).toContainText(record.thread.latestComment!.body); await pin.click(); await expect(page.getByRole('complementary',{name:'Huddle feedback',exact:true}).locator('article')).toContainText(record.thread.latestComment!.body); await page.getByRole('button',{name:'Collapse feedback',exact:true}).click();
  }
  expect(fixture.records.map(item => item.thread.anchor)).toEqual(anchors); expect(fixture.requests.filter(item => item.method === 'PATCH')).toHaveLength(0);
 });
