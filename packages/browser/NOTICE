@@ -9,3 +9,5 @@ Third-party dependencies retain their respective licenses.
 The browser library bundles selected icons and SVG rendering code from Lucide
 1.73.0 (https://lucide.dev). Its ISC and Feather-derived MIT notices are included
 in the browser package as LICENSE-LUCIDE.
+
+The optional browser-local adapter bundles Zod Mini 4.6.7 (Zod) and @noble/hashes 2.4.0. Their MIT notices are included as LICENSE-ZOD and LICENSE-NOBLE in the browser package. Node host integrations retain native Node cryptography.

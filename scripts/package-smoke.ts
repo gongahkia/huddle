@@ -11,7 +11,7 @@ const exec = promisify(execFile), directory = mkdtempSync(join(tmpdir(),'huddle-
 const root = JSON.parse(readFileSync('package.json','utf8')), pkg = JSON.parse(readFileSync('packages/browser/package.json','utf8'));
 const peers = Object.keys(pkg.peerDependencies) as string[];
 const cases = [
- {entry:'local',peers:[],symbol:'createLocalOptions',call:"helper({namespace:'local-consumer'})"},
+ {entry:'local',peers:[],symbol:'createLocalOptions',call:"(() => {const review=mount(helper({namespace:'local-consumer'}));review.open();review.destroy();return review;})()"},
  {entry: '',peers: [],symbol: 'mount',call: '(() => {const widget=helper(options);widget.open();widget.close();widget.updateContext({release:"v2"});widget.destroy();return widget;})()'},
  {entry: 'http',peers: [],symbol: 'createHttpAdapter',call: 'helper()'},
  {entry: 'react',peers: ['react'],symbol: 'useHuddle',call: 'helper(options)'},
@@ -33,7 +33,7 @@ try {
   await exec('npm',['install','--ignore-scripts','--no-audit','--no-fund'],{cwd: dir,maxBuffer: 2 * 1024 * 1024});
   for (const peer of peers) if (!item.peers.includes(peer) && existsSync(join(dir,'node_modules',peer,'package.json'))) throw new Error(`${item.entry || 'core'} unnecessarily installed ${peer}`);
   const entry = '@huddle/browser' + (item.entry ? `/${item.entry}` : '');
-  writeFileSync(join(dir,'consumer.ts'),`import {${item.symbol} as helper} from '${entry}';import type {HuddleOptions} from '@huddle/browser';\nconst options:HuddleOptions={adapter:{} as import('@huddle/browser').CollaborationAdapter,namespace:'consumer',workspace:'team',environment:'staging'};\n// @ts-expect-error Configuration fields must retain their declared types.\nconst invalid:HuddleOptions={...options,environment:123};void invalid;\nexport function integration(){return ${item.call};}\nconsole.log(helper);\n`);
+  writeFileSync(join(dir,'consumer.ts'),`${item.entry==='local'?"import {mount} from '@huddle/browser';":''}import {${item.symbol} as helper} from '${entry}';import type {HuddleOptions} from '@huddle/browser';\nconst options:HuddleOptions={adapter:{} as import('@huddle/browser').CollaborationAdapter,namespace:'consumer',workspace:'team',environment:'staging'};\n// @ts-expect-error Configuration fields must retain their declared types.\nconst invalid:HuddleOptions={...options,environment:123};void invalid;\nexport function integration(){return ${item.call};}\nconsole.log(helper);\n`);
   const files = ['consumer.ts'];
   if(!item.entry) {
    const installedRoot = join(dir,'node_modules/@huddle/browser'), guide = readFileSync(join(installedRoot,'README.md'),'utf8'), example = guide.match(/```ts\n([\s\S]*?)```/)?.[1]; if(!example) throw new Error('The installed browser guide has no TypeScript integration example.');

@@ -22,3 +22,5 @@ Local-only mode must be explicit. A failed or unauthorized team connection must 
 5. Document and verify both installation paths. Port to Pronto only when consumer integration/rollout is requested, following ADR 0001.
 
 This decision records approved direction. It does not claim that the existing SDK already provides a backend-free adapter or that local feedback is shared, synced or backed up elsewhere.
+
+The v0.4 local options, storage boundaries, shared engine and installation paths are specified in [Local and team review](../local-review.md). The maintained workbench lives in `examples/testing/playground/`; it remains a team-host testing fixture, alongside the separate no-backend local example. Actual release evidence must cover both paths before consumer rollout.

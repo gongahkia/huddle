@@ -10,3 +10,5 @@ async function graph(path: string, seen = new Set<string>()): Promise<number> {
  return bytes;
 }
 for (const file of ['dist/public/embed.js','packages/browser/dist/huddle.js','packages/browser/dist/http.js','packages/browser/dist/local.js','dist/public/local-embed.js']) {const bytes = await graph(file); console.log(`${file}: ${bytes} bytes gzip including shared chunks (budget 76800)`); if (bytes > 75 * 1024) throw new Error('Widget exceeds 75 KiB gzip.');}
+
+const localGraph=new Set<string>();const combined=await graph('packages/browser/dist/huddle.js',localGraph)+await graph('packages/browser/dist/local.js',localGraph);console.log(`Local widget complete ESM graph: ${combined} bytes gzip (budget 76800)`);if(combined>75*1024)throw new Error('Local widget exceeds 75 KiB gzip.');

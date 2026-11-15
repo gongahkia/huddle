@@ -152,3 +152,5 @@ Install once in a layout's processed browser script, rather than server frontmat
 Use a persistent root owner when pages overlap during transitions. Do not combine the standalone installer, a manual mount and a framework helper in one document. Framework runtimes remain external peers and never enter the core installer/ES-module dependency graph.
 
 The browser engine's [failure recovery](reliability.md), URL privacy policy, CSP requirements and authentication scopes apply equally to every helper.
+
+Local mode uses the same helpers: pass `createLocalOptions({namespace: 'my-review'})` from `@huddle/browser/local` in place of HTTP options. Keep the returned adapter/options stable. All maintained fixtures accept `?mode=local&workspace=personal`; see [local review](local-review.md) and [v0.4 verification](modes-release.md).

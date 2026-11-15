@@ -1,3 +1,4 @@
+/* global URLSearchParams, location, window, document */
 import {mount} from '../sdk/huddle.js';
 import {createLocalOptions} from '../sdk/local.js';
 const namespace=new URLSearchParams(location.search).get('namespace')||'local-example';

@@ -27,3 +27,14 @@ for (const {name,port} of [{name:'next',port:4322},{name:'nuxt',port:4323},{name
   await openReview(page); await expect(page.getByText(`${name} SSR host-backed seam`,{exact:true})).toBeVisible(); expect(errors).toEqual([]);
  });
 }
+
+for(const {name,port,path} of [
+ ...['react','preact','vue','svelte','solid','angular','html'].map(name=>({name,port:4321,path:'/'+name+'/'})),
+ {name:'jquery-htmx',port:4321,path:'/html/interactions.html'},
+ ...[{name:'next',port:4322},{name:'nuxt',port:4323},{name:'sveltekit',port:4324},{name:'astro',port:4325}].map(item=>({...item,path:'/'})),
+])test(`${name} uses the installed local adapter without API requests and retains feedback after reload`,async({page,request})=>{
+ test.setTimeout(60000);const api:string[]=[],errors:string[]=[];await page.route('**/api/**',route=>{api.push(route.request().url());return route.abort();});page.on('pageerror',error=>errors.push(error.message));const url=`http://localhost:${port}${path}?mode=local&workspace=personal`,response=await request.get(url);expect(response.ok()).toBe(true);expect(await response.text()).not.toContain('data-huddle-root');await page.goto(url);await page.getByRole('button',{name:'Expand feedback',exact:true}).click();await expect(page.getByRole('button',{name:'Continue',exact:true})).toBeEnabled();await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('.panel-footer')).toContainText('Local');
+ const note=`${name} local review`;await comment(page,note);await expect(page.getByText(note,{exact:true})).toBeVisible();await page.reload();await page.getByRole('button',{name:'Expand feedback',exact:true}).click();await expect(page.getByRole('button',{name:'Continue',exact:true})).toHaveCount(0);await expect(page.locator('button.thread').filter({hasText:note})).toBeVisible();await page.getByRole('button',{name:'Collapse feedback',exact:true}).click();
+ const remove=page.getByRole('button',{name:'Remove Huddle integration',exact:true});if(await remove.count()){await remove.click();await expect(page.locator('[data-huddle-root]')).toHaveCount(0);await page.getByRole('button',{name:'Mount Huddle integration',exact:true}).click();await expect(page.locator('[data-huddle-root]')).toHaveCount(1);}else if(await page.getByRole('link',{name:'Next page',exact:true}).count()){await page.getByRole('link',{name:'Next page',exact:true}).click();await expect(page.locator('[data-huddle-root]')).toHaveCount(0);await page.goBack();await expect(page.locator('[data-huddle-root]')).toHaveCount(1);}else{await page.evaluate(()=>Reflect.get(window,'review').destroy());await expect(page.locator('[data-huddle-root]')).toHaveCount(0);await page.reload();await expect(page.locator('[data-huddle-root]')).toHaveCount(1);}
+ expect(api).toEqual([]);expect(errors).toEqual([]);
+});

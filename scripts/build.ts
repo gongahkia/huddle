@@ -9,6 +9,7 @@ import solid from 'vite-plugin-solid';
 await rm('dist',{recursive:true,force:true}); await mkdir('dist/public',{recursive: true}); await rm('packages/browser/dist',{recursive: true,force: true}); await mkdir('packages/browser/dist',{recursive: true});
 await build({entryPoints: ['packages/browser/src/embed.ts'],bundle: true,format: 'iife',globalName: 'Huddle',minify: true,target: 'es2022',outfile: 'dist/public/embed.js'});
 await build({entryPoints:['packages/browser/src/local-embed.ts'],bundle:true,format:'iife',globalName:'HuddleLocal',minify:true,target:'es2022',outfile:'dist/public/local-embed.js'});
+await cp('dist/public/embed.js','packages/browser/dist/embed.js');await cp('dist/public/local-embed.js','packages/browser/dist/local-embed.js');
 const helpers = ['react','preact','vue','svelte','solid','angular','astro'];
 const entries = {huddle: 'packages/browser/src/index.ts',http: 'packages/browser/src/http.ts',local:'packages/browser/src/local.ts',...Object.fromEntries(helpers.map(name => [name,`packages/browser/src/adapters/${name}.ts`]))};
 const frameworkPeers = Object.keys(JSON.parse(await readFile('packages/browser/package.json','utf8')).peerDependencies);
@@ -47,7 +48,7 @@ for (const [name,entry] of Object.entries(hostEntries)) {
 }
 await mkdir('packages/host/dist/docs/schema',{recursive:true});
 await mkdir('packages/host/dist/docs/decisions',{recursive:true});
-for (const document of ['host-http.md','host-transfers.md','server-matrix.md','collaboration-contract.md','frontend-progress.md','acceptance-current.md','migration-v0.2.md','browser-workflows.md','ui-playground.md','decisions/0001-huddle-ui-dogfooding.md','decisions/0002-local-and-team-modes.md','implementation-plan.adoc']) await cp('docs/'+document,'packages/host/dist/docs/'+document);
+for (const document of ['host-http.md','host-transfers.md','server-matrix.md','collaboration-contract.md','frontend-progress.md','acceptance-current.md','migration-v0.2.md','browser-workflows.md','local-review.md','modes-release.md','ui-playground.md','decisions/0001-huddle-ui-dogfooding.md','decisions/0002-local-and-team-modes.md','implementation-plan.adoc']) await cp('docs/'+document,'packages/host/dist/docs/'+document);
 await writeFile('packages/host/dist/docs/host-http.md',(await readFile('docs/host-http.md','utf8')).replace('../packages/host/README.md','../../README.md'));
 for (const schema of ['huddle.feedback.v2.schema.json','huddle.http.v2.openapi.json']) await cp('docs/schema/'+schema,'packages/host/dist/docs/schema/'+schema);
 await cp('packages/host/dist/docs','packages/browser/dist/docs',{recursive:true});

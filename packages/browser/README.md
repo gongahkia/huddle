@@ -1,6 +1,6 @@
 # @huddle/browser
 
-Private, framework-independent embedded review library. Huddle uses your application's access policy, backend and database through a collaboration adapter. The host can allow open review without interactive sign-in or require its existing login; Huddle creates no accounts. It does not require a separately deployed Huddle product service.
+Private, framework-independent embedded review library. Choose backend-free local review with IndexedDB, or team review through your application's access policy, backend and database. The host can allow open review without interactive sign-in or require its existing login; Huddle creates no accounts. It does not require a separately deployed Huddle product service.
 
 ```ts
 import {mount} from '@huddle/browser';
@@ -38,4 +38,4 @@ UI icons use named imports from [Lucide](https://lucide.dev/guide/lucide) 1.73.0
 
 Type `@` for searchable keyboard-accessible mention suggestions. Optional shared colors require host capability `commentColors`; this browser/host v0.3 DTO extension preserves colors in exports and imports. Upgrade both readers before enabling it or importing colored data. `onDisplayNameChange(name, signal)` enables a compact first-visit name prompt before loading feedback. Continue accepts the suggested host-issued name when blank or delegates a chosen name to the host. Completion is remembered per integration/reviewer in the selected browser storage; the footer opens a separate name editor afterward. The host owns the stable reviewer ID, generated name, validation and session refresh. Huddle supplies no accounts. The collapsed dock shows **Huddle** with an expand icon.
 
-An explicit backend-free local review mode is approved as the next implementation, alongside the existing host-backed team mode. It will reuse this UI and support formatted copy/export for coding agents. It is not implemented by this release; see [ADR 0002](./dist/docs/decisions/0002-local-and-team-modes.md).
+For local-only review, import `createLocalOptions` from `@huddle/browser/local` and pass `createLocalOptions({namespace:'my-site-review'})` to `mount` or any framework helper. No API/account/database service is connected. The same UI stores feedback in this browser and offers complete JSON/Markdown plus Copy Markdown for agents. See [local/team installation and storage limits](./dist/docs/local-review.md) and [ADR 0002](./dist/docs/decisions/0002-local-and-team-modes.md). The optional local module bundles @noble/hashes 2.4.0; its MIT notice is included in [LICENSE-NOBLE](./LICENSE-NOBLE). The packed `dist/embed.js` and `dist/local-embed.js` installers provide explicit team and local script paths.

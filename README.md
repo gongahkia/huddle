@@ -4,6 +4,8 @@ A framework-independent browser library for reviewing working websites using the
 
 The [current acceptance audit](docs/acceptance-current.md) records verified browser/database/framework and hosted Pronto results, recovery evidence and performance limits.
 
+Use `createLocalOptions({namespace:'my-review'})` from `@huddle/browser/local` for backend-free browser review, or supply a host adapter for shared team feedback. Both use the same UI and support complete JSON/Markdown transfers plus formatted copy for agents. See [local/team modes](docs/local-review.md).
+
 The private `@huddle/browser` package has optional React/Next.js, Preact, Vue/Nuxt, Svelte/SvelteKit, Solid, Angular and Astro helpers. Its core has no framework dependency. The separate server-only `@huddle/host` reference package supplies thin Next.js/Express/Fastify HTTP bindings and PostgreSQL/MySQL/SQLite/MongoDB storage implementations. The host authorizes every operation and derives authorship; importing historical identities grants no access.
 
 Start with the [browser package guide](packages/browser/README.md), [host integration guide](docs/host-http.md), [storage package](packages/host/README.md), [browser workflows/theme tokens](docs/browser-workflows.md) and [complete transfers](docs/host-transfers.md). The [neutral collaboration contract](docs/collaboration-contract.md), [HTTP specification](docs/schema/huddle.http.v2.openapi.json) and [huddle.feedback.v2 schema](docs/schema/huddle.feedback.v2.schema.json) support custom backends. Existing v0.1 integrations need the [migration guide](docs/migration-v0.2.md).
