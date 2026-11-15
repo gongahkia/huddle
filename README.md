@@ -2,7 +2,7 @@
 
 A framework-independent browser library for reviewing working websites using the host application's access policy, backend and database. Hosts can allow open review without interactive login or require their existing authentication; Huddle creates no accounts. Pin an element, leave a page observation, reply and resolve discussion in the embedded panel. Directory lookup, mentions and assignment are optional host capabilities. Complete JSON/Markdown export and deliberate preview/import/resume live in the panel; no separately deployed Huddle product service or management app is required.
 
-The [current acceptance audit](docs/acceptance-current.md) records verified browser/database/framework and Pronto results, performance limits and the remaining hosted migration gates.
+The [current acceptance audit](docs/acceptance-current.md) records verified browser/database/framework and hosted Pronto results, recovery evidence and performance limits.
 
 The private `@huddle/browser` package has optional React/Next.js, Preact, Vue/Nuxt, Svelte/SvelteKit, Solid, Angular and Astro helpers. Its core has no framework dependency. The separate server-only `@huddle/host` reference package supplies thin Next.js/Express/Fastify HTTP bindings and PostgreSQL/MySQL/SQLite/MongoDB storage implementations. The host authorizes every operation and derives authorship; importing historical identities grants no access.
 
@@ -25,7 +25,7 @@ Browser checks build every maintained framework fixture from an installed privat
 
 Both packages remain private archives. Install them in the host without a sibling-checkout dependency; keep server drivers out of the browser graph. Detaching the library/routes leaves host data intact. Storage removal is a separate explicit host decision after a verified complete export. There is no uninstall hook that deletes feedback.
 
-The [approved implementation plan](docs/implementation-plan.adoc) supersedes the older service architecture. [Current evidence and outstanding gates](docs/frontend-progress.md) distinguish fixture checks from actual Pronto migration and hosted acceptance. Original feedback, backups, credentials and evaluation data are not disposable fixtures. Legacy components remain until real migration dependencies permit retirement.
+The [approved implementation plan](docs/implementation-plan.adoc) supersedes the older service architecture. [Current evidence and outstanding gates](docs/frontend-progress.md) distinguish fixture checks from the completed actual Pronto migration and hosted acceptance. Original feedback, backups, credentials and evaluation data are not disposable fixtures. The unused standalone product service and its one-off commands are retired; original stores and private backups remain intact.
 
 ## Access and storage
 
