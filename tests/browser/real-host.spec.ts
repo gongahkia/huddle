@@ -55,3 +55,18 @@ test('real host overlay has keyboard/touch access, automated WCAG checks and pri
   const collapsedAudit = await new AxeBuilder({page}).include('[data-huddle-root]').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze(); expect(collapsedAudit.violations).toEqual([]); await page.keyboard.press('Escape'); await expect(page.getByRole('tooltip')).not.toBeVisible(); await pin.click();
   await page.getByRole('button',{name:'Transfer feedback',exact:true}).click(); const transferAudit = await new AxeBuilder({page}).include('[data-huddle-root]').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze(); expect(transferAudit.violations).toEqual([]); await page.getByRole('button',{name:'Back to feedback',exact:true}).focus(); await page.keyboard.press('Escape'); await expect(page.getByRole('button',{name:'Open Huddle',exact:true})).toBeFocused();
 });
+test('picker cancel is readable and keyboard accessible for new pins and reattachment in both themes',async ({page,browserName}) => {
+  const f = await fixture(); await login(page.context(),f,'alex'); await page.goto(f.origin); await open(page); await loaded(page);
+  for(const theme of ['light','dark']) {
+    if(theme === 'dark') await page.locator('#theme').click();
+    for(const action of ['Pin a comment','Reattach pin']) {
+      if(action === 'Reattach pin') {await page.getByRole('button',{name:'Page comment',exact:true}).click(); await page.getByLabel('Your comment',{exact:true}).fill(`Picker ${browserName} ${theme} ${randomUUID()}`); await page.getByRole('button',{name:'Post comment',exact:true}).click(); await expect(page.getByText('Comment saved.',{exact:true})).toBeVisible(); await loaded(page); await page.getByLabel('Reply',{exact:true}).fill('Retain this draft');}
+      await page.getByRole('button',{name:action,exact:true}).click(); const cancel = page.getByRole('button',{name:'Cancel',exact:true}); await expect(cancel).toBeEnabled(); await cancel.focus();
+      const audit = await new AxeBuilder({page}).include('[data-huddle-root]').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze(); expect(audit.violations).toEqual([]);
+      if(browserName === 'chromium') await page.screenshot({path:`output/browser/cancel-${theme}-${action === 'Reattach pin' ? 'reattach' : 'new'}.png`});
+      await page.keyboard.press('Enter'); await expect(page.locator('.pick-note')).toHaveCount(0);
+      if(action === 'Reattach pin') {await expect(page.getByLabel('Reply',{exact:true})).toHaveValue('Retain this draft'); await page.getByRole('button',{name:'Back to comments',exact:true}).click();}
+      else await expect(page.getByRole('button',{name:'Pin a comment',exact:true})).toBeVisible();
+    }
+  }
+});

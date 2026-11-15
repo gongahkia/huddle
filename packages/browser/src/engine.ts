@@ -103,7 +103,7 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
     const focused = shadow.activeElement as HTMLElement | null, focusId = focused?.id || (document.activeElement === document.body || document.activeElement === host ? pendingFocus : undefined);
     const textControl = focused instanceof HTMLTextAreaElement || focused instanceof HTMLInputElement && ['text','search','url','tel'].includes(focused.type), selection = textControl ? {start:focused.selectionStart,end:focused.selectionEnd} : undefined;
     const scroll = shadow.querySelector('.content')?.scrollTop || 0; ui.replaceChildren();
-    if (pinning) {clearPins(); const note = el('div',undefined,'pick-note'), message = el('span',notice || (reattach ? 'Click the new target. Escape to cancel.' : 'Click an element to comment. Escape to cancel.')); message.setAttribute('role','status'); note.append(message,button('Cancel',cancelPin)); ui.append(note); return;}
+    if (pinning) {clearPins(); const note = el('div',undefined,'pick-note'), message = el('span',notice || (reattach ? 'Click the new target. Escape to cancel.' : 'Click an element to comment. Escape to cancel.')), cancel = button('Cancel',cancelPin); cancel.disabled = false; message.setAttribute('role','status'); note.append(message,cancel); ui.append(note); return;}
     if (!opened) {if (settings.launcher !== 'hidden') {const launch = button('Huddle',() => controller.open(),'launcher'); launch.setAttribute('aria-label','Open Huddle'); ui.append(launch);} clearPins(); return;}
     const close = action('Close','close',() => controller.close()); close.title = 'Exit feedback and hide pins'; close.disabled = false;
     if (collapsed) {

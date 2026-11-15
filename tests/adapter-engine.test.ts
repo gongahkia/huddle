@@ -75,6 +75,14 @@ it('collapses without stopping live reads or losing the draft, and closes review
   widget.open(); expect(root().querySelector('textarea')!.value).toBe('Keep my draft while browsing'); expect(document.querySelector('[data-huddle-collapsed]')).toBeNull();
   widget.collapse(); widget.close(); const count = changes.mock.calls.length; await vi.advanceTimersByTimeAsync(30000); expect(changes).toHaveBeenCalledTimes(count); expect(root().querySelector('.review-dock')).toBeNull(); expect(document.querySelector('[data-huddle-open]')).toBeNull();
 });
+it('keeps picker cancellation available while a background list refresh is pending',async () => {
+  const adapter = new TestAdapter(); widget = mount(options(adapter)); widget.open(); await settle(); click('Pin a comment');
+  let release: (value: Awaited<ReturnType<TestAdapter['list']>>) => void = () => {};
+  const list = vi.spyOn(adapter,'list').mockImplementationOnce(() => new Promise(resolve => {release = resolve;}));
+  vi.spyOn(adapter,'changes').mockResolvedValueOnce({items:[],cursor:'1',hasMore:false,reset:true}); await vi.advanceTimersByTimeAsync(10000);
+  expect(list).toHaveBeenCalledOnce(); const cancel = root().getElementById('huddle-action-cancel') as HTMLButtonElement; expect(cancel.disabled).toBe(false); cancel.click();
+  expect(root().querySelector('.pick-note')).toBeNull(); expect(root().querySelector('.panel')).not.toBeNull(); release({items:[],nextCursor:null}); await settle();
+});
 it('clears rendered private data and preview state when access is revoked during collapsed review',async () => {
   const adapter = new TestAdapter(); widget = mount(options(adapter)); widget.open(); await settle(); click('Page comment'); type('Private draft'); widget.collapse();
   adapter.allowed = false; await vi.advanceTimersByTimeAsync(10000); expect(root().querySelector('.pin-preview')!.hasAttribute('hidden')).toBe(true); expect(root().querySelector('.pin')).toBeNull();
