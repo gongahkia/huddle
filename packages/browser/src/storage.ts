@@ -15,12 +15,12 @@ export class MemoryStorage implements Storage {
 export class LocalStore {
   constructor(private scope: string, private storage: Storage | null = (() => {try {return globalThis.localStorage;} catch {return null;}})(), private fallback?: Storage) {}
   private key(key: string) {return PREFIX + JSON.stringify([this.scope, key]);}
-  read<T>(key: string): T | null {
+  read<T>(key: string,maxAge = AGE): T | null {
     try {const raw = this.storage?.getItem(this.key(key)), backup = this.fallback?.getItem(this.key(key)); if (!raw && !backup) return null;
       let entry = JSON.parse(raw || backup!) as Entry<T>;
       if (backup) {const saved = JSON.parse(backup) as Entry<T>; if (saved.at >= entry.at) entry = saved;}
-      if (typeof entry.at !== 'number' || Date.now() - entry.at > AGE) {this.remove(key); return null;} return entry.value;
-    } catch {return this.fallback ? new LocalStore(this.scope,this.fallback).read<T>(key) : null;}
+      if (typeof entry.at !== 'number' || Date.now() - entry.at > maxAge) {this.remove(key); return null;} return entry.value;
+    } catch {return this.fallback ? new LocalStore(this.scope,this.fallback).read<T>(key,maxAge) : null;}
   }
   write(key: string, value: unknown) {
     if (!this.storage) return;

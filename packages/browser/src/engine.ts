@@ -36,6 +36,8 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
   let contextLife = new AbortController(), epoch = 0, session: Session | undefined, members: Identity[] = [];
   let memberCursor:string | undefined, memberNext:string | null = null, memberSearch = '', appliedMemberSearch = '', memberLoading = false, memberLoaded = false, memberSequence = 0;
   let draftContext: CapturedContext | undefined;
+  let onboardingStore:LocalStore|undefined,onboarded=false,editingName=false,nameValue='',nameFieldSeen=false;
+  const needsOnboarding=()=>!!settings.onDisplayNameChange&&!onboarded;
   let opened = settings.launcher!=='hidden', destroyed = false, pinning = false, reattach = false, busy = false, loading = false, detailLoading = false, connecting = false, stale = false;
   let collapsed = opened, scopeExpanded = false, previewId: string | undefined, previewHovered = false, previewTimer: ReturnType<typeof setTimeout> | undefined;
   const pinNodes = new Map<string,HTMLButtonElement>();
@@ -79,6 +81,7 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
     if (settings.persistence === 'disabled') storage = null;
     else if (!settings.persistence || settings.persistence === 'local') {try {storage = window.localStorage;} catch { /* memory fallback */ }}
     store = new LocalStore(JSON.stringify([settings.namespace,settings.workspace,session.actor.id,settings.environment]),storage,settings.persistence === 'disabled' ? undefined : memory);
+    onboardingStore=new LocalStore(JSON.stringify([settings.namespace,'reviewer-onboarding',session.actor.id]),preferenceStorage||memory,memory);onboarded=onboardingStore.read<boolean>('complete',Infinity)===true;
     const preferred=store.read<CommentColor>('comment-color');if(COMMENT_COLORS.includes(preferred!))color=preferred!;
     seen = store.read<Record<string,string>>('seen') || {}; draftKey = `draft:${currentContext.page}`;
     const draft = store.read<Draft>(draftKey);
@@ -97,7 +100,7 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
   function link(text: string,href: string) {const node = el('a',text); try {const url = new URL(href); if (['http:','https:'].includes(url.protocol) && !url.username && !url.password) {node.href = url.href; node.target = '_blank'; node.rel = 'noopener noreferrer';}} catch { /* imported URLs remain inert */ } return node;}
   function stopUpdates() {clearTimeout(pollTimer); pollTimer = undefined; subscriptionLife?.abort(); subscriptionLife = undefined; const cleanup = unsubscribe; unsubscribe = undefined; try {cleanup?.();} catch (value) {notify(value);}}
   function invalidate() {stopUpdates(); contextLife.abort(); contextLife = new AbortController(); epoch++; loadSequence++; detailSequence++; memberSequence++; memberLoading = false; polling = false; connecting = false; busy = false; loading = detailLoading = false; transfers.cancel();}
-  function clearPrivate() {mentionNames.clear();color='green';requests.forget(); updates.forget(); session = undefined; members = []; memberCursor = undefined; memberNext = null; memberSearch = appliedMemberSearch = ''; memberLoaded = false; transfers.reset(); threads = []; selected = undefined; anchor = undefined; body = ''; mentionIds = []; draftContext = undefined; store = undefined; seen = {}; restoredTarget = ''; resolutions.clear(); clearPins(); pinning = false; highlight.hidden = true;}
+  function clearPrivate() {onboardingStore=undefined;onboarded=false;editingName=false;nameValue='';nameFieldSeen=false;mentionNames.clear();color='green';requests.forget(); updates.forget(); session = undefined; members = []; memberCursor = undefined; memberNext = null; memberSearch = appliedMemberSearch = ''; memberLoaded = false; transfers.reset(); threads = []; selected = undefined; anchor = undefined; body = ''; mentionIds = []; draftContext = undefined; store = undefined; seen = {}; restoredTarget = ''; resolutions.clear(); clearPins(); pinning = false; highlight.hidden = true;}
   function setError(value: unknown) {
     if (destroyed || (value instanceof Error && value.name === 'AbortError')) return;
     notify(value); error = isCollaborationError(value) ? value.message : 'Review could not complete this action. Your draft is kept.';
@@ -118,23 +121,29 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
       const dock=el('aside',undefined,'review-dock');dock.setAttribute('aria-label','Collapsed Huddle feedback');
       const handle=action('Move feedback toolbar','grip',()=>{});handle.disabled=false;handle.classList.add('drag-handle');
       const expand=action('Expand feedback','expand',()=>controller.open(),false);expand.disabled=false;expand.setAttribute('aria-expanded','false');expand.setAttribute('aria-controls','huddle-panel');
-      dock.append(handle,expand);if(opened){const status=el('span',error?'Feedback unavailable':connecting?'Loading feedback…':stale?'Updates paused':'Pins visible','muted');if(error||stale)status.setAttribute('role','status');dock.append(status);}
+      dock.append(handle,expand);if(opened){const status=el('span',error?'Feedback unavailable':connecting?'Loading feedback…':needsOnboarding()?'Choose your name':stale?'Updates paused':'Pins visible','muted');if(error||stale)status.setAttribute('role','status');dock.append(status);}
       ui.append(dock);presentation.attach(dock,handle);presentation.finish(ui);if(opened)scheduleResolution();else clearPins();return;
     }
     const panel = el('aside',undefined,'panel'); panel.id = 'huddle-panel'; panel.setAttribute('aria-label','Huddle feedback');
     const header = el('header'), heading = el('div',undefined,'row between'), brand = el('div',undefined,'brand'), tools = el('div',undefined,'row tools'); brand.append(icon('comment'),el('h2','Huddle'));
     const info = action('Review details','info',() => {scopeExpanded = !scopeExpanded; render();}); info.setAttribute('aria-expanded',String(scopeExpanded)); info.setAttribute('aria-controls','huddle-scope');
-    if(session) tools.append(action('Transfer feedback','transfer',() => {persistDraft(); transfers.open();}),action('Refresh feedback','refresh',() => {void initialize();}));
+    const nameScreen=needsOnboarding()||editingName;
+    if(session&&!nameScreen) tools.append(action('Transfer feedback','transfer',() => {persistDraft(); transfers.open();}),action('Refresh feedback','refresh',() => {void initialize();}));
     const collapse = action('Collapse feedback','collapse',() => controller.collapse()); collapse.disabled = false; collapse.setAttribute('aria-expanded','true'); collapse.setAttribute('aria-controls','huddle-panel'); tools.append(collapse); heading.append(brand,tools); header.append(heading);
     const content = el('div',undefined,'content');
-    if(scopeExpanded) {const details = el('div',undefined,'scope-details'); details.id = 'huddle-scope'; details.append(el('h3','Review details'));if(session)details.append(el('p','Reviewing as '+session.actor.name));details.append(el('p',`Workspace: ${currentContext.workspace}`),el('p',`Environment: ${currentContext.environment}`)); if(currentContext.release) details.append(el('p',`Release: ${currentContext.release}`)); if(session&&settings.onDisplayNameChange){const rename=el('form'),label=el('label','Your name (optional)'),field=el('input');field.id='huddle-display-name';field.placeholder=session.actor.name;field.maxLength=80;field.setAttribute('autocomplete','nickname');label.htmlFor=field.id;label.append(field);const submit=el('button','Update name');submit.type='submit';submit.disabled=busy;rename.append(label,submit);rename.addEventListener('submit',event=>{event.preventDefault();void changeDisplayName(field.value);},{signal:uiSignal});details.append(rename);}content.append(details);}
+    if(nameScreen){
+      panel.classList.add('onboarding');content.setAttribute('aria-busy',String(busy||connecting));renderReviewerName(content,needsOnboarding());panel.append(header,content);ui.append(panel);presentation.finish(ui);
+      if(focusId){const target=shadow.getElementById(focusId);if(target instanceof HTMLElement){target.focus({preventScroll:true});if(selection&&target instanceof HTMLInputElement&&selection.start!==null&&selection.end!==null)target.setSelectionRange(selection.start,selection.end);}}
+      if(session&&needsOnboarding()&&!nameFieldSeen){shadow.getElementById('huddle-display-name')?.focus({preventScroll:true});nameFieldSeen=true;}return;
+    }
+    if(scopeExpanded) {const details = el('div',undefined,'scope-details'); details.id = 'huddle-scope'; details.append(el('h3','Review details'));if(session)details.append(el('p','Reviewing as '+session.actor.name));details.append(el('p',`Workspace: ${currentContext.workspace}`),el('p',`Environment: ${currentContext.environment}`)); if(currentContext.release) details.append(el('p',`Release: ${currentContext.release}`)); content.append(details);}
     content.setAttribute('aria-busy',String(busy || loading || detailLoading || connecting));
     if(stale) {const status = el('p','Feedback may be out of date. Refresh when connected.','notice'); status.setAttribute('role','status'); content.append(status);}
     if (error) {const node = el('p',error,'notice error'); node.setAttribute('role','alert'); content.append(node);}
     if (notice) {const node = el('p',notice,'notice'); node.setAttribute('role','status'); content.append(node);}
     if (!session) content.append(el('p',connecting ? 'Checking review access…' : 'Use your application’s existing sign-in to access team feedback.','muted'),button('Check access again',() => {void initialize();}));
     else {if(transfers.active()) transfers.render(content,currentContext.page); else if (!anchor && !selected) renderList(header,content); else renderThread(content);}
-    const footer = el('footer',undefined,'panel-footer'); const reviewer=session&&settings.onDisplayNameChange?button(session.actor.name,()=>{scopeExpanded=true;render();shadow.getElementById('huddle-display-name')?.focus();},'quiet'):el('span',session?.actor.name||'Feedback','muted');if(reviewer instanceof HTMLButtonElement){reviewer.setAttribute('aria-label','Edit reviewer name');reviewer.title='Change your display name';}footer.append(reviewer,info);
+    const footer = el('footer',undefined,'panel-footer'); const reviewer=session&&settings.onDisplayNameChange?button(session.actor.name,()=>{editingName=true;scopeExpanded=false;nameValue='';error='';hidePreview();render();shadow.getElementById('huddle-display-name')?.focus();},'quiet'):el('span',session?.actor.name||'Feedback','muted');if(reviewer instanceof HTMLButtonElement){reviewer.setAttribute('aria-label','Edit reviewer name');reviewer.title='Change your display name';}footer.append(reviewer,info);
     panel.append(header,content,footer); ui.append(panel); content.scrollTop = scroll;presentation.finish(ui);
     pendingFocus = undefined;
     if (focusId) {const target = shadow.getElementById(focusId); if(target && 'disabled' in target && target.disabled) pendingFocus = focusId; else {const next = target || shadow.querySelector<HTMLElement>('.content button:not([disabled])'); next?.focus({preventScroll: true}); if(selection && (next instanceof HTMLTextAreaElement || next instanceof HTMLInputElement) && selection.start !== null && selection.end !== null) next.setSelectionRange(selection.start,selection.end);}}
@@ -198,7 +207,23 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
     if(capability('commentColors')){const palette=el('fieldset',undefined,'color-picker');palette.append(el('legend','Comment color'));for(const value of COMMENT_COLORS){const option=el('label'),radio=el('input');radio.type='radio';radio.name='huddle-comment-color';radio.value=value;radio.checked=color===value;radio.setAttribute('aria-label',value[0].toUpperCase()+value.slice(1));radio.disabled=busy;radio.addEventListener('change',()=>{color=value;store?.write('comment-color',color);persistDraft();},{signal:uiSignal});const swatch=el('span',undefined,'color-swatch');paint(swatch,value);option.title=value[0].toUpperCase()+value.slice(1);option.append(radio,swatch);palette.append(option);}form.append(palette);}
     const submit = el('button',busy ? 'Saving…' : selected ? 'Post reply' : 'Post comment','primary'); submit.id = 'huddle-submit-comment'; submit.type = 'submit'; submit.disabled = busy; form.append(submit); form.addEventListener('submit',event => {event.preventDefault(); void save();},{signal:uiSignal}); content.append(form);
   }
-  async function changeDisplayName(value:string){if(!settings.onDisplayNameChange||!session||busy)return;const stamp=epoch;busy=true;error='';render();try{await call(signal=>settings.onDisplayNameChange!(value.trim(),signal));if(stamp===epoch)await resolveSession();}catch(value){if(stamp===epoch)setError(value);}finally{if(stamp===epoch){busy=false;render();}}}
+  function renderReviewerName(content:HTMLElement,joining:boolean){
+    if(!joining)content.append(action('Back to feedback','back',()=>{editingName=false;nameValue='';error='';render();},false,'quiet'));
+    if(error){const alert=el('p',error,'notice error');alert.setAttribute('role','alert');content.append(alert);}
+    if(!session){const status=el('p',connecting?'Getting your reviewer name…':'Review access is unavailable.','muted');status.setAttribute('role','status');content.append(status);if(!connecting)content.append(button('Check access again',()=>{void initialize();}));return;}
+    content.append(el('h3',joining?'Welcome to Huddle':'Your name'),el('p',joining?'Choose a name for your comments, or keep the suggested one.':'Update how your name appears on new comments.','onboarding-copy'));
+    const form=el('form'),label=el('label','Your name (optional)'),field=el('input');field.id='huddle-display-name';field.placeholder=session.actor.name;field.value=nameValue;field.maxLength=80;field.setAttribute('autocomplete','nickname');field.disabled=busy||connecting;field.addEventListener('input',()=>{nameValue=field.value;},{signal:uiSignal});label.htmlFor=field.id;label.append(field);
+    const submit=el('button',busy?'Saving…':joining?'Continue':'Update name','primary');submit.type='submit';submit.disabled=busy||connecting;form.append(label,submit);form.addEventListener('submit',event=>{event.preventDefault();void changeDisplayName(nameValue,joining);},{signal:uiSignal});content.append(form);
+  }
+  async function changeDisplayName(value:string,joining:boolean){
+    if(!settings.onDisplayNameChange||!session||busy||connecting)return;const stamp=epoch,actor=session.actor.id;busy=true;error='';render();
+    try{
+      if(!await resolveSession()||stamp!==epoch||session?.actor.id!==actor)return;
+      if(!joining||value.trim()){await call(signal=>settings.onDisplayNameChange!(value.trim(),signal));if(stamp!==epoch||!await resolveSession()||session?.actor.id!==actor)return;}
+      if(joining){onboardingStore?.write('complete',true);onboarded=true;nameFieldSeen=false;}
+      editingName=false;scopeExpanded=false;nameValue='';busy=false;await initialize();shadow.getElementById('huddle-action-pin-a-comment')?.focus();
+    }catch(value){if(stamp===epoch)setError(value);}finally{if(stamp===epoch){busy=false;render();}}
+  }
   async function resolveSession(): Promise<boolean> {
     const stamp = epoch, result = await call(signal => adapter.session(scope(),signal));
     if (stamp !== epoch || destroyed) return false;
@@ -210,7 +235,7 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
   async function initialize() {
     if (!active() || connecting) return; if (polling) {updateQueued = true; return;} stopUpdates(); connecting = true; error = ''; const stamp = epoch; render();
     try {
-      if (!await resolveSession() || stamp !== epoch) return;
+      if (!await resolveSession() || stamp !== epoch || needsOnboarding()) return;
       const baseline = await call(signal => adapter.changes(scope(),undefined,signal)); if (stamp !== epoch) return; cursor = baseline.cursor;
       await refresh();
       if (restoredTarget && stamp === epoch) {const id = restoredTarget; restoredTarget = ''; try {const result = await call(signal => adapter.detail(scope(),id,{},signal)); if (stamp === epoch) selected = result;} catch (value) {if (stamp === epoch && isCollaborationError(value) && value.code === 'not_found') {anchor = capturedAnchor(pageAnchor()); notice = 'The original thread is unavailable. Your draft is kept as a page comment.';} else throw value;}}
@@ -219,7 +244,7 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
     finally {if (stamp === epoch) {connecting = false; render();}}
   }
   async function refresh() {
-    if (!session || !active()) return;
+    if (!session || !active() || needsOnboarding()) return;
     const seq = ++loadSequence, stamp = epoch; loading = true; render();
     try {
       const result = await call(signal => adapter.list(scope(),{page: allPages ? undefined : currentContext.page,status: resolved ? undefined : 'open',cursor: listCursor,limit: 50},signal));
@@ -267,7 +292,7 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
     return result;
   }
   async function save() {
-    if (busy || !session || !body.trim() || (!anchor && !selected)) return;
+    if (busy || !session || needsOnboarding() || !body.trim() || (!anchor && !selected)) return;
     busy = true; error = ''; const stamp = epoch, sent = body, sentMentions = capability('mentions') ? [...mentionIds] : [],sentColor=capability('commentColors')?color:undefined, target = anchor, id = selected?.thread.id, savedKey = draftKey, savedStore = store;
     render();
     try {
@@ -370,7 +395,7 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
     preview.style.top = `${Math.max(12,Math.min(top,innerHeight - height - 12))}px`;
   }
   function geometry() {
-    geometryFrame = 0; if (!opened || pinning || document.visibilityState === 'hidden') {clearPins(); return;}
+    geometryFrame = 0; if (needsOnboarding() || !opened || pinning || document.visibilityState === 'hidden') {clearPins(); return;}
     const visible = new Set<string>(), placed: {x:number;y:number}[] = [];
     for (const [i,t] of threads.entries()) {
       if (t.page !== currentContext.page || (t.status === 'resolved' && !resolved)) continue;
@@ -422,7 +447,7 @@ export function mountForOwner(options: HuddleOptions,owner?: symbol): Huddle {
   window.addEventListener('online',() => {if (active()) void initialize();},{signal: life.signal});
   document.addEventListener('toggle',event => {if (event.composedPath().includes(host) || !(event.target instanceof HTMLElement) || !event.target.matches('[popover]')) return; try {surface.hidePopover(); topLayer();} catch { /* fixed-host fallback */ } scheduleResolution();},{capture: true,signal: life.signal});
   const controller: Huddle = {
-    open() {if (destroyed) return;if(!opened||collapsed){let focused=document.activeElement;while(focused?.shadowRoot?.activeElement)focused=focused.shadowRoot.activeElement;if(focused instanceof HTMLElement&&focused.getRootNode()!==shadow&&!host.contains(focused)&&!focused.matches('body,html'))opener=focused;} if(opened) {if(collapsed) {collapsed = false;motion=true; render(); shadow.getElementById('huddle-action-collapse-feedback')?.focus();} return;} let focused = document.activeElement; while(focused?.shadowRoot?.activeElement) focused = focused.shadowRoot.activeElement; opener = focused instanceof HTMLElement && focused.getRootNode() !== shadow && !host.contains(focused) ? focused : null; opened = true; collapsed = false;motion=true; topLayer(); render(); shadow.getElementById('huddle-action-collapse-feedback')?.focus(); void initialize();},
+    open() {if (destroyed) return;if(!opened||collapsed){let focused=document.activeElement;while(focused?.shadowRoot?.activeElement)focused=focused.shadowRoot.activeElement;if(focused instanceof HTMLElement&&focused.getRootNode()!==shadow&&!host.contains(focused)&&!focused.matches('body,html'))opener=focused;} if(opened) {if(collapsed) {collapsed = false;motion=true; render(); (needsOnboarding()?shadow.getElementById('huddle-display-name'):undefined)?.focus();if(!needsOnboarding()||!session)shadow.getElementById('huddle-action-collapse-feedback')?.focus();} return;} let focused = document.activeElement; while(focused?.shadowRoot?.activeElement) focused = focused.shadowRoot.activeElement; opener = focused instanceof HTMLElement && focused.getRootNode() !== shadow && !host.contains(focused) ? focused : null; opened = true; collapsed = false;motion=true; topLayer(); render(); (needsOnboarding()?shadow.getElementById('huddle-display-name'):undefined)?.focus();if(!needsOnboarding()||!session)shadow.getElementById('huddle-action-collapse-feedback')?.focus(); void initialize();},
     collapse() {if(destroyed || !opened || pinning || collapsed) return; persistDraft(); hidePreview(); collapsed = true;motion=true; render(); shadow.getElementById('huddle-action-expand-feedback')?.focus();},
     close() {if (destroyed) return; persistDraft(); invalidate(); clearPrivate(); cursor = undefined; listCursor = commentCursor = historyCursor = undefined; opened = false; collapsed = false; pinning = false; highlight.hidden = true; render(); if (opener?.isConnected) opener.focus(); else shadow.getElementById('huddle-action-expand-feedback')?.focus();},
     updateContext(context) {if (destroyed) return; validateOptions({...settings,...context}); Object.assign(settings,context); routeChange();},
