@@ -2,4 +2,4 @@
 import Layout from '../layouts/Layout.astro';
 const serverProject = Astro.url.searchParams.get('workspace');
 ---
-<Layout><main data-review-page data-server-workspace={serverProject}><h1>Astro server-rendered integration</h1><section data-huddle-id="astro-counter"><p id="updates">Updates: 0</p><button id="add-update">Add update</button></section><a href="/other">Next page</a></main></Layout>
+<Layout><main data-review-page data-server-workspace={serverProject}><a href="http://localhost:4327/playground/">UI playground</a><h1>Astro server-rendered integration</h1><section data-huddle-id="astro-counter"><p id="updates">Updates: 0</p><button id="add-update">Add update</button></section><a href="/other">Next page</a></main></Layout>

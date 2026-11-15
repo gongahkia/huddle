@@ -22,6 +22,9 @@ for (const [name,entry] of Object.entries(entries)) {
  await declarations.write({file: `packages/browser/dist/${name === 'huddle' ? 'index' : name}.d.ts`,format: 'es'}); await declarations.close();
 }
 await cp('examples/html','dist/examples/html',{recursive: true}); await mkdir('dist/examples/html/vendor',{recursive:true});
+await mkdir('dist/examples/playground',{recursive:true});
+for(const file of ['index.html','app.html','playground.css']) await cp('examples/playground/'+file,'dist/examples/playground/'+file);
+await build({entryPoints:['examples/playground/index.ts','examples/playground/app.ts'],bundle:true,format:'esm',target:'es2022',outdir:'dist/examples/playground'});
 await cp('node_modules/jquery/dist/jquery.min.js','dist/examples/html/vendor/jquery.min.js'); await cp('node_modules/htmx.org/dist/htmx.min.js','dist/examples/html/vendor/htmx.min.js');
 await cp('examples/style.css','dist/examples/style.css'); await cp('dist/public/huddle.js','dist/examples/huddle.js');
 await rm('dist/examples/chunks',{recursive: true,force: true}); await cp('dist/public/chunks','dist/examples/chunks',{recursive: true});
@@ -41,7 +44,8 @@ for (const [name,entry] of Object.entries(hostEntries)) {
  await declarations.write({file:`packages/host/dist/${name}.d.ts`,format:'es'}); await declarations.close();
 }
 await mkdir('packages/host/dist/docs/schema',{recursive:true});
-for (const document of ['host-http.md','host-transfers.md','server-matrix.md','collaboration-contract.md','frontend-progress.md','acceptance-current.md','migration-v0.2.md','browser-workflows.md','implementation-plan.adoc']) await cp('docs/'+document,'packages/host/dist/docs/'+document);
+await mkdir('packages/host/dist/docs/decisions',{recursive:true});
+for (const document of ['host-http.md','host-transfers.md','server-matrix.md','collaboration-contract.md','frontend-progress.md','acceptance-current.md','migration-v0.2.md','browser-workflows.md','ui-playground.md','decisions/0001-huddle-ui-dogfooding.md','implementation-plan.adoc']) await cp('docs/'+document,'packages/host/dist/docs/'+document);
 await writeFile('packages/host/dist/docs/host-http.md',(await readFile('docs/host-http.md','utf8')).replace('../packages/host/README.md','../../README.md'));
 for (const schema of ['huddle.feedback.v2.schema.json','huddle.http.v2.openapi.json']) await cp('docs/schema/'+schema,'packages/host/dist/docs/schema/'+schema);
 await cp('packages/host/dist/docs','packages/browser/dist/docs',{recursive:true});

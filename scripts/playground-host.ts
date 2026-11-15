@@ -1,11 +1,11 @@
-import express,type Express from 'express';
+import express,{type Express} from 'express';
 import {randomUUID} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {ReviewStore,CollaborationError,type Backend,type Identity,type Scope} from '../packages/host/src/store';
 import {createExpressMiddleware} from '../packages/host/src/express';
 
-// This fictional host shares only the browser fixture's explicitly disposable backend.
+// this fictional host shares only the browser fixture's explicitly disposable backend.
 export async function addPlayground(app:Express,backend:Backend,origin:string) {
   const csrf = randomUUID(), full = {directory:true,mentions:true,assignment:true}, basic = {directory:false,mentions:false,assignment:false};
   const actors = {alex:{id:'playground:alex',name:'Alex Rivera'},morgan:{id:'playground:morgan',name:'Morgan Chen'},guest:{id:'playground:guest',name:'Guest'}};
@@ -17,7 +17,7 @@ export async function addPlayground(app:Express,backend:Backend,origin:string) {
   const seed = new ReviewStore(backend,async () => ({actor:actors.alex,capabilities:full}),directory), signal = new AbortController().signal;
   for(const workspace of ['playground','playground-busy']) {
     const scope = {workspace,environment:'preview'}, page = '/playground/app/overview';
-    const add = (key:string,label:string,body:string,extra:Partial<Parameters<ReviewStore['create']>[1]>={}) => seed.create(scope,{idempotencyKey:`${workspace}:${key}`,page,pageUrl:origin+page,anchor:{kind:'element',selector:`[data-huddle-id="${key}"]`,stableKey:`[data-huddle-id="${key}"]`,tag:'h2',label,quote:'',x:.5,y:.5},body,...extra},signal);
+    const add = (key:string,label:string,body:string,extra:Partial<Parameters<ReviewStore['create']>[1]>={}) => seed.create(scope,{idempotencyKey:`${workspace}:${key}`,page,pageUrl:origin+page,anchor:{kind:'element',selector:`[data-huddle-id="${key}"]`,stableKey:`[data-huddle-id="${key}"]`,tag:key==='settings-target'?'h1':'h2',label,quote:'',x:.5,y:.5},body,...extra},signal);
     for(let n=0;n<3;n++) await add('shared-target','Launch checklist', ['Can we make this heading easier to scan?','Three discussions share this exact target. Each badge should remain reachable.','Keyboard check: focus this pin, read its preview, then open the discussion.'][n],{idempotencyKey:`${workspace}:shared:${n}`});
     const long = await add('summary-copy','A calmer release week','A long discussion for checking replies, history, mentions, wrapping and pagination. Keep the original feedback visible when you resize the page.');
     const peer = new ReviewStore(backend,async () => ({actor:actors.morgan,capabilities:full}),directory);

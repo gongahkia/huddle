@@ -17,6 +17,10 @@ For Pronto, the user explicitly approved showing *existing feedback to every dem
 
 Hosted positive acceptance for this Pronto policy uses two distinct genuine chooser sessions, imported history, shared pin/reply/status/export and persistence from a fresh visitor. Verify missing/forged/revoked sessions, foreign scopes and cross-origin writes are denied. Guest denial remains required in internal mode. A successful public-mode test is not evidence of internal authenticated-mode acceptance. All backup, migration parity, deployment-revision, rollback, privacy and spending boundaries below remain in force.
 
+== UI dogfooding revision approved 15 November 2026
+
+Shared widget UI is developed and reviewed in Huddle's own example playground before porting a verified SDK to a consumer. Pronto dogfooding validates engineering integration, host policy/storage, CSP/lifecycle, packaging, migration and deployment; retain basic deployed rendering and collaboration smoke checks. Do not use Pronto as the primary widget UI iteration environment or maintain a Pronto-only widget fix. See link:decisions/0001-huddle-ui-dogfooding.md[ADR 0001] and link:ui-playground.md[the local playground guide]. This decision supersedes any older workflow here that treats Pronto as the initial UI review surface. Existing engineering, data-preservation and hosted acceptance gates remain required.
+
 == Workspace and first actions on a new machine
 
 Assume two independent Git repositories checked out under the same parent directory:

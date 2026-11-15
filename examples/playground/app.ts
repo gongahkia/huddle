@@ -21,7 +21,7 @@ document.getElementById('hide-target')!.addEventListener('click',()=>{changing.h
 document.getElementById('remove-target')!.addEventListener('click',()=>changing.remove());
 document.getElementById('restore-target')!.addEventListener('click',()=>{changing.textContent='Delivery notes';changing.hidden=false;if(!changing.isConnected)holder.append(changing);});
 const activity=document.getElementById('activity')!;for(let n=1;n<=16;n++){const row=document.createElement('li');row.dataset.huddleId=`activity-${n}`;row.textContent=`Sample update ${n} · ${n%2?'Alex added a release note':'Morgan reviewed a change'}`;activity.append(row);}
-document.getElementById('feedback')!.addEventListener('click',()=>review?.open());
+for(const launcher of document.querySelectorAll('[data-open-feedback]'))launcher.addEventListener('click',()=>review?.open());
 try {
   csrf=(await json('/playground/config')).csrf;const session=await json('/playground/session',{reviewer,scenario,capabilities});token=session.token;
   const {mount}=await import(new URL('/sdk/huddle.js',location.href).href) as typeof import('@huddle/browser'),{createHttpAdapter}=await import(new URL('/sdk/http.js',location.href).href) as typeof import('@huddle/browser/http');

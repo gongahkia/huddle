@@ -1,3 +1,4 @@
+export {};
 const control = (id:string) => document.getElementById(id) as HTMLSelectElement;
 const preview = document.getElementById('preview') as HTMLIFrameElement, status = document.getElementById('connection')!;
 const params = new URLSearchParams(location.search); let generation = '';
@@ -8,7 +9,7 @@ function links() {
   (document.getElementById('standalone') as HTMLAnchorElement).href='/playground/app/overview?'+settings;
   settings.set('reviewer',control('reviewer').value==='morgan'?'alex':'morgan');settings.set('device',control('device').value);(document.getElementById('peer') as HTMLAnchorElement).href='/playground/?'+settings;
 }
-function resize() {const device=control('device').value;preview.style.width=device==='mobile'?'390px':device==='narrow'?'320px':'100%';preview.style.height=device==='mobile'?'844px':device==='narrow'?'720px':'calc(100vh - 120px)';links();}
+function resize() {const device=control('device').value;preview.style.maxWidth=device==='desktop'?'100%':'none';preview.style.width=device==='mobile'?'390px':device==='narrow'?'320px':'100%';preview.style.height=device==='mobile'?'844px':device==='narrow'?'720px':'calc(100vh - 120px)';links();}
 function load() {generation=crypto.randomUUID();control('fault').value='normal';control('fault').disabled=true;status.textContent='Preparing the sample workspace…';const settings=new URLSearchParams({reviewer:control('reviewer').value,scenario:control('scenario').value,capabilities:control('capabilities').value,theme:control('theme').value,generation});preview.src='/playground/app/overview?'+settings;links();}
 for(const id of ['reviewer','scenario','capabilities'])control(id).addEventListener('change',load);
 control('device').addEventListener('change',resize);

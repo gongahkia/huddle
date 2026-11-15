@@ -24,6 +24,7 @@
     "generate:schemas": "tsx scripts/feedback-schema.ts && tsx scripts/http-schema.ts",
     "bench:browser": "playwright test tests/browser/performance.spec.ts --reporter=line",
     "examples": "tsx scripts/examples.ts",
+    "playground": "pnpm build && tsx scripts/browser-host.ts --playground",
     "test:package": "tsx scripts/package-smoke.ts && tsx scripts/host-package-smoke.ts",
     "test:storage:sqlite": "vitest run tests/sqlite-conformance.test.ts tests/sqlite-exports.test.ts tests/sqlite-imports.test.ts",
     "test:storage:postgres": "vitest run --config vitest.storage.config.ts tests/database/postgres.spec.ts",
